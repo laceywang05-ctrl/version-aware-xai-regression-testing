@@ -1,0 +1,34 @@
+project:
+  name: version-aware-xai-regression-testing
+
+probe_dataset:
+  id: fixed-probe-v1
+  split: test
+
+explainer:
+  methods:
+    - shap
+    - lime
+  random_seed: 42
+  repeated_runs: 10
+  lime:
+    num_samples: 5000
+    num_features: 10
+  shap:
+    background_dataset_id: background-v1
+
+comparison:
+  top_k: 5
+  metrics:
+    - cosine_similarity
+    - spearman_rank_correlation
+    - top_k_overlap
+    - direction_flip_rate
+
+policy:
+  # Initial placeholders. Final thresholds should be calibrated empirically.
+  minimum_cosine_similarity: 0.90
+  minimum_rank_correlation: 0.80
+  minimum_top_k_overlap: 0.60
+  maximum_direction_flip_rate: 0.20
+

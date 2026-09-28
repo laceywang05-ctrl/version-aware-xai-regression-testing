@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "version-aware-xai-regression-testing"
+version = "0.1.0"
+description = "Compare explanation artifacts across machine-learning model versions."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+xai = [
+  "lime>=0.2.0.1",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "shap>=0.44",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
