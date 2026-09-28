@@ -4,9 +4,8 @@
 
 1. Create a short branch from `main`, for example `feature/shap-runner`.
 2. Make one focused change.
-3. Add or update tests.
-4. Run `pytest` locally.
-5. Open a pull request that explains the research or implementation decision.
+3. Add tests once implementation work begins.
+4. Open a pull request that explains the research or implementation decision.
 
 ## Research records
 
@@ -15,4 +14,3 @@ When adding an experiment, record the model version, dataset version, preprocess
 ## Interpretation
 
 Do not label an explanation difference as concept drift or regression without supporting evidence. Treat warnings as prompts for investigation.
-

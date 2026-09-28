@@ -38,9 +38,9 @@ Compare with accepted baseline
 Apply policy and report warning
 ```
 
-## Comparison metrics
+## Candidate comparison metrics
 
-The first implementation supports:
+The literature review identifies several candidate metrics for later evaluation:
 
 - cosine similarity of attribution vectors;
 - Spearman rank correlation;
@@ -49,34 +49,22 @@ The first implementation supports:
 
 Possible later metrics include distribution divergence for aggregate explanations and heatmap similarity for Grad-CAM.
 
+The final metric set and thresholds will be selected after the initial scope is confirmed with the supervisor.
+
 ## Repository structure
 
 ```text
 .
 ├── config/                 # Reproducible experiment settings
 ├── docs/                   # Research scope, architecture and literature map
-├── examples/               # Small runnable examples
-├── src/xai_regression/     # Core comparison code
-├── tests/                  # Unit tests
+├── src/xai_regression/     # Placeholder for the future implementation
 ├── CONTRIBUTING.md
 └── pyproject.toml
 ```
 
-## Quick start
-
-Python 3.10 or newer is recommended.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
-python -m unittest discover -s tests -v
-python examples/compare_explanations.py
-```
-
 ## Current status
 
-The repository currently contains the research scope, proposed architecture, reproducible configuration, and a tested baseline implementation of explanation-comparison metrics. Model training and SHAP/LIME generation are the next implementation stage.
+This is the initial project repository. It currently contains the literature-based research scope, proposed architecture and an experiment-configuration draft. Implementation will begin after the initial scope is confirmed with the supervisor.
 
 ## Important interpretation rule
 
