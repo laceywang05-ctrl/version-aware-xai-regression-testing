@@ -9,6 +9,14 @@ description = "Compare explanation artifacts across machine-learning model versi
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "joblib>=1.5,<2",
+    "matplotlib>=3.10,<4",
+    "numpy>=2.0,<3",
+    "pandas>=2.2,<3",
+    "pyarrow>=20,<23",
+    "scikit-learn>=1.7,<2",
+    "shap>=0.48,<0.51",
+    "shap-monitor>=0.0.12,<0.1",
 ]
 
 [tool.setuptools.packages.find]

@@ -64,7 +64,28 @@ The final metric set and thresholds will be selected after the initial scope is 
 
 ## Current status
 
-This is the initial project repository. It currently contains the literature-based research scope, proposed architecture and an experiment-configuration draft. Implementation will begin after the initial scope is confirmed with the supervisor.
+The repository now contains a working Tree SHAP proof of concept. It logs and
+compares two model versions on a fixed probe dataset, verifies deterministic
+same-model repeatability, estimates normal explanation variation across ten
+benign retraining seeds, and applies a provisional review policy. Initial results
+are summarised in [`docs/INITIAL_EXPERIMENT_RESULTS.md`](docs/INITIAL_EXPERIMENT_RESULTS.md).
+
+The same workflow has also been validated on the real Breast Cancer Wisconsin
+Diagnostic dataset. The reference and candidate agree on 99% of probe
+predictions, while the explanation policy still identifies a small excess of
+cosine-similarity breaches for review. See
+[`docs/REAL_DATASET_EXPERIMENT_RESULT.md`](docs/REAL_DATASET_EXPERIMENT_RESULT.md).
+
+Run the current experiment sequence from the repository root:
+
+```bash
+python experiments/02_generate_two_versions.py
+python experiments/03_compare_explanations.py
+python experiments/04_same_model_stability.py
+python experiments/05_retraining_baseline.py
+python experiments/06_apply_provisional_policy.py
+python experiments/07_real_dataset_validation.py
+```
 
 ## Important interpretation rule
 
