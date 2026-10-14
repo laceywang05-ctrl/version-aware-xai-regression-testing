@@ -46,6 +46,15 @@ policy: {lower_quantile: 0.05, upper_quantile: 0.95}
             with self.assertRaisesRegex(ConfigError, "probe_size"):
                 load_config(path)
 
+    def test_lime_stability_config_loads(self):
+        config = load_config(PROJECT_ROOT / "config/lime_stability.yaml")
+
+        self.assertEqual(config.explainer.method, "lime")
+        self.assertIsNotNone(config.lime)
+        self.assertEqual(config.lime.probe_size, 20)
+        self.assertEqual(config.lime.num_samples, 1000)
+        self.assertEqual(len(config.lime.repeated_seeds), 10)
+
 
 if __name__ == "__main__":
     unittest.main()

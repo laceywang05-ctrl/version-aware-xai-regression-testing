@@ -36,8 +36,8 @@ class DatasetSplit:
     y_probe: pd.Series
 
 
-def validate_supported_workflow(config: ExperimentConfig) -> None:
-    """Reject configuration choices not implemented by the current prototype."""
+def validate_supported_data_model(config: ExperimentConfig) -> None:
+    """Reject dataset and model choices not implemented by the prototype."""
     if config.dataset.name != "breast_cancer":
         raise ValueError(
             "The current workflow supports dataset.name=breast_cancer only."
@@ -46,19 +46,24 @@ def validate_supported_workflow(config: ExperimentConfig) -> None:
         raise ValueError(
             "The current workflow supports model.family=random_forest only."
         )
-    if config.explainer.method != "tree_shap":
-        raise ValueError(
-            "The current workflow supports explainer.method=tree_shap only."
-        )
     if config.explainer.target_class != "malignant":
         raise ValueError(
             "The breast-cancer workflow currently explains target_class=malignant."
         )
 
 
+def validate_supported_workflow(config: ExperimentConfig) -> None:
+    """Validate the current Tree SHAP workflow configuration."""
+    validate_supported_data_model(config)
+    if config.explainer.method != "tree_shap":
+        raise ValueError(
+            "The current workflow supports explainer.method=tree_shap only."
+        )
+
+
 def load_dataset(config: ExperimentConfig) -> DatasetSplit:
     """Load and split the configured dataset, including a fixed probe subset."""
-    validate_supported_workflow(config)
+    validate_supported_data_model(config)
     dataset = load_breast_cancer(as_frame=True)
     X = dataset.data.copy()
 

@@ -40,6 +40,17 @@ class ExplainerConfig:
 
 
 @dataclass(frozen=True)
+class LimeConfig:
+    baseline_seed: int
+    repeated_seeds: tuple[int, ...]
+    probe_size: int
+    num_samples: int
+    kernel_width: float | None
+    discretize_continuous: bool
+    output_dir: Path
+
+
+@dataclass(frozen=True)
 class ComparisonConfig:
     metrics: tuple[str, ...]
     top_k: int
@@ -59,6 +70,7 @@ class ExperimentConfig:
     dataset: DatasetConfig
     model: ModelConfig
     explainer: ExplainerConfig
+    lime: LimeConfig | None
     comparison: ComparisonConfig
     policy: PolicyConfig
 
@@ -83,6 +95,19 @@ def _validate(config: ExperimentConfig) -> None:
         raise ConfigError("comparison.top_k must be at least 1.")
     if not config.comparison.metrics:
         raise ConfigError("comparison.metrics must contain at least one metric.")
+    if config.explainer.method == "lime":
+        if config.lime is None:
+            raise ConfigError("A 'lime' section is required for LIME experiments.")
+        if config.lime.probe_size < 1:
+            raise ConfigError("lime.probe_size must be at least 1.")
+        if config.lime.probe_size > config.dataset.probe_size:
+            raise ConfigError(
+                "lime.probe_size cannot exceed dataset.probe_size."
+            )
+        if config.lime.num_samples < 2:
+            raise ConfigError("lime.num_samples must be at least 2.")
+        if not config.lime.repeated_seeds:
+            raise ConfigError("lime.repeated_seeds must contain at least one seed.")
     if not 0 < config.policy.lower_quantile < config.policy.upper_quantile < 1:
         raise ConfigError(
             "policy quantiles must satisfy 0 < lower_quantile < "
@@ -111,6 +136,9 @@ def load_config(path: str | Path) -> ExperimentConfig:
     explainer = _section(raw, "explainer")
     comparison = _section(raw, "comparison")
     policy = _section(raw, "policy")
+    lime = raw.get("lime")
+    if lime is not None and not isinstance(lime, dict):
+        raise ConfigError("Invalid 'lime' section.")
 
     try:
         config = ExperimentConfig(
@@ -140,6 +168,27 @@ def load_config(path: str | Path) -> ExperimentConfig:
             explainer=ExplainerConfig(
                 method=str(explainer["method"]),
                 target_class=str(explainer["target_class"]),
+            ),
+            lime=(
+                None
+                if lime is None
+                else LimeConfig(
+                    baseline_seed=int(lime["baseline_seed"]),
+                    repeated_seeds=tuple(
+                        int(seed) for seed in lime["repeated_seeds"]
+                    ),
+                    probe_size=int(lime["probe_size"]),
+                    num_samples=int(lime["num_samples"]),
+                    kernel_width=(
+                        None
+                        if lime.get("kernel_width") is None
+                        else float(lime["kernel_width"])
+                    ),
+                    discretize_continuous=bool(
+                        lime["discretize_continuous"]
+                    ),
+                    output_dir=Path(lime["output_dir"]),
+                )
             ),
             comparison=ComparisonConfig(
                 metrics=tuple(str(metric) for metric in comparison["metrics"]),

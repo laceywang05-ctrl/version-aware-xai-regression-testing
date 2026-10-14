@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Sequence
 
 from xai_regression.config import ConfigError, load_config
+from xai_regression.lime_workflow import run_lime_stability
 from xai_regression.runner import run_validation
 
 
@@ -28,6 +29,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         default="config/default.yaml",
         help="Path to the experiment YAML file.",
+    )
+    lime_parser = subparsers.add_parser(
+        "lime-stability",
+        help="Measure repeated-seed LIME variance for one fixed model.",
+    )
+    lime_parser.add_argument(
+        "--config",
+        default="config/lime_stability.yaml",
+        help="Path to the LIME stability YAML file.",
     )
     return parser
 
@@ -51,6 +61,26 @@ def run_experiment(config_path: str | Path) -> int:
     return 0
 
 
+def run_lime_experiment(config_path: str | Path) -> int:
+    """Validate a config and execute the fixed-model LIME experiment."""
+    path = Path(config_path)
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+
+    config = load_config(path)
+    print(f"Experiment: {config.experiment_id}", flush=True)
+    print(f"Configuration: {path}", flush=True)
+    if config.lime is not None:
+        print(f"Output directory: {config.lime.output_dir}", flush=True)
+
+    run_lime_stability(
+        config,
+        config_path=path,
+        project_root=PROJECT_ROOT,
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -58,6 +88,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "run":
             return run_experiment(args.config)
+        if args.command == "lime-stability":
+            return run_lime_experiment(args.config)
     except ConfigError as error:
         parser.error(str(error))
 

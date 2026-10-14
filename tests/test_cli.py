@@ -32,6 +32,26 @@ class CliTests(unittest.TestCase):
         with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
             cli.main([])
 
+    def test_lime_command_uses_validated_config(self):
+        with (
+            patch(
+                "xai_regression.cli.run_lime_stability",
+                return_value={},
+            ) as run,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_lime_experiment(
+                PROJECT_ROOT / "config/lime_stability.yaml"
+            )
+
+        self.assertEqual(exit_code, 0)
+        config = run.call_args.args[0]
+        self.assertEqual(
+            config.experiment_id,
+            "breast-cancer-lime-stability-v1",
+        )
+        self.assertEqual(run.call_args.kwargs["project_root"], cli.PROJECT_ROOT)
+
 
 if __name__ == "__main__":
     unittest.main()
