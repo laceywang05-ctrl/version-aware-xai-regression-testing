@@ -91,6 +91,12 @@ The YAML configuration records the dataset split, fixed-probe size, reference
 and candidate model settings, benign-retraining seeds, explainer, comparison
 metrics and provisional policy quantiles used by the real-dataset experiment.
 
+The same real-dataset workflow can be launched through the package entry point:
+
+```bash
+PYTHONPATH=src python -m xai_regression run --config config/default.yaml
+```
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
