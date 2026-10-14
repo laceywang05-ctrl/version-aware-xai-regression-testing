@@ -2,7 +2,12 @@ import unittest
 
 import numpy as np
 
-from xai_regression.lime_workflow import explanation_to_vector
+import pandas as pd
+
+from xai_regression.lime_workflow import (
+    apply_sample_policy_flags,
+    explanation_to_vector,
+)
 
 
 class FakeExplanation:
@@ -27,6 +32,28 @@ class LimeWorkflowTests(unittest.TestCase):
                 label=0,
                 n_features=4,
             )
+
+    def test_policy_flags_respect_metric_direction(self):
+        frame = pd.DataFrame(
+            {
+                "cosine_similarity": [0.7, 0.9],
+                "direction_flip_rate": [0.1, 0.4],
+            }
+        )
+        result = apply_sample_policy_flags(
+            frame,
+            {"cosine_similarity": 0.8, "direction_flip_rate": 0.3},
+        )
+
+        self.assertEqual(
+            result["cosine_similarity_breach"].tolist(),
+            [True, False],
+        )
+        self.assertEqual(
+            result["direction_flip_rate_breach"].tolist(),
+            [False, True],
+        )
+        self.assertEqual(result["any_metric_breach"].tolist(), [True, True])
 
 
 if __name__ == "__main__":

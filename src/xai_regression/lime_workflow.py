@@ -6,17 +6,24 @@ import json
 from pathlib import Path
 from typing import Any
 
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas as pd
 
 from xai_regression.config import ExperimentConfig
+from xai_regression.runner import METRIC_DIRECTIONS, calibrate_policy
 from xai_regression.workflow import (
     compare_explanations,
     load_dataset,
+    predictive_metrics,
+    train_candidate_model,
     train_reference_model,
     validate_supported_data_model,
 )
+
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 
 
 METRIC_COLUMNS = (
@@ -116,6 +123,87 @@ def _save_distribution_figure(results: pd.DataFrame, path: Path) -> None:
     fig.tight_layout()
     fig.savefig(path, dpi=180, bbox_inches="tight")
     plt.close(fig)
+
+
+def apply_sample_policy_flags(
+    frame: pd.DataFrame,
+    sample_limits: dict[str, float],
+) -> pd.DataFrame:
+    """Add metric-level and combined advisory breach flags."""
+    flagged = frame.copy()
+    columns = []
+    for metric, limit in sample_limits.items():
+        direction = METRIC_DIRECTIONS[metric]
+        column = f"{metric}_breach"
+        flagged[column] = (
+            flagged[metric] < limit
+            if direction == "lower"
+            else flagged[metric] > limit
+        )
+        columns.append(column)
+    flagged["any_metric_breach"] = flagged[columns].any(axis=1)
+    return flagged
+
+
+def _save_cross_version_figure(
+    benign: pd.DataFrame,
+    candidate: pd.DataFrame,
+    policy: pd.DataFrame,
+    path: Path,
+) -> None:
+    figure, axes = plt.subplots(1, 2, figsize=(13, 5.5))
+    positions = np.arange(len(METRIC_COLUMNS))
+    benign_data = [benign[metric].to_numpy() for metric in METRIC_COLUMNS]
+    candidate_data = [candidate[metric].to_numpy() for metric in METRIC_COLUMNS]
+    axes[0].boxplot(
+        benign_data,
+        positions=positions - 0.17,
+        widths=0.28,
+        patch_artist=True,
+        boxprops={"facecolor": "#6baed6"},
+        medianprops={"color": "black"},
+    )
+    axes[0].boxplot(
+        candidate_data,
+        positions=positions + 0.17,
+        widths=0.28,
+        patch_artist=True,
+        boxprops={"facecolor": "#fd8d3c"},
+        medianprops={"color": "black"},
+    )
+    axes[0].set_xticks(
+        positions,
+        [metric.replace("_", "\n") for metric in METRIC_COLUMNS],
+    )
+    axes[0].set_title("Fixed-Model Variation vs Cross-Version Change")
+    axes[0].set_ylabel("Metric value")
+    axes[0].plot([], [], color="#6baed6", linewidth=8, label="fixed model")
+    axes[0].plot([], [], color="#fd8d3c", linewidth=8, label="cross version")
+    axes[0].legend()
+
+    axes[1].bar(
+        policy["metric"],
+        policy["candidate_breach_rate"],
+        color="#fd8d3c",
+        label="cross-version breach rate",
+    )
+    axes[1].scatter(
+        policy["metric"],
+        policy["run_level_limit_95_percent"],
+        color="#2b8cbe",
+        marker="_",
+        s=500,
+        linewidths=3,
+        label="fixed-model run limit",
+    )
+    axes[1].tick_params(axis="x", rotation=25)
+    axes[1].set_ylabel("Fraction of matched samples")
+    axes[1].set_title("Advisory Policy Evaluation")
+    axes[1].legend()
+    figure.suptitle("LIME Cross-Version Explanation Comparison")
+    figure.tight_layout()
+    figure.savefig(path, dpi=180, bbox_inches="tight")
+    plt.close(figure)
 
 
 def run_lime_stability(
@@ -222,6 +310,206 @@ def run_lime_stability(
     print(f"Matched comparisons: {len(per_sample)}")
     for metric, value in summary["overall_means"].items():
         print(f"Mean {metric}: {value:.6f}")
+    print(f"Reports saved to: {reports_dir}")
+    print(f"Figure saved to: {figure_path}")
+    return summary
+
+
+def run_lime_cross_version(
+    config: ExperimentConfig,
+    *,
+    config_path: str | Path,
+    project_root: Path,
+) -> dict[str, Any]:
+    """Compare reference and candidate LIME explanations against noise."""
+    validate_supported_data_model(config)
+    if config.explainer.method != "lime" or config.lime is None:
+        raise ValueError("This command requires explainer.method=lime.")
+
+    split = load_dataset(config)
+    X_probe = split.X_probe.iloc[: config.lime.probe_size].copy()
+    reference_model = train_reference_model(
+        config,
+        config.model.reference_seed,
+        split.X_train,
+        split.y_train,
+    )
+    candidate_model = train_candidate_model(
+        config,
+        split.X_train,
+        split.y_train,
+    )
+    reference_predictions = reference_model.predict(X_probe)
+    candidate_predictions = candidate_model.predict(X_probe)
+    prediction_changes = reference_predictions != candidate_predictions
+
+    baseline_reference = generate_lime_matrix(
+        config,
+        reference_model,
+        split.X_train,
+        X_probe,
+        seed=config.lime.baseline_seed,
+    )
+    benign_frames = []
+    candidate_frames = []
+    paired_candidate_frames = []
+    for seed in config.lime.repeated_seeds:
+        reference_values = generate_lime_matrix(
+            config,
+            reference_model,
+            split.X_train,
+            X_probe,
+            seed=seed,
+        )
+        benign = compare_explanations(
+            config,
+            baseline_reference,
+            reference_values,
+            np.zeros(len(X_probe), dtype=bool),
+        )
+        benign.insert(0, "seed", seed)
+        benign_frames.append(benign)
+
+        candidate_values = generate_lime_matrix(
+            config,
+            candidate_model,
+            split.X_train,
+            X_probe,
+            seed=seed,
+        )
+        candidate = compare_explanations(
+            config,
+            baseline_reference,
+            candidate_values,
+            prediction_changes,
+        )
+        candidate.insert(0, "seed", seed)
+        candidate_frames.append(candidate)
+
+        paired_candidate = compare_explanations(
+            config,
+            reference_values,
+            candidate_values,
+            prediction_changes,
+        )
+        paired_candidate.insert(0, "seed", seed)
+        paired_candidate_frames.append(paired_candidate)
+
+    benign_samples = pd.concat(benign_frames, ignore_index=True)
+    candidate_samples = pd.concat(candidate_frames, ignore_index=True)
+    paired_candidate_samples = pd.concat(
+        paired_candidate_frames,
+        ignore_index=True,
+    )
+    policy, sample_limits = calibrate_policy(
+        config,
+        benign_samples,
+        candidate_samples,
+    )
+    candidate_flagged = apply_sample_policy_flags(
+        candidate_samples,
+        sample_limits,
+    )
+    overall_status = (
+        "REVIEW" if policy["review_flag"].any() else "WITHIN_BASELINE"
+    )
+
+    output_dir = project_root / config.lime.output_dir
+    reports_dir = output_dir / "reports"
+    figures_dir = output_dir / "figures"
+    data_dir = output_dir / "data"
+    for directory in (reports_dir, figures_dir, data_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    probe = X_probe.reset_index(names="source_row")
+    probe.insert(0, "sample_id", range(len(probe)))
+    probe["target_malignant"] = split.y_probe.iloc[: len(X_probe)].to_numpy()
+    probe.to_csv(data_dir / "fixed_probe.csv", index=False)
+    benign_samples.to_csv(
+        reports_dir / "fixed_model_baseline.csv",
+        index=False,
+    )
+    candidate_flagged.to_csv(
+        reports_dir / "cross_version_per_sample.csv",
+        index=False,
+    )
+    paired_candidate_samples.to_csv(
+        reports_dir / "paired_seed_cross_version.csv",
+        index=False,
+    )
+    policy.to_csv(reports_dir / "policy_evaluation.csv", index=False)
+    figure_path = figures_dir / "lime_cross_version_comparison.png"
+    _save_cross_version_figure(
+        benign_samples,
+        candidate_samples,
+        policy,
+        figure_path,
+    )
+
+    summary: dict[str, Any] = {
+        "experiment_id": config.experiment_id,
+        "config_path": str(Path(config_path)),
+        "status": overall_status,
+        "interpretation": (
+            "Policy comparison uses the same independent-seed structure for "
+            "fixed-model and cross-version runs. The paired-seed result "
+            "controls random perturbations and is descriptive. REVIEW is not "
+            "proof of a defective model."
+        ),
+        "probe_samples": len(X_probe),
+        "repeated_seeds": len(config.lime.repeated_seeds),
+        "matched_cross_version_comparisons": len(candidate_samples),
+        "probe_prediction_agreement": float(1.0 - prediction_changes.mean()),
+        "reference_performance": predictive_metrics(
+            reference_model,
+            split.X_test,
+            split.y_test,
+        ),
+        "candidate_performance": predictive_metrics(
+            candidate_model,
+            split.X_test,
+            split.y_test,
+        ),
+        "fixed_model_means": {
+            metric: float(benign_samples[metric].mean())
+            for metric in METRIC_COLUMNS
+        },
+        "noise_matched_cross_version_means": {
+            metric: float(candidate_samples[metric].mean())
+            for metric in METRIC_COLUMNS
+        },
+        "paired_seed_cross_version_means": {
+            metric: float(paired_candidate_samples[metric].mean())
+            for metric in METRIC_COLUMNS
+        },
+        "sample_limits": sample_limits,
+        "flagged_metrics": policy.loc[policy["review_flag"], "metric"].tolist(),
+        "any_metric_breach_rate": float(
+            candidate_flagged["any_metric_breach"].mean()
+        ),
+    }
+    (reports_dir / "summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    print("LIME cross-version comparison")
+    print("-----------------------------")
+    print(f"Status: {overall_status}")
+    print(
+        "Probe prediction agreement: "
+        f"{summary['probe_prediction_agreement']:.3f}"
+    )
+    for metric in METRIC_COLUMNS:
+        baseline = summary["fixed_model_means"][metric]
+        cross_version = summary["noise_matched_cross_version_means"][metric]
+        paired = summary["paired_seed_cross_version_means"][metric]
+        print(
+            f"{metric}: baseline={baseline:.6f}, "
+            f"noise-matched cross={cross_version:.6f}, "
+            f"paired cross={paired:.6f}"
+        )
+    print(f"Flagged metrics: {summary['flagged_metrics']}")
     print(f"Reports saved to: {reports_dir}")
     print(f"Figure saved to: {figure_path}")
     return summary

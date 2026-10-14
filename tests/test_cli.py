@@ -52,6 +52,24 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(run.call_args.kwargs["project_root"], cli.PROJECT_ROOT)
 
+    def test_lime_compare_command_uses_validated_config(self):
+        with (
+            patch(
+                "xai_regression.cli.run_lime_cross_version",
+                return_value={},
+            ) as run,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_lime_comparison(
+                PROJECT_ROOT / "config/lime_cross_version.yaml"
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.args[0].experiment_id,
+            "breast-cancer-lime-cross-version-v1",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

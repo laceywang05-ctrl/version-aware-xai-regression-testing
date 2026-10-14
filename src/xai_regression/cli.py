@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Sequence
 
 from xai_regression.config import ConfigError, load_config
-from xai_regression.lime_workflow import run_lime_stability
+from xai_regression.lime_workflow import (
+    run_lime_cross_version,
+    run_lime_stability,
+)
 from xai_regression.runner import run_validation
 
 
@@ -38,6 +41,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         default="config/lime_stability.yaml",
         help="Path to the LIME stability YAML file.",
+    )
+    compare_parser = subparsers.add_parser(
+        "lime-compare",
+        help="Compare two model versions against fixed-model LIME variation.",
+    )
+    compare_parser.add_argument(
+        "--config",
+        default="config/lime_cross_version.yaml",
+        help="Path to the LIME cross-version YAML file.",
     )
     return parser
 
@@ -81,6 +93,22 @@ def run_lime_experiment(config_path: str | Path) -> int:
     return 0
 
 
+def run_lime_comparison(config_path: str | Path) -> int:
+    """Execute the LIME cross-version comparison workflow."""
+    path = Path(config_path)
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    config = load_config(path)
+    print(f"Experiment: {config.experiment_id}", flush=True)
+    print(f"Configuration: {path}", flush=True)
+    run_lime_cross_version(
+        config,
+        config_path=path,
+        project_root=PROJECT_ROOT,
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -90,6 +118,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_experiment(args.config)
         if args.command == "lime-stability":
             return run_lime_experiment(args.config)
+        if args.command == "lime-compare":
+            return run_lime_comparison(args.config)
     except ConfigError as error:
         parser.error(str(error))
 

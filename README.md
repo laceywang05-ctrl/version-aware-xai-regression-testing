@@ -111,6 +111,19 @@ differences estimate explainer variance; they are not evidence of model drift.
 The observed baseline is summarised in
 [`docs/LIME_STABILITY_RESULT.md`](docs/LIME_STABILITY_RESULT.md).
 
+Compare reference and candidate model versions using identical LIME seeds, then
+evaluate the changes against the fixed-model LIME baseline:
+
+```bash
+PYTHONPATH=src python -m xai_regression lime-compare --config config/lime_cross_version.yaml
+```
+
+The resulting policy status is advisory. A `REVIEW` result identifies changes
+larger than the measured fixed-model variation; it does not by itself prove a
+software defect, harmful regression or real-world concept drift.
+The first cross-version result and its limitations are documented in
+[`docs/LIME_CROSS_VERSION_RESULT.md`](docs/LIME_CROSS_VERSION_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
