@@ -84,8 +84,12 @@ python experiments/03_compare_explanations.py
 python experiments/04_same_model_stability.py
 python experiments/05_retraining_baseline.py
 python experiments/06_apply_provisional_policy.py
-python experiments/07_real_dataset_validation.py
+python experiments/07_real_dataset_validation.py --config config/default.yaml
 ```
+
+The YAML configuration records the dataset split, fixed-probe size, reference
+and candidate model settings, benign-retraining seeds, explainer, comparison
+metrics and provisional policy quantiles used by the real-dataset experiment.
 
 ## Important interpretation rule
 

@@ -16,6 +16,7 @@ pyarrow==22.0.0
 pyparsing==3.3.3
 python-dateutil==2.9.0.post0
 pytz==2026.5
+PyYAML==6.0.3
 scikit-learn==1.9.1
 scipy==1.18.1
 shap==0.50.0

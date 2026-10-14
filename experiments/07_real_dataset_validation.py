@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -34,15 +35,28 @@ from xai_regression.metrics import (  # noqa: E402
     direction_flip_rate,
     top_k_overlap,
 )
+from xai_regression.config import load_config  # noqa: E402
 
 
-DATA_SEED = 42
-REFERENCE_SEED = 42
-BENIGN_SEEDS = [7, 21, 55, 84, 126, 168, 210, 252, 294, 336]
-TOP_K = 5
-PROBE_SIZE = 100
+parser = argparse.ArgumentParser(
+    description="Validate explanation regression on a real tabular dataset."
+)
+parser.add_argument(
+    "--config",
+    default="config/default.yaml",
+    help="Path to the experiment YAML file.",
+)
+args = parser.parse_args()
+CONFIG = load_config(args.config)
 
-OUTPUT_DIR = Path("artifacts/experiment_05_real_dataset")
+if CONFIG.dataset.name != "breast_cancer":
+    raise ValueError("This runner currently supports dataset.name=breast_cancer only.")
+if CONFIG.model.family != "random_forest":
+    raise ValueError("This runner currently supports model.family=random_forest only.")
+if CONFIG.explainer.method != "tree_shap":
+    raise ValueError("This runner currently supports explainer.method=tree_shap only.")
+
+OUTPUT_DIR = CONFIG.output_dir
 REPORT_DIR = OUTPUT_DIR / "reports"
 FIGURE_DIR = OUTPUT_DIR / "figures"
 DATA_DIR = OUTPUT_DIR / "data"
@@ -61,20 +75,20 @@ def load_fixed_dataset():
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
-        test_size=0.25,
-        random_state=DATA_SEED,
+        test_size=CONFIG.dataset.test_size,
+        random_state=CONFIG.dataset.split_seed,
         stratify=y,
     )
 
-    X_probe = X_test.iloc[:PROBE_SIZE].copy()
-    y_probe = y_test.iloc[:PROBE_SIZE].copy()
+    X_probe = X_test.iloc[: CONFIG.dataset.probe_size].copy()
+    y_probe = y_test.iloc[: CONFIG.dataset.probe_size].copy()
     return X_train, X_test, y_train, y_test, X_probe, y_probe
 
 
 def train_reference_configuration(seed, X_train, y_train):
     model = RandomForestClassifier(
-        n_estimators=200,
-        class_weight="balanced",
+        n_estimators=CONFIG.model.n_estimators,
+        class_weight=CONFIG.model.class_weight,
         random_state=seed,
         n_jobs=-1,
     )
@@ -84,11 +98,11 @@ def train_reference_configuration(seed, X_train, y_train):
 
 def train_controlled_candidate(X_train, y_train):
     model = RandomForestClassifier(
-        n_estimators=200,
-        max_depth=4,
-        min_samples_leaf=5,
-        class_weight="balanced",
-        random_state=99,
+        n_estimators=CONFIG.model.n_estimators,
+        max_depth=CONFIG.model.candidate_max_depth,
+        min_samples_leaf=CONFIG.model.candidate_min_samples_leaf,
+        class_weight=CONFIG.model.class_weight,
+        random_state=CONFIG.model.candidate_random_seed,
         n_jobs=-1,
     )
     model.fit(X_train, y_train)
@@ -130,7 +144,11 @@ def compare_explanations(reference_values, candidate_values, prediction_changes)
                 "prediction_changed": bool(prediction_changes[sample_id]),
                 "cosine_similarity": cosine_similarity(left, right),
                 "rank_correlation": absolute_rank_correlation(left, right),
-                "top_k_overlap": top_k_overlap(left, right, TOP_K),
+                "top_k_overlap": top_k_overlap(
+                    left,
+                    right,
+                    CONFIG.comparison.top_k,
+                ),
                 "direction_flip_rate": direction_flip_rate(left, right),
             }
         )
@@ -144,7 +162,11 @@ probe_to_save.insert(0, "sample_id", range(len(probe_to_save)))
 probe_to_save["target_malignant"] = y_probe.to_numpy()
 probe_to_save.to_csv(DATA_DIR / "fixed_probe.csv", index=False)
 
-reference_model = train_reference_configuration(REFERENCE_SEED, X_train, y_train)
+reference_model = train_reference_configuration(
+    CONFIG.model.reference_seed,
+    X_train,
+    y_train,
+)
 reference_values = positive_class_shap_values(reference_model, X_probe)
 reference_predictions = reference_model.predict(X_probe)
 reference_performance = predictive_metrics(reference_model, X_test, y_test)
@@ -152,7 +174,7 @@ reference_performance = predictive_metrics(reference_model, X_test, y_test)
 benign_frames = []
 benign_run_rows = []
 
-for seed in BENIGN_SEEDS:
+for seed in CONFIG.model.benign_seeds:
     benign_model = train_reference_configuration(seed, X_train, y_train)
     benign_values = positive_class_shap_values(benign_model, X_probe)
     benign_predictions = benign_model.predict(X_probe)
@@ -191,11 +213,25 @@ candidate_comparison = compare_explanations(
 )
 
 sample_limits = {
-    "cosine_similarity": float(benign_samples["cosine_similarity"].quantile(0.05)),
-    "rank_correlation": float(benign_samples["rank_correlation"].quantile(0.05)),
-    "top_k_overlap": float(benign_samples["top_k_overlap"].quantile(0.05)),
+    "cosine_similarity": float(
+        benign_samples["cosine_similarity"].quantile(
+            CONFIG.policy.lower_quantile
+        )
+    ),
+    "rank_correlation": float(
+        benign_samples["rank_correlation"].quantile(
+            CONFIG.policy.lower_quantile
+        )
+    ),
+    "top_k_overlap": float(
+        benign_samples["top_k_overlap"].quantile(
+            CONFIG.policy.lower_quantile
+        )
+    ),
     "direction_flip_rate": float(
-        benign_samples["direction_flip_rate"].quantile(0.95)
+        benign_samples["direction_flip_rate"].quantile(
+            CONFIG.policy.upper_quantile
+        )
     ),
 }
 
@@ -222,7 +258,9 @@ for metric, direction in rules:
         .groupby("seed")["breach"]
         .mean()
     )
-    run_level_limit = float(baseline_rates.quantile(0.95))
+    run_level_limit = float(
+        baseline_rates.quantile(CONFIG.policy.upper_quantile)
+    )
     candidate_rate = float(
         breach_mask(candidate_comparison, metric, direction).mean()
     )
@@ -319,6 +357,8 @@ figure.savefig(FIGURE_DIR / "real_dataset_validation.png", dpi=180)
 plt.close(figure)
 
 summary = {
+    "experiment_id": CONFIG.experiment_id,
+    "config_path": str(Path(args.config)),
     "dataset": "scikit-learn Breast Cancer Wisconsin Diagnostic",
     "samples": int(len(X_train) + len(X_test)),
     "features": int(X_train.shape[1]),
