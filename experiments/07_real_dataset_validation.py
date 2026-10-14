@@ -10,16 +10,6 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 import pandas as pd
-import shap
-from sklearn.datasets import load_breast_cancer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    balanced_accuracy_score,
-    f1_score,
-    roc_auc_score,
-)
-from sklearn.model_selection import train_test_split
 
 
 matplotlib.use("Agg")
@@ -29,13 +19,16 @@ import matplotlib.pyplot as plt  # noqa: E402
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from xai_regression.metrics import (  # noqa: E402
-    absolute_rank_correlation,
-    cosine_similarity,
-    direction_flip_rate,
-    top_k_overlap,
-)
 from xai_regression.config import load_config  # noqa: E402
+from xai_regression.workflow import (  # noqa: E402
+    compare_explanations,
+    load_dataset,
+    positive_class_shap_values,
+    predictive_metrics,
+    train_candidate_model,
+    train_reference_model,
+    validate_supported_workflow,
+)
 
 
 parser = argparse.ArgumentParser(
@@ -49,12 +42,7 @@ parser.add_argument(
 args = parser.parse_args()
 CONFIG = load_config(args.config)
 
-if CONFIG.dataset.name != "breast_cancer":
-    raise ValueError("This runner currently supports dataset.name=breast_cancer only.")
-if CONFIG.model.family != "random_forest":
-    raise ValueError("This runner currently supports model.family=random_forest only.")
-if CONFIG.explainer.method != "tree_shap":
-    raise ValueError("This runner currently supports explainer.method=tree_shap only.")
+validate_supported_workflow(CONFIG)
 
 OUTPUT_DIR = CONFIG.output_dir
 REPORT_DIR = OUTPUT_DIR / "reports"
@@ -64,105 +52,21 @@ for directory in (REPORT_DIR, FIGURE_DIR, DATA_DIR):
     directory.mkdir(parents=True, exist_ok=True)
 
 
-def load_fixed_dataset():
-    dataset = load_breast_cancer(as_frame=True)
-    X = dataset.data.copy()
-
-    # The source dataset uses malignant=0 and benign=1. Recode malignant as the
-    # positive class so positive-class explanations describe cancer risk.
-    y = (dataset.target == 0).astype(int)
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=CONFIG.dataset.test_size,
-        random_state=CONFIG.dataset.split_seed,
-        stratify=y,
-    )
-
-    X_probe = X_test.iloc[: CONFIG.dataset.probe_size].copy()
-    y_probe = y_test.iloc[: CONFIG.dataset.probe_size].copy()
-    return X_train, X_test, y_train, y_test, X_probe, y_probe
-
-
-def train_reference_configuration(seed, X_train, y_train):
-    model = RandomForestClassifier(
-        n_estimators=CONFIG.model.n_estimators,
-        class_weight=CONFIG.model.class_weight,
-        random_state=seed,
-        n_jobs=-1,
-    )
-    model.fit(X_train, y_train)
-    return model
-
-
-def train_controlled_candidate(X_train, y_train):
-    model = RandomForestClassifier(
-        n_estimators=CONFIG.model.n_estimators,
-        max_depth=CONFIG.model.candidate_max_depth,
-        min_samples_leaf=CONFIG.model.candidate_min_samples_leaf,
-        class_weight=CONFIG.model.class_weight,
-        random_state=CONFIG.model.candidate_random_seed,
-        n_jobs=-1,
-    )
-    model.fit(X_train, y_train)
-    return model
-
-
-def positive_class_shap_values(model, X_probe):
-    values = np.asarray(shap.TreeExplainer(model)(X_probe).values)
-
-    if values.ndim == 3:
-        if values.shape[2] != 2:
-            raise RuntimeError(f"Expected binary-class SHAP values, got {values.shape}.")
-        values = values[:, :, 1]
-    elif values.ndim != 2:
-        raise RuntimeError(f"Expected a 2D explanation array, got {values.shape}.")
-
-    return values
-
-
-def predictive_metrics(model, X_test, y_test):
-    predictions = model.predict(X_test)
-    probabilities = model.predict_proba(X_test)[:, 1]
-    return {
-        "accuracy": float(accuracy_score(y_test, predictions)),
-        "balanced_accuracy": float(balanced_accuracy_score(y_test, predictions)),
-        "f1_malignant": float(f1_score(y_test, predictions)),
-        "roc_auc": float(roc_auc_score(y_test, probabilities)),
-    }
-
-
-def compare_explanations(reference_values, candidate_values, prediction_changes):
-    rows = []
-    for sample_id, (left, right) in enumerate(
-        zip(reference_values, candidate_values)
-    ):
-        rows.append(
-            {
-                "sample_id": sample_id,
-                "prediction_changed": bool(prediction_changes[sample_id]),
-                "cosine_similarity": cosine_similarity(left, right),
-                "rank_correlation": absolute_rank_correlation(left, right),
-                "top_k_overlap": top_k_overlap(
-                    left,
-                    right,
-                    CONFIG.comparison.top_k,
-                ),
-                "direction_flip_rate": direction_flip_rate(left, right),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-X_train, X_test, y_train, y_test, X_probe, y_probe = load_fixed_dataset()
+dataset = load_dataset(CONFIG)
+X_train = dataset.X_train
+X_test = dataset.X_test
+y_train = dataset.y_train
+y_test = dataset.y_test
+X_probe = dataset.X_probe
+y_probe = dataset.y_probe
 
 probe_to_save = X_probe.reset_index(names="source_row")
 probe_to_save.insert(0, "sample_id", range(len(probe_to_save)))
 probe_to_save["target_malignant"] = y_probe.to_numpy()
 probe_to_save.to_csv(DATA_DIR / "fixed_probe.csv", index=False)
 
-reference_model = train_reference_configuration(
+reference_model = train_reference_model(
+    CONFIG,
     CONFIG.model.reference_seed,
     X_train,
     y_train,
@@ -175,10 +79,11 @@ benign_frames = []
 benign_run_rows = []
 
 for seed in CONFIG.model.benign_seeds:
-    benign_model = train_reference_configuration(seed, X_train, y_train)
+    benign_model = train_reference_model(CONFIG, seed, X_train, y_train)
     benign_values = positive_class_shap_values(benign_model, X_probe)
     benign_predictions = benign_model.predict(X_probe)
     comparison = compare_explanations(
+        CONFIG,
         reference_values,
         benign_values,
         reference_predictions != benign_predictions,
@@ -202,11 +107,12 @@ for seed in CONFIG.model.benign_seeds:
 benign_samples = pd.concat(benign_frames, ignore_index=True)
 benign_runs = pd.DataFrame(benign_run_rows)
 
-candidate_model = train_controlled_candidate(X_train, y_train)
+candidate_model = train_candidate_model(CONFIG, X_train, y_train)
 candidate_values = positive_class_shap_values(candidate_model, X_probe)
 candidate_predictions = candidate_model.predict(X_probe)
 candidate_performance = predictive_metrics(candidate_model, X_test, y_test)
 candidate_comparison = compare_explanations(
+    CONFIG,
     reference_values,
     candidate_values,
     reference_predictions != candidate_predictions,

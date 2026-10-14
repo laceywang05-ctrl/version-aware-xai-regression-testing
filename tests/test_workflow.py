@@ -1,0 +1,50 @@
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+from xai_regression.config import load_config
+from xai_regression.workflow import compare_explanations, load_dataset
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+class WorkflowTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.config = load_config(PROJECT_ROOT / "config/default.yaml")
+
+    def test_dataset_split_and_probe_are_reproducible(self):
+        first = load_dataset(self.config)
+        second = load_dataset(self.config)
+
+        self.assertEqual(len(first.X_train) + len(first.X_test), 569)
+        self.assertEqual(len(first.X_probe), 100)
+        self.assertTrue(first.X_probe.equals(second.X_probe))
+        self.assertTrue(first.y_probe.equals(second.y_probe))
+
+    def test_identical_explanations_produce_stable_metrics(self):
+        values = np.array(
+            [
+                [1.0, -2.0, 0.5, 0.2, -0.1],
+                [0.2, 0.1, -0.4, 0.7, -0.3],
+            ]
+        )
+        changes = np.array([False, False])
+        comparison = compare_explanations(
+            self.config,
+            values,
+            values,
+            changes,
+        )
+
+        self.assertTrue(
+            np.allclose(comparison["cosine_similarity"], 1.0)
+        )
+        self.assertTrue(np.allclose(comparison["rank_correlation"], 1.0))
+        self.assertTrue((comparison["direction_flip_rate"] == 0.0).all())
+
+
+if __name__ == "__main__":
+    unittest.main()
