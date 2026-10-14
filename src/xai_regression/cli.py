@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import subprocess
-import sys
 from pathlib import Path
 from typing import Sequence
 
 from xai_regression.config import ConfigError, load_config
+from xai_regression.runner import run_validation
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -40,23 +39,16 @@ def run_experiment(config_path: str | Path) -> int:
         path = PROJECT_ROOT / path
 
     config = load_config(path)
-    script_path = PROJECT_ROOT / "experiments/07_real_dataset_validation.py"
-
     print(f"Experiment: {config.experiment_id}", flush=True)
     print(f"Configuration: {path}", flush=True)
     print(f"Output directory: {config.output_dir}", flush=True)
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(script_path),
-            "--config",
-            str(path),
-        ],
-        cwd=PROJECT_ROOT,
-        check=False,
+    run_validation(
+        config,
+        config_path=path,
+        project_root=PROJECT_ROOT,
     )
-    return completed.returncode
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
