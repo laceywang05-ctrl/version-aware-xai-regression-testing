@@ -124,6 +124,18 @@ software defect, harmful regression or real-world concept drift.
 The first cross-version result and its limitations are documented in
 [`docs/LIME_CROSS_VERSION_RESULT.md`](docs/LIME_CROSS_VERSION_RESULT.md).
 
+Combine the completed SHAP and LIME artifacts into one method-aware report:
+
+```bash
+PYTHONPATH=src python -m xai_regression report
+```
+
+The unified report preserves each explainer's baseline definition and writes
+CSV, JSON, Markdown and figure outputs under
+`artifacts/experiment_08_unified_report/`.
+The current combined result is summarised in
+[`docs/UNIFIED_REPORT_RESULT.md`](docs/UNIFIED_REPORT_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.

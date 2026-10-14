@@ -70,6 +70,18 @@ class CliTests(unittest.TestCase):
             "breast-cancer-lime-cross-version-v1",
         )
 
+    def test_report_command_resolves_project_paths(self):
+        with patch(
+            "xai_regression.cli.run_unified_report",
+            return_value={},
+        ) as run:
+            exit_code = cli.run_report("shap", "lime", "output")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(run.call_args.kwargs["shap_report_dir"], cli.PROJECT_ROOT / "shap")
+        self.assertEqual(run.call_args.kwargs["lime_report_dir"], cli.PROJECT_ROOT / "lime")
+        self.assertEqual(run.call_args.kwargs["output_dir"], cli.PROJECT_ROOT / "output")
+
 
 if __name__ == "__main__":
     unittest.main()

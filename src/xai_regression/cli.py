@@ -12,6 +12,7 @@ from xai_regression.lime_workflow import (
     run_lime_stability,
 )
 from xai_regression.runner import run_validation
+from xai_regression.reporting import run_unified_report
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -50,6 +51,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         default="config/lime_cross_version.yaml",
         help="Path to the LIME cross-version YAML file.",
+    )
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Combine existing SHAP and LIME experiment artifacts.",
+    )
+    report_parser.add_argument(
+        "--shap-report-dir",
+        default="artifacts/experiment_05_real_dataset/reports",
+    )
+    report_parser.add_argument(
+        "--lime-report-dir",
+        default="artifacts/experiment_07_lime_cross_version/reports",
+    )
+    report_parser.add_argument(
+        "--output-dir",
+        default="artifacts/experiment_08_unified_report",
     )
     return parser
 
@@ -109,6 +126,25 @@ def run_lime_comparison(config_path: str | Path) -> int:
     return 0
 
 
+def _project_path(value: str | Path) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
+
+def run_report(
+    shap_report_dir: str | Path,
+    lime_report_dir: str | Path,
+    output_dir: str | Path,
+) -> int:
+    """Build one report from previously generated experiment artifacts."""
+    run_unified_report(
+        shap_report_dir=_project_path(shap_report_dir),
+        lime_report_dir=_project_path(lime_report_dir),
+        output_dir=_project_path(output_dir),
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -120,6 +156,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_lime_experiment(args.config)
         if args.command == "lime-compare":
             return run_lime_comparison(args.config)
+        if args.command == "report":
+            return run_report(
+                args.shap_report_dir,
+                args.lime_report_dir,
+                args.output_dir,
+            )
     except ConfigError as error:
         parser.error(str(error))
 
