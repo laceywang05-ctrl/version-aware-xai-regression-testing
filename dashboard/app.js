@@ -169,12 +169,27 @@ elements.upload.addEventListener("change", async (event) => {
   }
 });
 
-fetch("data/example-report.json")
-  .then((response) => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  })
-  .then((report) => renderReport(report, "Showing the bundled example report."))
-  .catch((error) => {
+async function loadInitialReport() {
+  try {
+    const generated = await fetch("data/report.json", { cache: "no-store" });
+    if (generated.ok) {
+      renderReport(
+        await generated.json(),
+        "Loaded the latest generated workflow report.",
+      );
+      return;
+    }
+  } catch (_error) {
+    // A normal static server does not provide the runtime report route.
+  }
+
+  try {
+    const example = await fetch("data/example-report.json");
+    if (!example.ok) throw new Error(`HTTP ${example.status}`);
+    renderReport(await example.json(), "Showing the bundled example report.");
+  } catch (error) {
     elements.message.textContent = `Example report could not be loaded: ${error.message}`;
-  });
+  }
+}
+
+loadInitialReport();

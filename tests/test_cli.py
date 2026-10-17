@@ -82,6 +82,49 @@ class CliTests(unittest.TestCase):
         self.assertEqual(run.call_args.kwargs["lime_report_dir"], cli.PROJECT_ROOT / "lime")
         self.assertEqual(run.call_args.kwargs["output_dir"], cli.PROJECT_ROOT / "output")
 
+    def test_workflow_runs_pipeline_without_serving_by_default(self):
+        with (
+            patch(
+                "xai_regression.cli.run_pipeline",
+                return_value={"report_path": Path("summary.json")},
+            ) as pipeline,
+            patch("xai_regression.cli.serve_dashboard") as serve,
+        ):
+            exit_code = cli.run_workflow(
+                "shap.yaml",
+                "lime.yaml",
+                "output",
+                serve=False,
+                host="127.0.0.1",
+                port=8000,
+            )
+
+        self.assertEqual(exit_code, 0)
+        pipeline.assert_called_once()
+        serve.assert_not_called()
+
+    def test_workflow_can_serve_generated_report(self):
+        report_path = PROJECT_ROOT / "summary.json"
+        with (
+            patch(
+                "xai_regression.cli.run_pipeline",
+                return_value={"report_path": report_path},
+            ),
+            patch("xai_regression.cli.serve_dashboard") as serve,
+        ):
+            exit_code = cli.run_workflow(
+                "shap.yaml",
+                "lime.yaml",
+                "output",
+                serve=True,
+                host="127.0.0.1",
+                port=8123,
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(serve.call_args.kwargs["report_path"], report_path)
+        self.assertEqual(serve.call_args.kwargs["port"], 8123)
+
 
 if __name__ == "__main__":
     unittest.main()

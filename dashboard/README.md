@@ -16,3 +16,12 @@ new report.
 
 Opening `index.html` directly is not recommended because browsers may block the
 example JSON request for local files.
+
+To serve the latest generated unified report automatically, run:
+
+```bash
+PYTHONPATH=src python -m xai_regression serve
+```
+
+The local server exposes only the selected report at a fixed read-only route.
+It binds to `127.0.0.1` by default and does not upload report data externally.

@@ -11,8 +11,10 @@ from xai_regression.lime_workflow import (
     run_lime_cross_version,
     run_lime_stability,
 )
+from xai_regression.pipeline import run_pipeline
 from xai_regression.runner import run_validation
 from xai_regression.reporting import run_unified_report
+from xai_regression.server import serve_dashboard
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -68,6 +70,39 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default="artifacts/experiment_08_unified_report",
     )
+    workflow_parser = subparsers.add_parser(
+        "workflow",
+        help="Run SHAP, LIME and unified reporting as one workflow.",
+    )
+    workflow_parser.add_argument(
+        "--shap-config",
+        default="config/default.yaml",
+    )
+    workflow_parser.add_argument(
+        "--lime-config",
+        default="config/lime_cross_version.yaml",
+    )
+    workflow_parser.add_argument(
+        "--output-dir",
+        default="artifacts/experiment_08_unified_report",
+    )
+    workflow_parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Serve the dashboard with the newly generated report.",
+    )
+    workflow_parser.add_argument("--host", default="127.0.0.1")
+    workflow_parser.add_argument("--port", type=int, default=8000)
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Serve the dashboard with an existing unified report.",
+    )
+    serve_parser.add_argument(
+        "--report",
+        default="artifacts/experiment_08_unified_report/reports/summary.json",
+    )
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=8000)
     return parser
 
 
@@ -145,6 +180,43 @@ def run_report(
     return 0
 
 
+def run_workflow(
+    shap_config: str | Path,
+    lime_config: str | Path,
+    output_dir: str | Path,
+    *,
+    serve: bool,
+    host: str,
+    port: int,
+) -> int:
+    """Run the complete workflow and optionally start the local dashboard."""
+    result = run_pipeline(
+        shap_config_path=_project_path(shap_config),
+        lime_config_path=_project_path(lime_config),
+        output_dir=_project_path(output_dir),
+        project_root=PROJECT_ROOT,
+    )
+    if serve:
+        serve_dashboard(
+            report_path=result["report_path"],
+            dashboard_dir=PROJECT_ROOT / "dashboard",
+            host=host,
+            port=port,
+        )
+    return 0
+
+
+def run_dashboard(report: str | Path, *, host: str, port: int) -> int:
+    """Serve the dashboard with a previously generated unified report."""
+    serve_dashboard(
+        report_path=_project_path(report),
+        dashboard_dir=PROJECT_ROOT / "dashboard",
+        host=host,
+        port=port,
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -162,7 +234,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.lime_report_dir,
                 args.output_dir,
             )
-    except ConfigError as error:
+        if args.command == "workflow":
+            return run_workflow(
+                args.shap_config,
+                args.lime_config,
+                args.output_dir,
+                serve=args.serve,
+                host=args.host,
+                port=args.port,
+            )
+        if args.command == "serve":
+            return run_dashboard(args.report, host=args.host, port=args.port)
+    except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 
     parser.error(f"Unsupported command: {args.command}")

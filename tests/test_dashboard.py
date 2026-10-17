@@ -47,6 +47,11 @@ class DashboardTests(unittest.TestCase):
         ):
             self.assertIn(f'id="{element_id}"', html)
 
+    def test_dashboard_prefers_runtime_report_then_falls_back(self):
+        script = (DASHBOARD / "app.js").read_text(encoding="utf-8")
+        self.assertIn('fetch("data/report.json"', script)
+        self.assertIn('fetch("data/example-report.json"', script)
+
 
 if __name__ == "__main__":
     unittest.main()

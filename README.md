@@ -149,6 +149,29 @@ Open `http://localhost:8000` and optionally load a newly generated unified
 `summary.json`. The browser processes the selected file locally; it is not
 uploaded to an external service.
 
+## End-to-end workflow
+
+Run the SHAP validation, LIME cross-version comparison and unified report in
+one command:
+
+```bash
+PYTHONPATH=src python -m xai_regression workflow
+```
+
+To start the dashboard immediately after the workflow completes:
+
+```bash
+PYTHONPATH=src python -m xai_regression workflow --serve
+```
+
+The dashboard then loads the newly generated report automatically. Press
+`Control+C` to stop the local server. To reopen an existing report without
+rerunning the experiments, use:
+
+```bash
+PYTHONPATH=src python -m xai_regression serve
+```
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
