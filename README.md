@@ -136,6 +136,19 @@ CSV, JSON, Markdown and figure outputs under
 The current combined result is summarised in
 [`docs/UNIFIED_REPORT_RESULT.md`](docs/UNIFIED_REPORT_RESULT.md).
 
+## Local dashboard
+
+The repository includes a dependency-free dashboard prototype for presenting
+the unified report. Start it from the repository root:
+
+```bash
+python -m http.server 8000 --directory dashboard
+```
+
+Open `http://localhost:8000` and optionally load a newly generated unified
+`summary.json`. The browser processes the selected file locally; it is not
+uploaded to an external service.
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
