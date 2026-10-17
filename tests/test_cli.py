@@ -1,0 +1,130 @@
+import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
+from pathlib import Path
+from unittest.mock import patch
+
+from xai_regression import cli
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+class CliTests(unittest.TestCase):
+    def test_run_uses_current_python_and_validated_config(self):
+        with (
+            patch("xai_regression.cli.run_validation", return_value={}) as run,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_experiment(PROJECT_ROOT / "config/default.yaml")
+
+        self.assertEqual(exit_code, 0)
+        config = run.call_args.args[0]
+        self.assertEqual(config.experiment_id, "breast-cancer-shap-v1")
+        self.assertTrue(
+            str(run.call_args.kwargs["config_path"]).endswith(
+                "config/default.yaml"
+            )
+        )
+        self.assertEqual(run.call_args.kwargs["project_root"], cli.PROJECT_ROOT)
+
+    def test_parser_requires_a_command(self):
+        with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
+            cli.main([])
+
+    def test_lime_command_uses_validated_config(self):
+        with (
+            patch(
+                "xai_regression.cli.run_lime_stability",
+                return_value={},
+            ) as run,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_lime_experiment(
+                PROJECT_ROOT / "config/lime_stability.yaml"
+            )
+
+        self.assertEqual(exit_code, 0)
+        config = run.call_args.args[0]
+        self.assertEqual(
+            config.experiment_id,
+            "breast-cancer-lime-stability-v1",
+        )
+        self.assertEqual(run.call_args.kwargs["project_root"], cli.PROJECT_ROOT)
+
+    def test_lime_compare_command_uses_validated_config(self):
+        with (
+            patch(
+                "xai_regression.cli.run_lime_cross_version",
+                return_value={},
+            ) as run,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_lime_comparison(
+                PROJECT_ROOT / "config/lime_cross_version.yaml"
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.args[0].experiment_id,
+            "breast-cancer-lime-cross-version-v1",
+        )
+
+    def test_report_command_resolves_project_paths(self):
+        with patch(
+            "xai_regression.cli.run_unified_report",
+            return_value={},
+        ) as run:
+            exit_code = cli.run_report("shap", "lime", "output")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(run.call_args.kwargs["shap_report_dir"], cli.PROJECT_ROOT / "shap")
+        self.assertEqual(run.call_args.kwargs["lime_report_dir"], cli.PROJECT_ROOT / "lime")
+        self.assertEqual(run.call_args.kwargs["output_dir"], cli.PROJECT_ROOT / "output")
+
+    def test_workflow_runs_pipeline_without_serving_by_default(self):
+        with (
+            patch(
+                "xai_regression.cli.run_pipeline",
+                return_value={"report_path": Path("summary.json")},
+            ) as pipeline,
+            patch("xai_regression.cli.serve_dashboard") as serve,
+        ):
+            exit_code = cli.run_workflow(
+                "shap.yaml",
+                "lime.yaml",
+                "output",
+                serve=False,
+                host="127.0.0.1",
+                port=8000,
+            )
+
+        self.assertEqual(exit_code, 0)
+        pipeline.assert_called_once()
+        serve.assert_not_called()
+
+    def test_workflow_can_serve_generated_report(self):
+        report_path = PROJECT_ROOT / "summary.json"
+        with (
+            patch(
+                "xai_regression.cli.run_pipeline",
+                return_value={"report_path": report_path},
+            ),
+            patch("xai_regression.cli.serve_dashboard") as serve,
+        ):
+            exit_code = cli.run_workflow(
+                "shap.yaml",
+                "lime.yaml",
+                "output",
+                serve=True,
+                host="127.0.0.1",
+                port=8123,
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(serve.call_args.kwargs["report_path"], report_path)
+        self.assertEqual(serve.call_args.kwargs["port"], 8123)
+
+
+if __name__ == "__main__":
+    unittest.main()
