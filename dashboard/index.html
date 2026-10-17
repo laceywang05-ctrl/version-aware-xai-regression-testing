@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Dashboard for version-aware SHAP and LIME regression testing"
+    />
+    <title>XAI Regression Monitor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <p class="eyebrow">Version-aware evaluation</p>
+        <h1>XAI Regression Monitor</h1>
+      </div>
+      <div class="upload-area">
+        <label class="upload-button" for="report-upload">
+          Load report JSON
+          <input id="report-upload" type="file" accept="application/json,.json" />
+        </label>
+        <p id="load-message" class="load-message" role="status" aria-live="polite"></p>
+      </div>
+    </header>
+
+    <main>
+      <section class="status-panel" aria-labelledby="status-heading">
+        <div>
+          <p class="eyebrow">Current decision</p>
+          <div class="status-title-row">
+            <h2 id="status-heading">Evaluation status</h2>
+            <span id="overall-status" class="status-badge">Loading</span>
+          </div>
+          <p id="status-explanation" class="status-explanation"></p>
+        </div>
+        <div class="summary-grid" aria-label="Report summary">
+          <article><span>Methods</span><strong id="method-count">—</strong></article>
+          <article><span>Review signals</span><strong id="flag-count">—</strong></article>
+          <article><span>Average agreement</span><strong id="agreement-average">—</strong></article>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="methods-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Method overview</p>
+            <h2 id="methods-heading">Explanation methods</h2>
+          </div>
+          <p>Each method is judged against its own natural-variation baseline.</p>
+        </div>
+        <div id="method-cards" class="method-grid"></div>
+      </section>
+
+      <section class="content-section" aria-labelledby="metrics-heading">
+        <div class="section-heading metric-heading">
+          <div>
+            <p class="eyebrow">Detailed evidence</p>
+            <h2 id="metrics-heading">Metric comparison</h2>
+          </div>
+          <div id="method-tabs" class="tabs" role="tablist" aria-label="Explanation method"></div>
+        </div>
+        <div id="metric-grid" class="metric-grid"></div>
+      </section>
+
+      <section class="interpretation-panel" aria-labelledby="interpretation-heading">
+        <div class="interpretation-icon" aria-hidden="true">i</div>
+        <div>
+          <h2 id="interpretation-heading">Interpretation boundary</h2>
+          <p id="interpretation-text"></p>
+          <p>
+            A <strong>REVIEW</strong> signal selects cases for investigation. It is not
+            automatic evidence of a software defect, harmful regression, or concept drift.
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      <span>FYP prototype</span>
+      <span>Local data only · No external upload</span>
+    </footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>
