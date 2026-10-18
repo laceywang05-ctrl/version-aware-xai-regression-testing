@@ -100,6 +100,27 @@ h2 { margin-bottom: 8px; font-size: clamp(1.25rem, 2vw, 1.65rem); }
 
 main { display: grid; gap: 24px; }
 
+.dashboard-view { display: grid; gap: 24px; }
+.view-tabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255,255,255,.82);
+}
+.view-tab {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 750;
+}
+.view-tab.active { background: var(--navy); color: white; }
+
 .status-panel,
 .content-section,
 .interpretation-panel {
@@ -182,11 +203,37 @@ main { display: grid; gap: 24px; }
 .interpretation-panel h2 { font-size: 1rem; }
 .interpretation-panel p { margin-bottom: 8px; color: var(--muted); font-size: .86rem; line-height: 1.55; }
 .interpretation-panel p:last-child { margin-bottom: 0; }
+
+.dataset-picker { display: grid; gap: 6px; color: var(--muted); font-size: .72rem; font-weight: 750; }
+.dataset-picker select { min-width: 220px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.benchmark-context { margin: -8px 0 20px; color: var(--muted); font-size: .86rem; line-height: 1.55; }
+.benchmark-summary { grid-template-columns: repeat(4, 1fr); }
+.scenario-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.scenario-card { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: #fbfcfc; }
+.scenario-card.control { background: #f1f6f7; }
+.scenario-title-row { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.scenario-title-row h3 { margin: 0 0 5px; font-size: 1rem; }
+.scenario-description { min-height: 38px; margin: 0; color: var(--muted); font-size: .74rem; line-height: 1.45; }
+.scenario-rate { color: var(--navy); font-size: 1.45rem; font-weight: 850; white-space: nowrap; }
+.ci-track { position: relative; height: 12px; margin: 20px 0 8px; border-radius: 99px; background: #e7eef0; }
+.ci-range { position: absolute; top: 3px; height: 6px; border-radius: 99px; background: #8ed8d9; }
+.ci-point { position: absolute; top: -2px; width: 4px; height: 16px; border-radius: 3px; background: var(--blue); transform: translateX(-2px); }
+.ci-labels, .scenario-foot { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .68rem; }
+.scenario-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.table-scroll { overflow-x: auto; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.comparison-table th, .comparison-table td { padding: 13px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+.comparison-table th { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
+.evidence-pill { display: inline-flex; padding: 5px 9px; border-radius: 99px; font-size: .68rem; font-weight: 800; }
+.evidence-pill.separated { background: #e5f5ef; color: var(--green); }
+.evidence-pill.exploratory { background: var(--orange-soft); color: #a84518; }
 footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px 0 40px; color: var(--muted); font-size: .72rem; }
 
 @media (max-width: 820px) {
   .status-panel { grid-template-columns: 1fr; }
   .method-grid, .metric-grid { grid-template-columns: 1fr; }
+  .scenario-grid { grid-template-columns: 1fr; }
+  .benchmark-summary { grid-template-columns: repeat(2, 1fr); }
   .section-heading { align-items: start; flex-direction: column; }
   .section-heading > p { text-align: left; }
 }
@@ -197,6 +244,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .upload-button { justify-content: center; }
   .load-message { max-width: none; text-align: center; }
   .summary-grid { grid-template-columns: 1fr; }
+  .benchmark-summary { grid-template-columns: 1fr; }
   .summary-grid article { display: flex; justify-content: space-between; align-items: center; }
   .summary-grid span { min-height: auto; }
   .method-stats { grid-template-columns: 1fr; }

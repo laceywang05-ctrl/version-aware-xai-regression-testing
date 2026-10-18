@@ -125,6 +125,21 @@ class CliTests(unittest.TestCase):
         self.assertEqual(serve.call_args.kwargs["report_path"], report_path)
         self.assertEqual(serve.call_args.kwargs["port"], 8123)
 
+    def test_dashboard_accepts_explicit_benchmark_reports(self):
+        with patch("xai_regression.cli.serve_dashboard") as serve:
+            exit_code = cli.run_dashboard(
+                "summary.json",
+                host="127.0.0.1",
+                port=8000,
+                benchmark_reports=["benchmark.json"],
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            serve.call_args.kwargs["benchmark_paths"],
+            [cli.PROJECT_ROOT / "benchmark.json"],
+        )
+
     def test_benchmark_command_resolves_both_configs(self):
         with patch(
             "xai_regression.cli.run_version_benchmark",

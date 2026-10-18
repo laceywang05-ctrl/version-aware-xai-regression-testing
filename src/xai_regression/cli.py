@@ -19,6 +19,10 @@ from xai_regression.server import serve_dashboard
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_BENCHMARK_REPORTS = (
+    "artifacts/experiment_10_heldout_benchmark/reports/summary.json",
+    "artifacts/experiment_11_wine_heldout_benchmark/reports/summary.json",
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -94,6 +98,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     workflow_parser.add_argument("--host", default="127.0.0.1")
     workflow_parser.add_argument("--port", type=int, default=8000)
+    workflow_parser.add_argument(
+        "--benchmark-report",
+        action="append",
+        default=None,
+        help="Optional benchmark summary JSON; repeat for multiple datasets.",
+    )
     serve_parser = subparsers.add_parser(
         "serve",
         help="Serve the dashboard with an existing unified report.",
@@ -104,6 +114,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8000)
+    serve_parser.add_argument(
+        "--benchmark-report",
+        action="append",
+        default=None,
+        help="Optional benchmark summary JSON; repeat for multiple datasets.",
+    )
     benchmark_parser = subparsers.add_parser(
         "benchmark",
         help="Evaluate the SHAP policy across controlled model-version scenarios.",
@@ -181,6 +197,14 @@ def _project_path(value: str | Path) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
+def _benchmark_paths(values: Sequence[str] | None) -> list[Path]:
+    candidates = values if values is not None else DEFAULT_BENCHMARK_REPORTS
+    paths = [_project_path(value) for value in candidates]
+    if values is None:
+        return [path for path in paths if path.is_file()]
+    return paths
+
+
 def run_report(
     shap_report_dir: str | Path,
     lime_report_dir: str | Path,
@@ -203,6 +227,7 @@ def run_workflow(
     serve: bool,
     host: str,
     port: int,
+    benchmark_reports: Sequence[str] | None = None,
 ) -> int:
     """Run the complete workflow and optionally start the local dashboard."""
     result = run_pipeline(
@@ -215,17 +240,25 @@ def run_workflow(
         serve_dashboard(
             report_path=result["report_path"],
             dashboard_dir=PROJECT_ROOT / "dashboard",
+            benchmark_paths=_benchmark_paths(benchmark_reports),
             host=host,
             port=port,
         )
     return 0
 
 
-def run_dashboard(report: str | Path, *, host: str, port: int) -> int:
+def run_dashboard(
+    report: str | Path,
+    *,
+    host: str,
+    port: int,
+    benchmark_reports: Sequence[str] | None = None,
+) -> int:
     """Serve the dashboard with a previously generated unified report."""
     serve_dashboard(
         report_path=_project_path(report),
         dashboard_dir=PROJECT_ROOT / "dashboard",
+        benchmark_paths=_benchmark_paths(benchmark_reports),
         host=host,
         port=port,
     )
@@ -270,9 +303,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 serve=args.serve,
                 host=args.host,
                 port=args.port,
+                benchmark_reports=args.benchmark_report,
             )
         if args.command == "serve":
-            return run_dashboard(args.report, host=args.host, port=args.port)
+            return run_dashboard(
+                args.report,
+                host=args.host,
+                port=args.port,
+                benchmark_reports=args.benchmark_report,
+            )
         if args.command == "benchmark":
             return run_benchmark(args.config, args.scenarios)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:

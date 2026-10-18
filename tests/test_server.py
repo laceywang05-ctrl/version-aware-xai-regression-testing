@@ -4,7 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from xai_regression.server import serve_dashboard, validate_report_file
+from xai_regression.server import (
+    serve_dashboard,
+    validate_benchmark_files,
+    validate_report_file,
+)
 
 
 class DashboardServerTests(unittest.TestCase):
@@ -23,6 +27,27 @@ class DashboardServerTests(unittest.TestCase):
             path.write_text(json.dumps({"status": "REVIEW"}), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "methods and metrics"):
                 validate_report_file(path)
+
+    def test_benchmark_report_is_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "benchmark.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "scenario_results": [],
+                        "paired_control_comparisons": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_benchmark_files([path]), [path.resolve()])
+
+    def test_non_benchmark_report_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "benchmark.json"
+            path.write_text(json.dumps({"methods": []}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "scenario_results"):
+                validate_benchmark_files([path])
 
     def test_socket_error_has_actionable_message(self):
         with tempfile.TemporaryDirectory() as directory:
