@@ -7,6 +7,7 @@ import pandas as pd
 from xai_regression.config import load_config
 from xai_regression.lime_workflow import (
     apply_sample_policy_flags,
+    evaluate_heldout_lime_policy,
     explanation_to_vector,
     lime_class_names,
 )
@@ -30,6 +31,7 @@ class LimeWorkflowTests(unittest.TestCase):
             lime_class_names(wine),
             ["wine_class_0", "wine_class_1"],
         )
+
     def test_sparse_explanation_is_mapped_to_feature_order(self):
         vector = explanation_to_vector(
             FakeExplanation(),
@@ -68,6 +70,62 @@ class LimeWorkflowTests(unittest.TestCase):
             [False, True],
         )
         self.assertEqual(result["any_metric_breach"].tolist(), [True, True])
+
+    def test_heldout_policy_evaluates_control_and_candidate_by_seed(self):
+        config = load_config(PROJECT_ROOT / "config/lime_heldout.yaml")
+        calibration = pd.DataFrame(
+            [
+                {
+                    "seed": seed,
+                    "cosine_similarity": value,
+                    "rank_correlation": value,
+                    "top_k_overlap": value,
+                    "direction_flip_rate": 1 - value,
+                }
+                for seed, value in ((1, 0.95), (1, 0.90), (2, 0.85), (2, 0.80))
+            ]
+        )
+        control = pd.DataFrame(
+            [
+                {
+                    "seed": seed,
+                    "cosine_similarity": 0.90,
+                    "rank_correlation": 0.90,
+                    "top_k_overlap": 0.90,
+                    "direction_flip_rate": 0.10,
+                }
+                for seed in (10, 11)
+            ]
+        )
+        candidate = control.copy()
+        candidate[[
+            "cosine_similarity",
+            "rank_correlation",
+            "top_k_overlap",
+        ]] = 0.10
+        candidate["direction_flip_rate"] = 0.90
+
+        policy, control_flagged, candidate_flagged, runs = (
+            evaluate_heldout_lime_policy(
+                config,
+                calibration,
+                control,
+                candidate,
+                candidate_prediction_agreement=0.95,
+            )
+        )
+
+        self.assertEqual(len(policy), 4)
+        self.assertFalse(control_flagged["any_metric_breach"].any())
+        self.assertTrue(candidate_flagged["any_metric_breach"].all())
+        self.assertEqual(len(runs), 4)
+        self.assertEqual(
+            runs.groupby("scenario")["review_flag"].sum().to_dict(),
+            {
+                "heldout_cross_version_candidate": 2,
+                "heldout_fixed_model_control": 0,
+            },
+        )
 
 
 if __name__ == "__main__":

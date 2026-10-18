@@ -84,6 +84,49 @@ def normalize_lime_comparison(
     dataset_id: str,
 ) -> dict[str, Any]:
     """Normalize one LIME cross-version comparison."""
+    if "heldout_control" in summary and "candidate" in summary:
+        required = (
+            "status",
+            "matched_candidate_comparisons",
+            "probe_prediction_agreement",
+            "heldout_candidate_means",
+            "paired_seed_cross_version_means",
+        )
+        missing = [key for key in required if key not in summary]
+        if missing:
+            raise ValueError(
+                "Held-out LIME summary is missing: " + ", ".join(missing)
+            )
+        return {
+            "dataset_id": dataset_id,
+            "dataset": DATASET_LABELS.get(dataset_id, dataset_id),
+            "method": "LIME",
+            "evidence_type": "held-out paired-seed validation",
+            "status": str(summary["status"]),
+            "observations": int(summary["matched_candidate_comparisons"]),
+            "prediction_agreement": float(summary["probe_prediction_agreement"]),
+            "cosine_similarity": float(
+                summary["heldout_candidate_means"]["cosine_similarity"]
+            ),
+            "paired_seed_cosine_similarity": float(
+                summary["paired_seed_cross_version_means"]["cosine_similarity"]
+            ),
+            "headline_metric": "candidate_review_rate",
+            "headline_value": float(summary["candidate"]["review_rate"]),
+            "control_review_rate": float(
+                summary["heldout_control"]["review_rate"]
+            ),
+            "strongest_scenario": None,
+            "separated_scenarios": None,
+            "scenario_comparisons": 1,
+            "flagged_metrics": list(summary.get("flagged_metrics", [])),
+            "interpretation": (
+                "Calibration and evaluation LIME seeds are disjoint. "
+                "SEPARATED is paired evidence of a change relative to the "
+                "fixed-model control, not evidence of harm."
+            ),
+        }
+
     required = (
         "status",
         "matched_cross_version_comparisons",
@@ -198,9 +241,10 @@ def run_cross_dataset_summary(
             "portfolio is descriptive and does not define a universal threshold."
         ),
         "comparability_note": (
-            "SHAP uses held-out repeated model-version benchmarks; LIME uses "
-            "noise-calibrated matched explanation comparisons. Headline rates "
-            "must not be compared as if they were the same statistic."
+            "SHAP summarizes the strongest of several held-out model-change "
+            "scenarios; LIME summarizes one paired held-out candidate. "
+            "Headline rates must not be compared as if they were identical "
+            "experimental contrasts."
         ),
         "sources": {
             "breast_cancer_shap": str(Path(breast_shap_report)),

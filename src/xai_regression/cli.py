@@ -10,6 +10,7 @@ from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
 from xai_regression.lime_workflow import (
     run_lime_cross_version,
+    run_lime_heldout_validation,
     run_lime_stability,
 )
 from xai_regression.pipeline import run_pipeline
@@ -62,6 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         default="config/lime_cross_version.yaml",
         help="Path to the LIME cross-version YAML file.",
+    )
+    heldout_parser = subparsers.add_parser(
+        "lime-heldout",
+        help="Validate a LIME policy on disjoint calibration and evaluation seeds.",
+    )
+    heldout_parser.add_argument(
+        "--config",
+        default="config/lime_heldout.yaml",
+        help="Path to the held-out LIME validation YAML file.",
     )
     report_parser = subparsers.add_parser(
         "report",
@@ -152,11 +162,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     portfolio_parser.add_argument(
         "--breast-lime-report",
-        default="artifacts/experiment_07_lime_cross_version/reports/summary.json",
+        default="artifacts/experiment_15_breast_lime_heldout/reports/summary.json",
     )
     portfolio_parser.add_argument(
         "--wine-lime-report",
-        default="artifacts/experiment_13_wine_lime_cross_version/reports/summary.json",
+        default="artifacts/experiment_16_wine_lime_heldout/reports/summary.json",
     )
     portfolio_parser.add_argument(
         "--output-dir",
@@ -218,6 +228,20 @@ def run_lime_comparison(config_path: str | Path) -> int:
     print(f"Experiment: {config.experiment_id}", flush=True)
     print(f"Configuration: {path}", flush=True)
     run_lime_cross_version(
+        config,
+        config_path=path,
+        project_root=PROJECT_ROOT,
+    )
+    return 0
+
+
+def run_lime_heldout(config_path: str | Path) -> int:
+    """Execute held-out LIME policy validation."""
+    path = _project_path(config_path)
+    config = load_config(path)
+    print(f"Experiment: {config.experiment_id}", flush=True)
+    print(f"Configuration: {path}", flush=True)
+    run_lime_heldout_validation(
         config,
         config_path=path,
         project_root=PROJECT_ROOT,
@@ -355,6 +379,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_lime_experiment(args.config)
         if args.command == "lime-compare":
             return run_lime_comparison(args.config)
+        if args.command == "lime-heldout":
+            return run_lime_heldout(args.config)
         if args.command == "report":
             return run_report(
                 args.shap_report_dir,

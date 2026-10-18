@@ -70,6 +70,24 @@ class CliTests(unittest.TestCase):
             "breast-cancer-lime-cross-version-v1",
         )
 
+    def test_lime_heldout_command_uses_validated_config(self):
+        with (
+            patch(
+                "xai_regression.cli.run_lime_heldout_validation",
+                return_value={},
+            ) as run,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_lime_heldout(
+                PROJECT_ROOT / "config/lime_heldout.yaml"
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.args[0].experiment_id,
+            "breast-cancer-lime-heldout-v1",
+        )
+
     def test_report_command_resolves_project_paths(self):
         with patch(
             "xai_regression.cli.run_unified_report",

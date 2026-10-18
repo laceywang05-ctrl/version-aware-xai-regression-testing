@@ -55,6 +55,17 @@ policy: {lower_quantile: 0.05, upper_quantile: 0.95}
         self.assertEqual(config.lime.num_samples, 1000)
         self.assertEqual(len(config.lime.repeated_seeds), 10)
 
+    def test_lime_heldout_seeds_are_disjoint(self):
+        config = load_config(PROJECT_ROOT / "config/lime_heldout.yaml")
+
+        self.assertEqual(len(config.lime.repeated_seeds), 30)
+        self.assertEqual(len(config.lime.evaluation_seeds), 30)
+        self.assertTrue(
+            set(config.lime.repeated_seeds).isdisjoint(
+                config.lime.evaluation_seeds
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
