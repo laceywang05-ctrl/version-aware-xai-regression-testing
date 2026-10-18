@@ -188,8 +188,24 @@ PYTHONPATH=src python -m xai_regression benchmark
 ```
 
 The scenario file includes a seed-only control and three model-configuration
-changes. Results are written under `artifacts/experiment_09_version_benchmark/`.
+changes, each repeated across 30 candidate seeds. The scenario summary reports
+Wilson 95% confidence intervals for the review rate. Results are written under
+`artifacts/experiment_09_version_benchmark/`.
 Warnings on the control scenario estimate false-positive behaviour; warnings on
 the other scenarios measure sensitivity to model changes, not whether those
 changes are harmful. The preliminary findings and limitations are documented in
 [`docs/VERSION_BENCHMARK_RESULT.md`](docs/VERSION_BENCHMARK_RESULT.md).
+
+Run the follow-up benchmark with 30 calibration seeds and a disjoint set of 30
+held-out candidate seeds:
+
+```bash
+PYTHONPATH=src python -m xai_regression benchmark \
+  --config config/benchmark_calibration.yaml \
+  --scenarios config/version_benchmark_heldout.yaml
+```
+
+This diagnostic keeps the quantile policy unchanged while testing whether the
+earlier control warnings were caused by a small calibration set.
+The verified results and interpretation are documented in
+[`docs/HELDOUT_POLICY_VALIDATION_RESULT.md`](docs/HELDOUT_POLICY_VALIDATION_RESULT.md).

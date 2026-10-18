@@ -5,27 +5,30 @@ scenarios:
   - id: seed_only_control
     change_type: control
     description: Same model settings with a new random seed
-    random_seed: 99
+    random_seeds: &candidate_seeds
+      [99, 123, 147, 189, 231, 253, 277, 301, 325, 349,
+       373, 397, 421, 445, 469, 493, 517, 541, 565, 589,
+       613, 637, 661, 685, 709, 733, 757, 781, 805, 829]
     max_depth: null
     min_samples_leaf: 1
 
   - id: shallow_depth
     change_type: model_configuration
     description: Limit tree depth while retaining the default leaf size
-    random_seed: 99
+    random_seeds: *candidate_seeds
     max_depth: 4
     min_samples_leaf: 1
 
   - id: larger_leaves
     change_type: model_configuration
     description: Increase minimum leaf size without limiting tree depth
-    random_seed: 99
+    random_seeds: *candidate_seeds
     max_depth: null
     min_samples_leaf: 5
 
   - id: constrained_candidate
     change_type: model_configuration
     description: Combine shallow trees with larger leaves
-    random_seed: 99
+    random_seeds: *candidate_seeds
     max_depth: 4
     min_samples_leaf: 5
