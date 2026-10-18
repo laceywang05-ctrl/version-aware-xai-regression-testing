@@ -57,7 +57,9 @@ The final metric set and thresholds will be selected after the initial scope is 
 .
 ├── config/                 # Reproducible experiment settings
 ├── docs/                   # Research scope, architecture and literature map
-├── src/xai_regression/     # Placeholder for the future implementation
+├── dashboard/              # Local report dashboard
+├── src/xai_regression/     # Experiment, policy and reporting package
+├── tests/                  # Unit tests
 ├── CONTRIBUTING.md
 └── pyproject.toml
 ```
@@ -175,3 +177,19 @@ PYTHONPATH=src python -m xai_regression serve
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
+
+## Controlled version benchmark
+
+Evaluate the calibrated SHAP policy across several controlled candidate-model
+configurations:
+
+```bash
+PYTHONPATH=src python -m xai_regression benchmark
+```
+
+The scenario file includes a seed-only control and three model-configuration
+changes. Results are written under `artifacts/experiment_09_version_benchmark/`.
+Warnings on the control scenario estimate false-positive behaviour; warnings on
+the other scenarios measure sensitivity to model changes, not whether those
+changes are harmful. The preliminary findings and limitations are documented in
+[`docs/VERSION_BENCHMARK_RESULT.md`](docs/VERSION_BENCHMARK_RESULT.md).
