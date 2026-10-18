@@ -11,6 +11,7 @@ from xai_regression.benchmark import (
     load_scenarios,
     wilson_interval,
 )
+from xai_regression.config import load_config
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +28,19 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(scenarios[0].change_type, "control")
         self.assertIsNone(scenarios[0].max_depth)
         self.assertEqual(len(scenarios[0].random_seeds), 30)
+
+    def test_heldout_seeds_are_disjoint_from_calibration(self):
+        config = load_config(PROJECT_ROOT / "config/benchmark_calibration.yaml")
+        output_dir, scenarios = load_scenarios(
+            PROJECT_ROOT / "config/version_benchmark_heldout.yaml"
+        )
+        heldout = set(scenarios[0].random_seeds)
+
+        self.assertEqual(output_dir.name, "experiment_10_heldout_benchmark")
+        self.assertEqual(len(config.model.benign_seeds), 30)
+        self.assertEqual(len(heldout), 30)
+        self.assertTrue(heldout.isdisjoint(config.model.benign_seeds))
+        self.assertNotIn(config.model.reference_seed, heldout)
 
     def test_duplicate_scenario_ids_are_rejected(self):
         content = """
