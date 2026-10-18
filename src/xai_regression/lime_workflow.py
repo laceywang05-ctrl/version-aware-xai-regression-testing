@@ -34,6 +34,15 @@ METRIC_COLUMNS = (
 )
 
 
+def lime_class_names(config: ExperimentConfig) -> list[str]:
+    """Return display labels matching the configured binary target."""
+    if config.dataset.name == "breast_cancer":
+        return ["benign", "malignant"]
+    if config.dataset.name == "wine_binary":
+        return ["wine_class_0", "wine_class_1"]
+    raise ValueError(f"Unsupported LIME dataset: {config.dataset.name}")
+
+
 def explanation_to_vector(
     explanation: Any,
     *,
@@ -81,7 +90,7 @@ def generate_lime_matrix(
     explainer = LimeTabularExplainer(
         training_data=X_train.to_numpy(),
         feature_names=list(X_train.columns),
-        class_names=["benign", "malignant"],
+        class_names=lime_class_names(config),
         mode="classification",
         discretize_continuous=config.lime.discretize_continuous,
         kernel_width=config.lime.kernel_width,
@@ -280,6 +289,7 @@ def run_lime_stability(
 
     summary: dict[str, Any] = {
         "experiment_id": config.experiment_id,
+        "dataset": config.dataset.name,
         "config_path": str(Path(config_path)),
         "interpretation": (
             "Same model and fixed probe data; observed differences estimate "
@@ -423,7 +433,7 @@ def run_lime_cross_version(
 
     probe = X_probe.reset_index(names="source_row")
     probe.insert(0, "sample_id", range(len(probe)))
-    probe["target_malignant"] = split.y_probe.iloc[: len(X_probe)].to_numpy()
+    probe["target_positive"] = split.y_probe.iloc[: len(X_probe)].to_numpy()
     probe.to_csv(data_dir / "fixed_probe.csv", index=False)
     benign_samples.to_csv(
         reports_dir / "fixed_model_baseline.csv",
@@ -448,6 +458,7 @@ def run_lime_cross_version(
 
     summary: dict[str, Any] = {
         "experiment_id": config.experiment_id,
+        "dataset": config.dataset.name,
         "config_path": str(Path(config_path)),
         "status": overall_status,
         "interpretation": (

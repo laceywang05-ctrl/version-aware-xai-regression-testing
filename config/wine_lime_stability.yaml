@@ -1,0 +1,48 @@
+project:
+  name: version-aware-xai-regression-testing
+
+experiment:
+  id: wine-lime-stability-v1
+  output_dir: artifacts/experiment_12_wine_lime_stability
+
+dataset:
+  name: wine_binary
+  test_size: 0.30
+  split_seed: 42
+  probe_size: 30
+
+model:
+  family: random_forest
+  n_estimators: 200
+  class_weight: balanced
+  reference_seed: 42
+  benign_seeds: [7, 21, 55, 84, 126, 168, 210, 252, 294, 336]
+  candidate:
+    random_seed: 99
+    max_depth: null
+    min_samples_leaf: 5
+
+explainer:
+  method: lime
+  target_class: wine_class_1
+
+lime:
+  baseline_seed: 42
+  repeated_seeds: [7, 21, 55, 84, 126, 168, 210, 252, 294, 336]
+  probe_size: 20
+  num_samples: 1000
+  kernel_width: null
+  discretize_continuous: true
+  output_dir: artifacts/experiment_12_wine_lime_stability
+
+comparison:
+  top_k: 5
+  metrics:
+    - cosine_similarity
+    - rank_correlation
+    - top_k_overlap
+    - direction_flip_rate
+
+policy:
+  lower_quantile: 0.05
+  upper_quantile: 0.95
