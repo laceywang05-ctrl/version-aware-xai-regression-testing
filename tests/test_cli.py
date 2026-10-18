@@ -125,6 +125,22 @@ class CliTests(unittest.TestCase):
         self.assertEqual(serve.call_args.kwargs["report_path"], report_path)
         self.assertEqual(serve.call_args.kwargs["port"], 8123)
 
+    def test_benchmark_command_resolves_both_configs(self):
+        with patch(
+            "xai_regression.cli.run_version_benchmark",
+            return_value={},
+        ) as run:
+            exit_code = cli.run_benchmark(
+                "config/default.yaml",
+                "config/version_benchmark.yaml",
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.kwargs["scenario_config_path"],
+            cli.PROJECT_ROOT / "config/version_benchmark.yaml",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

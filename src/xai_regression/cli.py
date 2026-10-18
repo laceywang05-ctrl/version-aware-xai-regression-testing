@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
 from xai_regression.lime_workflow import (
     run_lime_cross_version,
@@ -103,6 +104,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8000)
+    benchmark_parser = subparsers.add_parser(
+        "benchmark",
+        help="Evaluate the SHAP policy across controlled model-version scenarios.",
+    )
+    benchmark_parser.add_argument(
+        "--config",
+        default="config/default.yaml",
+        help="Path to the base SHAP experiment YAML file.",
+    )
+    benchmark_parser.add_argument(
+        "--scenarios",
+        default="config/version_benchmark.yaml",
+        help="Path to the controlled version-scenario YAML file.",
+    )
     return parser
 
 
@@ -217,6 +232,19 @@ def run_dashboard(report: str | Path, *, host: str, port: int) -> int:
     return 0
 
 
+def run_benchmark(config_path: str | Path, scenario_path: str | Path) -> int:
+    """Run the controlled multi-version SHAP benchmark."""
+    config_file = _project_path(config_path)
+    scenario_file = _project_path(scenario_path)
+    config = load_config(config_file)
+    run_version_benchmark(
+        config,
+        scenario_config_path=scenario_file,
+        project_root=PROJECT_ROOT,
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -245,6 +273,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         if args.command == "serve":
             return run_dashboard(args.report, host=args.host, port=args.port)
+        if args.command == "benchmark":
+            return run_benchmark(args.config, args.scenarios)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 
