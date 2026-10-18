@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from pathlib import Path
+from statistics import NormalDist
 from typing import Any
 
 import matplotlib
@@ -162,6 +164,9 @@ def aggregate_scenario_runs(run_summary: pd.DataFrame) -> pd.DataFrame:
         for value in group["flagged_metrics"]:
             for metric in filter(None, str(value).split(",")):
                 flagged_counts[metric] = flagged_counts.get(metric, 0) + 1
+        review_count = int(group["review_flag"].sum())
+        review_rate = float(group["review_flag"].mean())
+        ci_lower, ci_upper = wilson_interval(review_count, len(group))
         rows.append(
             {
                 "scenario_id": scenario_id,
@@ -182,8 +187,10 @@ def aggregate_scenario_runs(run_summary: pd.DataFrame) -> pd.DataFrame:
                 "std_cosine_similarity": float(
                     group["mean_cosine_similarity"].std(ddof=0)
                 ),
-                "review_count": int(group["review_flag"].sum()),
-                "review_rate": float(group["review_flag"].mean()),
+                "review_count": review_count,
+                "review_rate": review_rate,
+                "review_rate_ci_lower": ci_lower,
+                "review_rate_ci_upper": ci_upper,
                 "flagged_metric_frequency": ",".join(
                     f"{metric}:{count}"
                     for metric, count in sorted(flagged_counts.items())
@@ -191,6 +198,35 @@ def aggregate_scenario_runs(run_summary: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+def wilson_interval(
+    successes: int,
+    trials: int,
+    confidence: float = 0.95,
+) -> tuple[float, float]:
+    """Return a Wilson score interval for a binomial proportion."""
+    if trials <= 0:
+        raise ValueError("trials must be positive.")
+    if not 0 <= successes <= trials:
+        raise ValueError("successes must be between zero and trials.")
+    if not 0 < confidence < 1:
+        raise ValueError("confidence must be between zero and one.")
+
+    proportion = successes / trials
+    z_score = NormalDist().inv_cdf(0.5 + confidence / 2)
+    z_squared = z_score**2
+    denominator = 1 + z_squared / trials
+    centre = (proportion + z_squared / (2 * trials)) / denominator
+    margin = (
+        z_score
+        * math.sqrt(
+            proportion * (1 - proportion) / trials
+            + z_squared / (4 * trials**2)
+        )
+        / denominator
+    )
+    return max(0.0, centre - margin), min(1.0, centre + margin)
 
 
 def save_benchmark_figure(summary: pd.DataFrame, path: Path) -> None:
@@ -212,7 +248,15 @@ def save_benchmark_figure(summary: pd.DataFrame, path: Path) -> None:
     colors = [
         "#D97732" if value else "#67A878" for value in summary["review_rate"]
     ]
-    axes[1].bar(positions, summary["review_rate"], color=colors)
+    lower_error = summary["review_rate"] - summary["review_rate_ci_lower"]
+    upper_error = summary["review_rate_ci_upper"] - summary["review_rate"]
+    axes[1].bar(
+        positions,
+        summary["review_rate"],
+        yerr=np.vstack([lower_error, upper_error]),
+        capsize=4,
+        color=colors,
+    )
     axes[1].set_ylim(0, 1.02)
     axes[1].set_ylabel("Fraction of runs flagged for review")
     axes[1].set_xticks(positions, summary["scenario_id"], rotation=25, ha="right")
@@ -334,6 +378,7 @@ def run_version_benchmark(
         "candidate_run_count": len(run_summary),
         "control_run_count": len(control_rows),
         "control_review_count": int(control_rows["review_flag"].sum()),
+        "review_rate_interval": "Wilson 95% confidence interval",
         "scenario_results": scenario_summary.replace({np.nan: None}).to_dict(
             orient="records"
         ),

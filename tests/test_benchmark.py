@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from xai_regression.benchmark import aggregate_scenario_runs, load_scenarios
+from xai_regression.benchmark import (
+    aggregate_scenario_runs,
+    load_scenarios,
+    wilson_interval,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +24,7 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(len(scenarios), 4)
         self.assertEqual(scenarios[0].change_type, "control")
         self.assertIsNone(scenarios[0].max_depth)
-        self.assertEqual(len(scenarios[0].random_seeds), 5)
+        self.assertEqual(len(scenarios[0].random_seeds), 30)
 
     def test_duplicate_scenario_ids_are_rejected(self):
         content = """
@@ -76,11 +80,23 @@ scenarios:
 
         self.assertEqual(summary["runs"], 2)
         self.assertAlmostEqual(summary["review_rate"], 0.5)
+        self.assertLess(summary["review_rate_ci_lower"], 0.5)
+        self.assertGreater(summary["review_rate_ci_upper"], 0.5)
         self.assertAlmostEqual(summary["mean_prediction_agreement"], 0.95)
         self.assertEqual(
             summary["flagged_metric_frequency"],
             "cosine_similarity:1",
         )
+
+    def test_wilson_interval_for_known_rate(self):
+        lower, upper = wilson_interval(24, 30)
+
+        self.assertAlmostEqual(lower, 0.6269, places=4)
+        self.assertAlmostEqual(upper, 0.9049, places=4)
+
+    def test_wilson_interval_rejects_invalid_counts(self):
+        with self.assertRaisesRegex(ValueError, "between zero and trials"):
+            wilson_interval(2, 1)
 
 
 if __name__ == "__main__":

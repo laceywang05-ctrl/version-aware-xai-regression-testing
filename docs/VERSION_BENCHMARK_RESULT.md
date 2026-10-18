@@ -1,3 +1,11 @@
+## Material Passport
+
+- Origin Skill: experiment-agent
+- Origin Mode: run
+- Origin Date: 2026-10-18
+- Verification Status: VERIFIED
+- Version Label: version_benchmark_30_runs_v1
+
 # Controlled Model-Version Benchmark
 
 ## Purpose
@@ -10,46 +18,53 @@ changes?
 The benchmark reuses the fixed Breast Cancer Wisconsin probe set, Tree SHAP
 configuration, explanation metrics and benign-retraining policy from the main
 experiment. It evaluates four candidate-version scenarios against the same
-reference. Each scenario is repeated with five candidate seeds that are not
+reference. Each scenario is repeated with 30 candidate seeds that are not
 used to calibrate the benign baseline.
 
-## Preliminary results
+## Expanded results
 
-| Scenario | Change | Mean prediction agreement | Review runs | Review rate |
-|---|---|---:|---:|---:|
-| `seed_only_control` | Random seed only | 0.996 | 1/5 | 20% |
-| `shallow_depth` | `max_depth=4` | 1.000 | 4/5 | 80% |
-| `larger_leaves` | `min_samples_leaf=5` | 0.996 | 2/5 | 40% |
-| `constrained_candidate` | `max_depth=4`, `min_samples_leaf=5` | 0.998 | 4/5 | 80% |
+| Scenario | Change | Mean prediction agreement | Review runs | Review rate | Wilson 95% CI |
+|---|---|---:|---:|---:|---:|
+| `seed_only_control` | Random seed only | 0.997 | 11/30 | 36.7% | 21.9%–54.5% |
+| `shallow_depth` | `max_depth=4` | 1.000 | 20/30 | 66.7% | 48.8%–80.8% |
+| `larger_leaves` | `min_samples_leaf=5` | 0.996 | 11/30 | 36.7% | 21.9%–54.5% |
+| `constrained_candidate` | `max_depth=4`, `min_samples_leaf=5` | 0.996 | 20/30 | 66.7% | 48.8%–80.8% |
 
-The seed-only control produced one warning in five runs, so the current policy
-does have observable false-positive behaviour. However, the shallow-depth and
-combined-constraint scenarios were flagged in four of five runs, compared with
-one of five control runs. This preliminary separation suggests that the policy
-is responding to model-configuration changes more often than to seed-only
-retraining noise.
+The expanded seed-only control produced 11 warnings in 30 runs. This is a much
+stronger indication of false-positive behaviour than the earlier five-run
+result suggested. The shallow-depth and combined-constraint scenarios were
+flagged in 20 of 30 runs. Their point estimates are 30 percentage points above
+the control, but the confidence intervals overlap, so the current evidence does
+not establish reliable separation.
 
-Most importantly, the shallow-depth candidates retained 100% mean prediction
-agreement while 80% of their runs triggered an explanation warning. This is an
-example of the gap that ordinary prediction regression testing cannot observe.
+The shallow-depth candidates retained approximately 100% mean prediction
+agreement while 66.7% of their runs triggered an explanation warning. This
+continues to demonstrate that prediction-only checks can miss explanation
+changes, but the warning must be interpreted alongside the high control review
+rate.
 
-The larger-leaf scenario was flagged in only two of five runs. That result is
-also informative: the tool does not label every implementation change as an
-explanation regression, and different configuration changes have different
-detectability under the current metrics and thresholds.
+The larger-leaf scenario matched the control review rate at 36.7%. Under the
+current metrics and thresholds, this configuration change is not separated
+from seed-only retraining.
+
+The direction-flip metric produced most of the warnings: 9 control warnings,
+18 shallow-depth warnings, 9 larger-leaf warnings and 10 combined-constraint
+warnings. This concentration indicates that the direction-flip policy needs
+specific calibration analysis before the overall review flag can be treated as
+reliable.
 
 ## Interpretation limits
 
 These are preliminary case-study results, not estimates of general false-positive
 or detection rates. The benchmark currently uses one dataset, one reference
-model, five runs per scenario and three hand-selected configuration changes. A
+model, 30 runs per scenario and three hand-selected configuration changes. A
 review flag means that an explanation metric exceeded its calibrated limit; it
 does not establish that the candidate is defective or unsafe.
 
-The next research step is to expand the number of independent control and change
-runs, report uncertainty intervals for review rates, and later repeat the study
-on a second tabular dataset. This will support a more defensible evaluation of
-policy sensitivity and false positives.
+The next research step is to diagnose metric-level false positives, especially
+for direction flips, and evaluate a pre-specified revised policy against held-out
+control seeds. The study should then be repeated on a second tabular dataset.
+This avoids tuning and evaluating the policy on the same benchmark runs.
 
 ## Reproduction
 
@@ -59,3 +74,5 @@ PYTHONPATH=src python -m xai_regression benchmark
 
 Machine-readable results and the comparison figure are generated under
 `artifacts/experiment_09_version_benchmark/`.
+
+The verified run completed successfully with 36 automated tests passing.

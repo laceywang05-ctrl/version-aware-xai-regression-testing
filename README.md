@@ -188,7 +188,8 @@ PYTHONPATH=src python -m xai_regression benchmark
 ```
 
 The scenario file includes a seed-only control and three model-configuration
-changes, each repeated across five candidate seeds. Results are written under
+changes, each repeated across 30 candidate seeds. The scenario summary reports
+Wilson 95% confidence intervals for the review rate. Results are written under
 `artifacts/experiment_09_version_benchmark/`.
 Warnings on the control scenario estimate false-positive behaviour; warnings on
 the other scenarios measure sensitivity to model changes, not whether those
