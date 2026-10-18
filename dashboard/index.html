@@ -27,6 +27,12 @@
     </header>
 
     <main>
+      <nav class="view-tabs" aria-label="Dashboard view">
+        <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
+        <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
+      </nav>
+
+      <div id="comparison-view" class="dashboard-view">
       <section class="status-panel" aria-labelledby="status-heading">
         <div>
           <p class="eyebrow">Current decision</p>
@@ -76,6 +82,61 @@
           </p>
         </div>
       </section>
+
+      </div>
+
+      <div id="benchmark-view" class="dashboard-view" hidden>
+        <section class="content-section benchmark-intro" aria-labelledby="benchmark-heading">
+          <div class="section-heading benchmark-heading-row">
+            <div>
+              <p class="eyebrow">Repeated held-out evaluation</p>
+              <h2 id="benchmark-heading">Policy validation across model versions</h2>
+            </div>
+            <label class="dataset-picker">
+              Dataset
+              <select id="benchmark-selector"></select>
+            </label>
+          </div>
+          <p id="benchmark-context" class="benchmark-context"></p>
+          <div id="benchmark-summary" class="summary-grid benchmark-summary"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="scenario-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Thirty candidate seeds per scenario</p>
+              <h2 id="scenario-heading">Review-rate comparison</h2>
+            </div>
+            <p>Bars show the proportion of runs selected for review; whiskers show Wilson 95% confidence intervals.</p>
+          </div>
+          <div id="scenario-grid" class="scenario-grid"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="paired-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Paired evidence</p>
+              <h2 id="paired-heading">Comparison with seed-only control</h2>
+            </div>
+            <p>Adjusted p-values below 0.05 indicate separation from the control after correcting three comparisons.</p>
+          </div>
+          <div class="table-scroll">
+            <table class="comparison-table">
+              <thead><tr><th>Candidate</th><th>Rate change</th><th>Adjusted p</th><th>Evidence</th></tr></thead>
+              <tbody id="paired-results"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="interpretation-panel" aria-labelledby="benchmark-interpretation-heading">
+          <div class="interpretation-icon" aria-hidden="true">i</div>
+          <div>
+            <h2 id="benchmark-interpretation-heading">Interpretation boundary</h2>
+            <p id="benchmark-interpretation"></p>
+            <p>A higher review rate means the policy is sensitive to the version change; it does not by itself show that the new model is worse.</p>
+          </div>
+        </section>
+      </div>
 
     </main>
 

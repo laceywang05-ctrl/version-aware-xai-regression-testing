@@ -174,6 +174,12 @@ rerunning the experiments, use:
 PYTHONPATH=src python -m xai_regression serve
 ```
 
+When the held-out breast-cancer and wine benchmark summaries are present, the
+same command also exposes a **Benchmark validation** view. It compares four
+model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence
+intervals, and reports Bonferroni-adjusted paired-control results. A benchmark
+summary can also be supplied explicitly by repeating `--benchmark-report`.
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
