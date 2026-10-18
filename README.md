@@ -224,6 +224,18 @@ candidate review rates, Wilson 95% confidence intervals and an exact paired
 McNemar comparison. Results and limitations are documented in
 [`docs/LIME_HELDOUT_VALIDATION_RESULT.md`](docs/LIME_HELDOUT_VALIDATION_RESULT.md).
 
+Compare the original per-metric run limits with a Bonferroni-adjusted policy
+that accounts for simultaneously monitoring four explanation metrics:
+
+```bash
+PYTHONPATH=src python -m xai_regression lime-multiplicity
+```
+
+This analysis reuses the same disjoint calibration and held-out samples so the
+two policy rules are compared without rerunning LIME or changing the model.
+Results and limitations are documented in
+[`docs/LIME_MULTIPLICITY_POLICY_RESULT.md`](docs/LIME_MULTIPLICITY_POLICY_RESULT.md).
+
 ## Controlled version benchmark
 
 Evaluate the calibrated SHAP policy across several controlled candidate-model

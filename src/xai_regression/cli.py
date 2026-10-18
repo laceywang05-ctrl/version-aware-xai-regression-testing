@@ -13,6 +13,7 @@ from xai_regression.lime_workflow import (
     run_lime_heldout_validation,
     run_lime_stability,
 )
+from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.pipeline import run_pipeline
 from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
@@ -73,6 +74,23 @@ def build_parser() -> argparse.ArgumentParser:
         default="config/lime_heldout.yaml",
         help="Path to the held-out LIME validation YAML file.",
     )
+    multiplicity_parser = subparsers.add_parser(
+        "lime-multiplicity",
+        help="Compare ordinary and multiplicity-aware held-out LIME policies.",
+    )
+    multiplicity_parser.add_argument(
+        "--breast-report-dir",
+        default="artifacts/experiment_15_breast_lime_heldout/reports",
+    )
+    multiplicity_parser.add_argument(
+        "--wine-report-dir",
+        default="artifacts/experiment_16_wine_lime_heldout/reports",
+    )
+    multiplicity_parser.add_argument(
+        "--output-dir",
+        default="artifacts/experiment_17_lime_multiplicity_policy",
+    )
+    multiplicity_parser.add_argument("--alpha", type=float, default=0.05)
     report_parser = subparsers.add_parser(
         "report",
         help="Combine existing SHAP and LIME experiment artifacts.",
@@ -249,6 +267,23 @@ def run_lime_heldout(config_path: str | Path) -> int:
     return 0
 
 
+def run_lime_multiplicity(
+    breast_report_dir: str | Path,
+    wine_report_dir: str | Path,
+    output_dir: str | Path,
+    *,
+    alpha: float,
+) -> int:
+    """Compare unadjusted and family-wise LIME run policies."""
+    run_multiplicity_analysis(
+        breast_report_dir=_project_path(breast_report_dir),
+        wine_report_dir=_project_path(wine_report_dir),
+        output_dir=_project_path(output_dir),
+        alpha=alpha,
+    )
+    return 0
+
+
 def _project_path(value: str | Path) -> Path:
     path = Path(value)
     return path if path.is_absolute() else PROJECT_ROOT / path
@@ -381,6 +416,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_lime_comparison(args.config)
         if args.command == "lime-heldout":
             return run_lime_heldout(args.config)
+        if args.command == "lime-multiplicity":
+            return run_lime_multiplicity(
+                args.breast_report_dir,
+                args.wine_report_dir,
+                args.output_dir,
+                alpha=args.alpha,
+            )
         if args.command == "report":
             return run_report(
                 args.shap_report_dir,
