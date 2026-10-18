@@ -229,6 +229,71 @@ def wilson_interval(
     return max(0.0, centre - margin), min(1.0, centre + margin)
 
 
+def exact_mcnemar_p(control_flags, candidate_flags) -> tuple[int, int, float]:
+    """Compare paired review flags with an exact two-sided McNemar test."""
+    control = np.asarray(control_flags, dtype=bool)
+    candidate = np.asarray(candidate_flags, dtype=bool)
+    if control.shape != candidate.shape:
+        raise ValueError("Paired review flags must have matching shapes.")
+    control_clear_candidate_review = int((~control & candidate).sum())
+    control_review_candidate_clear = int((control & ~candidate).sum())
+    discordant = control_clear_candidate_review + control_review_candidate_clear
+    if discordant == 0:
+        return control_clear_candidate_review, control_review_candidate_clear, 1.0
+    smaller = min(control_clear_candidate_review, control_review_candidate_clear)
+    lower_tail = sum(
+        math.comb(discordant, count) for count in range(smaller + 1)
+    ) / (2**discordant)
+    return (
+        control_clear_candidate_review,
+        control_review_candidate_clear,
+        min(1.0, 2 * lower_tail),
+    )
+
+
+def build_paired_control_comparisons(run_summary: pd.DataFrame) -> pd.DataFrame:
+    """Compare each changed scenario with the control using matched seeds."""
+    control_ids = run_summary.loc[
+        run_summary["change_type"] == "control", "scenario_id"
+    ].unique()
+    if len(control_ids) != 1:
+        raise ValueError("Exactly one control scenario is required.")
+    pivot = run_summary.pivot(
+        index="random_seed",
+        columns="scenario_id",
+        values="review_flag",
+    )
+    control_id = control_ids[0]
+    changed_ids = run_summary.loc[
+        run_summary["change_type"] != "control", "scenario_id"
+    ].drop_duplicates()
+    rows = []
+    comparison_count = len(changed_ids)
+    for scenario_id in changed_ids:
+        paired = pivot[[control_id, scenario_id]].dropna().astype(bool)
+        control_clear, control_review, p_value = exact_mcnemar_p(
+            paired[control_id],
+            paired[scenario_id],
+        )
+        rows.append(
+            {
+                "control_scenario_id": control_id,
+                "candidate_scenario_id": scenario_id,
+                "paired_runs": len(paired),
+                "control_review_rate": float(paired[control_id].mean()),
+                "candidate_review_rate": float(paired[scenario_id].mean()),
+                "review_rate_difference": float(
+                    paired[scenario_id].mean() - paired[control_id].mean()
+                ),
+                "control_clear_candidate_review": control_clear,
+                "control_review_candidate_clear": control_review,
+                "exact_mcnemar_p": p_value,
+                "bonferroni_adjusted_p": min(1.0, p_value * comparison_count),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def save_benchmark_figure(summary: pd.DataFrame, path: Path) -> None:
     """Visualise mean prediction agreement and explanation review rate."""
     positions = np.arange(len(summary))
@@ -363,10 +428,15 @@ def run_version_benchmark(
 
     run_summary = pd.DataFrame(run_rows)
     scenario_summary = aggregate_scenario_runs(run_summary)
+    paired_comparisons = build_paired_control_comparisons(run_summary)
     policy_results = pd.concat(policy_frames, ignore_index=True)
     per_sample = pd.concat(per_sample_frames, ignore_index=True)
     scenario_summary.to_csv(report_dir / "scenario_summary.csv", index=False)
     run_summary.to_csv(report_dir / "scenario_run_summary.csv", index=False)
+    paired_comparisons.to_csv(
+        report_dir / "paired_control_comparisons.csv",
+        index=False,
+    )
     policy_results.to_csv(report_dir / "scenario_policy_results.csv", index=False)
     per_sample.to_csv(report_dir / "scenario_per_sample.csv", index=False)
     save_benchmark_figure(scenario_summary, figure_dir / "version_benchmark.png")
@@ -379,6 +449,9 @@ def run_version_benchmark(
         "control_run_count": len(control_rows),
         "control_review_count": int(control_rows["review_flag"].sum()),
         "review_rate_interval": "Wilson 95% confidence interval",
+        "paired_control_comparisons": paired_comparisons.replace(
+            {np.nan: None}
+        ).to_dict(orient="records"),
         "scenario_results": scenario_summary.replace({np.nan: None}).to_dict(
             orient="records"
         ),

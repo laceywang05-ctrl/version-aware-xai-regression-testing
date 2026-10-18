@@ -34,8 +34,7 @@ The expanded seed-only control produced 11 warnings in 30 runs. This is a much
 stronger indication of false-positive behaviour than the earlier five-run
 result suggested. The shallow-depth and combined-constraint scenarios were
 flagged in 20 of 30 runs. Their point estimates are 30 percentage points above
-the control, but the confidence intervals overlap, so the current evidence does
-not establish reliable separation.
+the control, while the marginal confidence intervals remain wide and overlap.
 
 The shallow-depth candidates retained approximately 100% mean prediction
 agreement while 66.7% of their runs triggered an explanation warning. This
@@ -52,6 +51,23 @@ The direction-flip metric produced most of the warnings: 9 control warnings,
 warnings. This concentration indicates that the direction-flip policy needs
 specific calibration analysis before the overall review flag can be treated as
 reliable.
+
+## Exploratory paired comparison
+
+Because all scenarios use the same 30 candidate seeds, each changed scenario
+can be paired with the seed-only control. Exact McNemar tests give the following
+descriptive comparisons:
+
+| Candidate scenario | Control clear / candidate review | Control review / candidate clear | Exact p | Bonferroni-adjusted p |
+|---|---:|---:|---:|---:|
+| `shallow_depth` | 12 | 3 | 0.035 | 0.105 |
+| `larger_leaves` | 6 | 6 | 1.000 | 1.000 |
+| `constrained_candidate` | 13 | 4 | 0.049 | 0.147 |
+
+The unadjusted results suggest directional separation for shallow and combined
+constraints. Neither comparison remains below 0.05 after adjustment for the
+three scenario comparisons. These tests are exploratory and do not replace a
+pre-specified confirmatory evaluation.
 
 ## Interpretation limits
 

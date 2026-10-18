@@ -6,6 +6,8 @@ import pandas as pd
 
 from xai_regression.benchmark import (
     aggregate_scenario_runs,
+    build_paired_control_comparisons,
+    exact_mcnemar_p,
     load_scenarios,
     wilson_interval,
 )
@@ -97,6 +99,41 @@ scenarios:
     def test_wilson_interval_rejects_invalid_counts(self):
         with self.assertRaisesRegex(ValueError, "between zero and trials"):
             wilson_interval(2, 1)
+
+    def test_exact_mcnemar_uses_discordant_pairs(self):
+        control_clear, control_review, p_value = exact_mcnemar_p(
+            [False, False, True, True],
+            [True, True, True, False],
+        )
+
+        self.assertEqual(control_clear, 2)
+        self.assertEqual(control_review, 1)
+        self.assertEqual(p_value, 1.0)
+
+    def test_paired_control_comparisons_apply_bonferroni(self):
+        runs = pd.DataFrame(
+            [
+                {
+                    "scenario_id": scenario,
+                    "change_type": change_type,
+                    "random_seed": seed,
+                    "review_flag": flag,
+                }
+                for scenario, change_type, flags in [
+                    ("control", "control", [False, False, False, True]),
+                    ("changed_a", "model_configuration", [True, True, True, True]),
+                    ("changed_b", "model_configuration", [False, False, False, True]),
+                ]
+                for seed, flag in enumerate(flags)
+            ]
+        )
+
+        comparisons = build_paired_control_comparisons(runs)
+
+        self.assertEqual(len(comparisons), 2)
+        self.assertTrue(
+            (comparisons["bonferroni_adjusted_p"] >= comparisons["exact_mcnemar_p"]).all()
+        )
 
 
 if __name__ == "__main__":
