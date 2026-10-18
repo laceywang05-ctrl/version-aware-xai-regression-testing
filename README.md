@@ -188,7 +188,8 @@ PYTHONPATH=src python -m xai_regression benchmark
 ```
 
 The scenario file includes a seed-only control and three model-configuration
-changes. Results are written under `artifacts/experiment_09_version_benchmark/`.
+changes, each repeated across five candidate seeds. Results are written under
+`artifacts/experiment_09_version_benchmark/`.
 Warnings on the control scenario estimate false-positive behaviour; warnings on
 the other scenarios measure sensitivity to model changes, not whether those
 changes are harmful. The preliminary findings and limitations are documented in

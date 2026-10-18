@@ -36,7 +36,7 @@ class VersionScenario:
     scenario_id: str
     change_type: str
     description: str
-    random_seed: int
+    random_seeds: tuple[int, ...]
     max_depth: int | None
     min_samples_leaf: int
 
@@ -74,19 +74,34 @@ def load_scenarios(path: str | Path) -> tuple[Path, tuple[VersionScenario, ...]]
             max_depth = item.get("max_depth")
             if max_depth is not None and int(max_depth) < 1:
                 raise ValueError("max_depth must be null or at least 1.")
+            random_seeds = tuple(
+                int(seed)
+                for seed in item.get(
+                    "random_seeds",
+                    [item["random_seed"]] if "random_seed" in item else [],
+                )
+            )
+            if not random_seeds:
+                raise ValueError("random_seeds must contain at least one seed.")
             scenarios.append(
                 VersionScenario(
                     scenario_id=scenario_id,
                     change_type=str(item["change_type"]),
                     description=str(item["description"]),
-                    random_seed=int(item["random_seed"]),
+                    random_seeds=random_seeds,
                     max_depth=None if max_depth is None else int(max_depth),
                     min_samples_leaf=min_samples_leaf,
                 )
             )
     except (KeyError, TypeError, ValueError) as error:
         if isinstance(error, ValueError) and str(error).startswith(
-            ("Duplicate", "min_samples", "max_depth", "Each scenario")
+            (
+                "Duplicate",
+                "min_samples",
+                "max_depth",
+                "Each scenario",
+                "random_seeds",
+            )
         ):
             raise
         raise ValueError(f"Invalid scenario configuration value: {error}") from error
@@ -98,13 +113,14 @@ def _train_scenario_model(
     scenario: VersionScenario,
     X_train: pd.DataFrame,
     y_train: pd.Series,
+    random_seed: int,
 ) -> RandomForestClassifier:
     model = RandomForestClassifier(
         n_estimators=config.model.n_estimators,
         max_depth=scenario.max_depth,
         min_samples_leaf=scenario.min_samples_leaf,
         class_weight=config.model.class_weight,
-        random_state=scenario.random_seed,
+        random_state=random_seed,
         n_jobs=-1,
     )
     model.fit(X_train, y_train)
@@ -138,20 +154,67 @@ def _build_benign_baseline(
     return pd.concat(frames, ignore_index=True)
 
 
+def aggregate_scenario_runs(run_summary: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate repeated candidate seeds into one row per scenario."""
+    rows = []
+    for scenario_id, group in run_summary.groupby("scenario_id", sort=False):
+        flagged_counts: dict[str, int] = {}
+        for value in group["flagged_metrics"]:
+            for metric in filter(None, str(value).split(",")):
+                flagged_counts[metric] = flagged_counts.get(metric, 0) + 1
+        rows.append(
+            {
+                "scenario_id": scenario_id,
+                "change_type": group["change_type"].iloc[0],
+                "description": group["description"].iloc[0],
+                "runs": len(group),
+                "mean_accuracy": float(group["accuracy"].mean()),
+                "std_accuracy": float(group["accuracy"].std(ddof=0)),
+                "mean_prediction_agreement": float(
+                    group["prediction_agreement"].mean()
+                ),
+                "std_prediction_agreement": float(
+                    group["prediction_agreement"].std(ddof=0)
+                ),
+                "mean_cosine_similarity": float(
+                    group["mean_cosine_similarity"].mean()
+                ),
+                "std_cosine_similarity": float(
+                    group["mean_cosine_similarity"].std(ddof=0)
+                ),
+                "review_count": int(group["review_flag"].sum()),
+                "review_rate": float(group["review_flag"].mean()),
+                "flagged_metric_frequency": ",".join(
+                    f"{metric}:{count}"
+                    for metric, count in sorted(flagged_counts.items())
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def save_benchmark_figure(summary: pd.DataFrame, path: Path) -> None:
-    """Visualise predictive agreement and number of explanation warnings."""
+    """Visualise mean prediction agreement and explanation review rate."""
     positions = np.arange(len(summary))
     figure, axes = plt.subplots(1, 2, figsize=(12, 5))
-    axes[0].bar(positions, summary["prediction_agreement"], color="#3A86A8")
+    axes[0].bar(
+        positions,
+        summary["mean_prediction_agreement"],
+        yerr=summary["std_prediction_agreement"],
+        capsize=4,
+        color="#3A86A8",
+    )
     axes[0].set_ylim(0, 1.02)
     axes[0].set_ylabel("Prediction agreement")
     axes[0].set_xticks(positions, summary["scenario_id"], rotation=25, ha="right")
     axes[0].set_title("Prediction behaviour")
 
-    colors = ["#D97732" if value else "#67A878" for value in summary["review_flag"]]
-    axes[1].bar(positions, summary["flagged_metric_count"], color=colors)
-    axes[1].set_ylim(0, max(4, int(summary["flagged_metric_count"].max()) + 1))
-    axes[1].set_ylabel("Flagged explanation metrics")
+    colors = [
+        "#D97732" if value else "#67A878" for value in summary["review_rate"]
+    ]
+    axes[1].bar(positions, summary["review_rate"], color=colors)
+    axes[1].set_ylim(0, 1.02)
+    axes[1].set_ylabel("Fraction of runs flagged for review")
     axes[1].set_xticks(positions, summary["scenario_id"], rotation=25, ha="right")
     axes[1].set_title("Explanation policy response")
     figure.suptitle("Controlled Model-Version Benchmark")
@@ -194,65 +257,82 @@ def run_version_benchmark(
         reference_predictions,
     )
 
-    scenario_rows = []
+    run_rows = []
     policy_frames = []
     per_sample_frames = []
     for scenario in scenarios:
-        model = _train_scenario_model(
-            config,
-            scenario,
-            dataset.X_train,
-            dataset.y_train,
-        )
-        values = positive_class_shap_values(model, dataset.X_probe)
-        predictions = model.predict(dataset.X_probe)
-        comparison = compare_explanations(
-            config,
-            reference_values,
-            values,
-            reference_predictions != predictions,
-        )
-        policy, _ = calibrate_policy(config, benign_samples, comparison)
-        policy.insert(0, "scenario_id", scenario.scenario_id)
-        policy_frames.append(policy)
-        tagged_comparison = comparison.copy()
-        tagged_comparison.insert(0, "scenario_id", scenario.scenario_id)
-        per_sample_frames.append(tagged_comparison)
-        performance = predictive_metrics(model, dataset.X_test, dataset.y_test)
-        flagged_metrics = policy.loc[policy["review_flag"], "metric"].tolist()
-        scenario_rows.append(
-            {
-                "scenario_id": scenario.scenario_id,
-                "change_type": scenario.change_type,
-                "description": scenario.description,
-                "random_seed": scenario.random_seed,
-                "max_depth": scenario.max_depth,
-                "min_samples_leaf": scenario.min_samples_leaf,
-                **performance,
-                "prediction_agreement": float(1 - comparison["prediction_changed"].mean()),
-                "mean_cosine_similarity": float(comparison["cosine_similarity"].mean()),
-                "mean_rank_correlation": float(comparison["rank_correlation"].mean()),
-                "mean_top_k_overlap": float(comparison["top_k_overlap"].mean()),
-                "mean_direction_flip_rate": float(comparison["direction_flip_rate"].mean()),
-                "flagged_metric_count": len(flagged_metrics),
-                "flagged_metrics": ",".join(flagged_metrics),
-                "review_flag": bool(flagged_metrics),
-            }
-        )
+        for random_seed in scenario.random_seeds:
+            model = _train_scenario_model(
+                config,
+                scenario,
+                dataset.X_train,
+                dataset.y_train,
+                random_seed,
+            )
+            values = positive_class_shap_values(model, dataset.X_probe)
+            predictions = model.predict(dataset.X_probe)
+            comparison = compare_explanations(
+                config,
+                reference_values,
+                values,
+                reference_predictions != predictions,
+            )
+            policy, _ = calibrate_policy(config, benign_samples, comparison)
+            policy.insert(0, "random_seed", random_seed)
+            policy.insert(0, "scenario_id", scenario.scenario_id)
+            policy_frames.append(policy)
+            tagged_comparison = comparison.copy()
+            tagged_comparison.insert(0, "random_seed", random_seed)
+            tagged_comparison.insert(0, "scenario_id", scenario.scenario_id)
+            per_sample_frames.append(tagged_comparison)
+            performance = predictive_metrics(model, dataset.X_test, dataset.y_test)
+            flagged_metrics = policy.loc[policy["review_flag"], "metric"].tolist()
+            run_rows.append(
+                {
+                    "scenario_id": scenario.scenario_id,
+                    "change_type": scenario.change_type,
+                    "description": scenario.description,
+                    "random_seed": random_seed,
+                    "max_depth": scenario.max_depth,
+                    "min_samples_leaf": scenario.min_samples_leaf,
+                    **performance,
+                    "prediction_agreement": float(
+                        1 - comparison["prediction_changed"].mean()
+                    ),
+                    "mean_cosine_similarity": float(
+                        comparison["cosine_similarity"].mean()
+                    ),
+                    "mean_rank_correlation": float(
+                        comparison["rank_correlation"].mean()
+                    ),
+                    "mean_top_k_overlap": float(
+                        comparison["top_k_overlap"].mean()
+                    ),
+                    "mean_direction_flip_rate": float(
+                        comparison["direction_flip_rate"].mean()
+                    ),
+                    "flagged_metric_count": len(flagged_metrics),
+                    "flagged_metrics": ",".join(flagged_metrics),
+                    "review_flag": bool(flagged_metrics),
+                }
+            )
 
-    scenario_summary = pd.DataFrame(scenario_rows)
+    run_summary = pd.DataFrame(run_rows)
+    scenario_summary = aggregate_scenario_runs(run_summary)
     policy_results = pd.concat(policy_frames, ignore_index=True)
     per_sample = pd.concat(per_sample_frames, ignore_index=True)
     scenario_summary.to_csv(report_dir / "scenario_summary.csv", index=False)
+    run_summary.to_csv(report_dir / "scenario_run_summary.csv", index=False)
     policy_results.to_csv(report_dir / "scenario_policy_results.csv", index=False)
     per_sample.to_csv(report_dir / "scenario_per_sample.csv", index=False)
     save_benchmark_figure(scenario_summary, figure_dir / "version_benchmark.png")
 
-    control_rows = scenario_summary[scenario_summary["change_type"] == "control"]
+    control_rows = run_summary[run_summary["change_type"] == "control"]
     summary = {
         "benchmark": "controlled-model-version-scenarios",
         "scenario_count": len(scenario_summary),
-        "control_count": len(control_rows),
+        "candidate_run_count": len(run_summary),
+        "control_run_count": len(control_rows),
         "control_review_count": int(control_rows["review_flag"].sum()),
         "scenario_results": scenario_summary.replace({np.nan: None}).to_dict(
             orient="records"
@@ -269,10 +349,11 @@ def run_version_benchmark(
 
     print("Controlled model-version benchmark")
     print("----------------------------------")
-    for row in scenario_rows:
+    for row in scenario_summary.to_dict(orient="records"):
         print(
-            f"{row['scenario_id']}: agreement={row['prediction_agreement']:.3f}, "
-            f"flagged={row['flagged_metric_count']} ({row['flagged_metrics'] or 'none'})"
+            f"{row['scenario_id']}: agreement={row['mean_prediction_agreement']:.3f}, "
+            f"review={row['review_count']}/{row['runs']} "
+            f"({row['flagged_metric_frequency'] or 'none'})"
         )
     print(f"Reports saved to: {report_dir}")
     print(f"Figure saved to: {figure_dir}")
