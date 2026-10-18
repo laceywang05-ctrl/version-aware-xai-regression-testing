@@ -3,6 +3,7 @@ const state = {
   selectedMethod: "SHAP",
   benchmarks: [],
   selectedBenchmark: 0,
+  portfolio: null,
 };
 
 const elements = {
@@ -26,6 +27,12 @@ const elements = {
   scenarioGrid: document.querySelector("#scenario-grid"),
   pairedResults: document.querySelector("#paired-results"),
   benchmarkInterpretation: document.querySelector("#benchmark-interpretation"),
+  portfolioView: document.querySelector("#portfolio-view"),
+  portfolioCoverage: document.querySelector("#portfolio-coverage"),
+  portfolioGrid: document.querySelector("#portfolio-grid"),
+  portfolioResults: document.querySelector("#portfolio-results"),
+  portfolioInterpretation: document.querySelector("#portfolio-interpretation"),
+  portfolioComparability: document.querySelector("#portfolio-comparability"),
 };
 
 function formatPercent(value) {
@@ -64,6 +71,21 @@ function validateBenchmark(report) {
   return report;
 }
 
+function validatePortfolio(report) {
+  if (
+    !report ||
+    !Array.isArray(report.entries) ||
+    !report.coverage ||
+    typeof report.coverage !== "object"
+  ) {
+    throw new Error("This file is not a cross-dataset summary.");
+  }
+  if (!report.entries.length) {
+    throw new Error("The cross-dataset summary contains no evidence entries.");
+  }
+  return report;
+}
+
 function datasetLabel(report) {
   if (report.dataset === "wine_binary") return "Wine (binary)";
   if (report.dataset === "breast_cancer" || !report.dataset) return "Breast cancer";
@@ -82,11 +104,76 @@ function scenarioLabel(id) {
 
 function switchView(view) {
   const benchmark = view === "benchmark";
-  elements.comparisonView.hidden = benchmark;
+  const portfolio = view === "portfolio";
+  elements.comparisonView.hidden = benchmark || portfolio;
   elements.benchmarkView.hidden = !benchmark;
+  elements.portfolioView.hidden = !portfolio;
   for (const tab of elements.viewTabs) {
     tab.classList.toggle("active", tab.dataset.view === view);
   }
+}
+
+function headlineLabel(entry) {
+  const labels = {
+    strongest_candidate_review_rate: "Strongest candidate review rate",
+    any_metric_breach_rate: "Any-metric breach rate",
+  };
+  return labels[entry.headline_metric] || String(entry.headline_metric).replaceAll("_", " ");
+}
+
+function renderPortfolio(report, message) {
+  state.portfolio = validatePortfolio(report);
+  elements.portfolioCoverage.textContent =
+    `${report.coverage.completed_cells} of ${report.coverage.expected_cells} dataset-method cells completed.`;
+  elements.portfolioGrid.replaceChildren();
+  elements.portfolioResults.replaceChildren();
+
+  for (const entry of report.entries) {
+    const card = document.createElement("article");
+    card.className = "portfolio-card";
+    card.innerHTML = `
+      <div class="portfolio-card-head">
+        <div><p class="portfolio-method"></p><h3 class="portfolio-dataset"></h3></div>
+        <span class="portfolio-status"></span>
+      </div>
+      <p class="portfolio-evidence"></p>
+      <div class="portfolio-stats">
+        <div><span>Prediction agreement</span><strong class="portfolio-agreement"></strong></div>
+        <div><span>Cosine similarity</span><strong class="portfolio-cosine"></strong></div>
+        <div><span class="portfolio-headline-label"></span><strong class="portfolio-headline"></strong></div>
+      </div>`;
+    card.querySelector(".portfolio-method").textContent = entry.method;
+    card.querySelector(".portfolio-dataset").textContent = entry.dataset;
+    const status = card.querySelector(".portfolio-status");
+    status.textContent = entry.status;
+    status.className = `portfolio-status ${entry.status === "REVIEW" ? "review" : "evidence"}`;
+    card.querySelector(".portfolio-evidence").textContent = entry.evidence_type;
+    card.querySelector(".portfolio-agreement").textContent = formatPercent(entry.prediction_agreement);
+    card.querySelector(".portfolio-cosine").textContent = formatScore(entry.cosine_similarity);
+    card.querySelector(".portfolio-headline-label").textContent = headlineLabel(entry);
+    card.querySelector(".portfolio-headline").textContent = formatPercent(entry.headline_value);
+    elements.portfolioGrid.append(card);
+
+    const row = document.createElement("tr");
+    const cells = [
+      entry.dataset,
+      entry.method,
+      entry.evidence_type,
+      formatPercent(entry.prediction_agreement),
+      formatScore(entry.cosine_similarity),
+      `${headlineLabel(entry)}: ${formatPercent(entry.headline_value)}`,
+      entry.status,
+    ];
+    for (const value of cells) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    elements.portfolioResults.append(row);
+  }
+  elements.portfolioInterpretation.textContent = report.interpretation;
+  elements.portfolioComparability.textContent = report.comparability_note;
+  if (message) elements.message.textContent = message;
 }
 
 function renderSummary() {
@@ -334,7 +421,10 @@ elements.upload.addEventListener("change", async (event) => {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (Array.isArray(payload.benchmarks)) {
+    if (Array.isArray(payload.entries) && payload.coverage) {
+      renderPortfolio(payload, `Loaded cross-dataset summary locally from ${file.name}.`);
+      switchView("portfolio");
+    } else if (Array.isArray(payload.benchmarks)) {
       setBenchmarks(payload.benchmarks, `Loaded benchmarks locally from ${file.name}.`);
     } else if (Array.isArray(payload.scenario_results)) {
       setBenchmarks([payload], `Loaded benchmark locally from ${file.name}.`);
@@ -391,6 +481,14 @@ async function loadInitialReport() {
     }
   } catch (_error) {
     // Benchmark data is optional when the dashboard is served statically.
+  }
+
+  try {
+    const response = await fetch("data/portfolio.json", { cache: "no-store" });
+    if (!response.ok) return;
+    renderPortfolio(await response.json());
+  } catch (_error) {
+    // Cross-dataset evidence is optional when the dashboard is served statically.
   }
 }
 

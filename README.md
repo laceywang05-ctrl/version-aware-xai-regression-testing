@@ -180,6 +180,21 @@ model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence
 intervals, and reports Bonferroni-adjusted paired-control results. A benchmark
 summary can also be supplied explicitly by repeating `--benchmark-report`.
 
+Build a single cross-dataset evidence matrix from the completed SHAP and LIME
+experiments:
+
+```bash
+PYTHONPATH=src python -m xai_regression portfolio
+```
+
+This writes JSON, CSV and Markdown reports under
+`artifacts/experiment_14_cross_dataset_summary/`. After it has been generated,
+`PYTHONPATH=src python -m xai_regression serve` automatically adds a
+**Cross-dataset overview** page to the dashboard. The page preserves the
+different meanings of SHAP review rates and LIME breach rates instead of
+combining them into one score. Results and limitations are documented in
+[`docs/CROSS_DATASET_SUMMARY_RESULT.md`](docs/CROSS_DATASET_SUMMARY_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
