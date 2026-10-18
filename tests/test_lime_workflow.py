@@ -1,13 +1,18 @@
 import unittest
+from pathlib import Path
 
 import numpy as np
-
 import pandas as pd
 
+from xai_regression.config import load_config
 from xai_regression.lime_workflow import (
     apply_sample_policy_flags,
     explanation_to_vector,
+    lime_class_names,
 )
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class FakeExplanation:
@@ -16,6 +21,15 @@ class FakeExplanation:
 
 
 class LimeWorkflowTests(unittest.TestCase):
+    def test_lime_class_names_match_dataset(self):
+        breast = load_config(PROJECT_ROOT / "config/lime_cross_version.yaml")
+        wine = load_config(PROJECT_ROOT / "config/wine_lime_cross_version.yaml")
+
+        self.assertEqual(lime_class_names(breast), ["benign", "malignant"])
+        self.assertEqual(
+            lime_class_names(wine),
+            ["wine_class_0", "wine_class_1"],
+        )
     def test_sparse_explanation_is_mapped_to_feature_order(self):
         vector = explanation_to_vector(
             FakeExplanation(),

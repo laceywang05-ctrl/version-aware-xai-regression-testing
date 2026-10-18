@@ -184,6 +184,16 @@ summary can also be supplied explicitly by repeating `--benchmark-report`.
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
 
+Run the LIME stability and cross-version checks on the binary Wine dataset:
+
+```bash
+PYTHONPATH=src python -m xai_regression lime-stability --config config/wine_lime_stability.yaml
+PYTHONPATH=src python -m xai_regression lime-compare --config config/wine_lime_cross_version.yaml
+```
+
+The design and observed results are documented in
+[`docs/WINE_LIME_VALIDATION_RESULT.md`](docs/WINE_LIME_VALIDATION_RESULT.md).
+
 ## Controlled version benchmark
 
 Evaluate the calibrated SHAP policy across several controlled candidate-model
