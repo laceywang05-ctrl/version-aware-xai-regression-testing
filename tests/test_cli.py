@@ -132,12 +132,38 @@ class CliTests(unittest.TestCase):
                 host="127.0.0.1",
                 port=8000,
                 benchmark_reports=["benchmark.json"],
+                portfolio_report="portfolio.json",
             )
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             serve.call_args.kwargs["benchmark_paths"],
             [cli.PROJECT_ROOT / "benchmark.json"],
+        )
+        self.assertEqual(
+            serve.call_args.kwargs["portfolio_path"],
+            cli.PROJECT_ROOT / "portfolio.json",
+        )
+
+    def test_portfolio_command_resolves_all_paths(self):
+        with patch(
+            "xai_regression.cli.run_cross_dataset_summary", return_value={}
+        ) as run:
+            exit_code = cli.run_portfolio(
+                "breast-shap.json",
+                "wine-shap.json",
+                "breast-lime.json",
+                "wine-lime.json",
+                "output",
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.kwargs["wine_lime_report"],
+            cli.PROJECT_ROOT / "wine-lime.json",
+        )
+        self.assertEqual(
+            run.call_args.kwargs["output_dir"], cli.PROJECT_ROOT / "output"
         )
 
     def test_benchmark_command_resolves_both_configs(self):

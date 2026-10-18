@@ -13,6 +13,7 @@ from xai_regression.lime_workflow import (
     run_lime_stability,
 )
 from xai_regression.pipeline import run_pipeline
+from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
 from xai_regression.reporting import run_unified_report
 from xai_regression.server import serve_dashboard
@@ -22,6 +23,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BENCHMARK_REPORTS = (
     "artifacts/experiment_10_heldout_benchmark/reports/summary.json",
     "artifacts/experiment_11_wine_heldout_benchmark/reports/summary.json",
+)
+DEFAULT_PORTFOLIO_REPORT = (
+    "artifacts/experiment_14_cross_dataset_summary/reports/summary.json"
 )
 
 
@@ -134,6 +138,35 @@ def build_parser() -> argparse.ArgumentParser:
         default="config/version_benchmark.yaml",
         help="Path to the controlled version-scenario YAML file.",
     )
+    portfolio_parser = subparsers.add_parser(
+        "portfolio",
+        help="Summarize SHAP and LIME evidence across both datasets.",
+    )
+    portfolio_parser.add_argument(
+        "--breast-shap-report",
+        default="artifacts/experiment_10_heldout_benchmark/reports/summary.json",
+    )
+    portfolio_parser.add_argument(
+        "--wine-shap-report",
+        default="artifacts/experiment_11_wine_heldout_benchmark/reports/summary.json",
+    )
+    portfolio_parser.add_argument(
+        "--breast-lime-report",
+        default="artifacts/experiment_07_lime_cross_version/reports/summary.json",
+    )
+    portfolio_parser.add_argument(
+        "--wine-lime-report",
+        default="artifacts/experiment_13_wine_lime_cross_version/reports/summary.json",
+    )
+    portfolio_parser.add_argument(
+        "--output-dir",
+        default="artifacts/experiment_14_cross_dataset_summary",
+    )
+    serve_parser.add_argument(
+        "--portfolio-report",
+        default=None,
+        help="Optional cross-dataset summary JSON.",
+    )
     return parser
 
 
@@ -241,6 +274,11 @@ def run_workflow(
             report_path=result["report_path"],
             dashboard_dir=PROJECT_ROOT / "dashboard",
             benchmark_paths=_benchmark_paths(benchmark_reports),
+            portfolio_path=(
+                _project_path(DEFAULT_PORTFOLIO_REPORT)
+                if _project_path(DEFAULT_PORTFOLIO_REPORT).is_file()
+                else None
+            ),
             host=host,
             port=port,
         )
@@ -253,14 +291,42 @@ def run_dashboard(
     host: str,
     port: int,
     benchmark_reports: Sequence[str] | None = None,
+    portfolio_report: str | Path | None = None,
 ) -> int:
     """Serve the dashboard with a previously generated unified report."""
     serve_dashboard(
         report_path=_project_path(report),
         dashboard_dir=PROJECT_ROOT / "dashboard",
         benchmark_paths=_benchmark_paths(benchmark_reports),
+        portfolio_path=(
+            _project_path(portfolio_report)
+            if portfolio_report is not None
+            else (
+                _project_path(DEFAULT_PORTFOLIO_REPORT)
+                if _project_path(DEFAULT_PORTFOLIO_REPORT).is_file()
+                else None
+            )
+        ),
         host=host,
         port=port,
+    )
+    return 0
+
+
+def run_portfolio(
+    breast_shap_report: str | Path,
+    wine_shap_report: str | Path,
+    breast_lime_report: str | Path,
+    wine_lime_report: str | Path,
+    output_dir: str | Path,
+) -> int:
+    """Build the cross-dataset evidence summary from completed reports."""
+    run_cross_dataset_summary(
+        breast_shap_report=_project_path(breast_shap_report),
+        wine_shap_report=_project_path(wine_shap_report),
+        breast_lime_report=_project_path(breast_lime_report),
+        wine_lime_report=_project_path(wine_lime_report),
+        output_dir=_project_path(output_dir),
     )
     return 0
 
@@ -311,9 +377,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 host=args.host,
                 port=args.port,
                 benchmark_reports=args.benchmark_report,
+                portfolio_report=args.portfolio_report,
             )
         if args.command == "benchmark":
             return run_benchmark(args.config, args.scenarios)
+        if args.command == "portfolio":
+            return run_portfolio(
+                args.breast_shap_report,
+                args.wine_shap_report,
+                args.breast_lime_report,
+                args.wine_lime_report,
+                args.output_dir,
+            )
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 

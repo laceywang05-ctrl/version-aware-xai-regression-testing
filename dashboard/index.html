@@ -30,6 +30,7 @@
       <nav class="view-tabs" aria-label="Dashboard view">
         <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
         <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
+        <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
       </nav>
 
       <div id="comparison-view" class="dashboard-view">
@@ -134,6 +135,44 @@
             <h2 id="benchmark-interpretation-heading">Interpretation boundary</h2>
             <p id="benchmark-interpretation"></p>
             <p>A higher review rate means the policy is sensitive to the version change; it does not by itself show that the new model is worse.</p>
+          </div>
+        </section>
+      </div>
+
+      <div id="portfolio-view" class="dashboard-view" hidden>
+        <section class="content-section" aria-labelledby="portfolio-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Two datasets · two explanation methods</p>
+              <h2 id="portfolio-heading">Completed evidence portfolio</h2>
+            </div>
+            <p id="portfolio-coverage"></p>
+          </div>
+          <div id="portfolio-grid" class="portfolio-grid"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="portfolio-table-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Comparable descriptors</p>
+              <h2 id="portfolio-table-heading">Cross-dataset result table</h2>
+            </div>
+            <p>Prediction agreement and cosine similarity are shown consistently; headline rates retain their method-specific meaning.</p>
+          </div>
+          <div class="table-scroll">
+            <table class="comparison-table">
+              <thead><tr><th>Dataset</th><th>Method</th><th>Evidence</th><th>Agreement</th><th>Cosine</th><th>Headline result</th><th>Status</th></tr></thead>
+              <tbody id="portfolio-results"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="interpretation-panel" aria-labelledby="portfolio-interpretation-heading">
+          <div class="interpretation-icon" aria-hidden="true">i</div>
+          <div>
+            <h2 id="portfolio-interpretation-heading">Interpretation boundary</h2>
+            <p id="portfolio-interpretation"></p>
+            <p id="portfolio-comparability"></p>
           </div>
         </section>
       </div>
