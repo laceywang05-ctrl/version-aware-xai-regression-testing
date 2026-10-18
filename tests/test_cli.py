@@ -88,6 +88,33 @@ class CliTests(unittest.TestCase):
             "breast-cancer-lime-heldout-v1",
         )
 
+    def test_lime_multiplicity_resolves_project_paths(self):
+        with patch(
+            "xai_regression.cli.run_multiplicity_analysis",
+            return_value={},
+        ) as run:
+            exit_code = cli.run_lime_multiplicity(
+                "breast",
+                "wine",
+                "output",
+                alpha=0.05,
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.kwargs["breast_report_dir"],
+            cli.PROJECT_ROOT / "breast",
+        )
+        self.assertEqual(
+            run.call_args.kwargs["wine_report_dir"],
+            cli.PROJECT_ROOT / "wine",
+        )
+        self.assertEqual(
+            run.call_args.kwargs["output_dir"],
+            cli.PROJECT_ROOT / "output",
+        )
+        self.assertEqual(run.call_args.kwargs["alpha"], 0.05)
+
     def test_report_command_resolves_project_paths(self):
         with patch(
             "xai_regression.cli.run_unified_report",
