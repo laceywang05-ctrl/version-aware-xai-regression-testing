@@ -24,6 +24,20 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(first.X_probe.equals(second.X_probe))
         self.assertTrue(first.y_probe.equals(second.y_probe))
 
+    def test_wine_binary_dataset_is_reproducible(self):
+        config = load_config(
+            PROJECT_ROOT / "config/wine_benchmark_calibration.yaml"
+        )
+        first = load_dataset(config)
+        second = load_dataset(config)
+
+        self.assertEqual(len(first.X_train) + len(first.X_test), 130)
+        self.assertEqual(first.X_train.shape[1], 13)
+        self.assertEqual(len(first.X_probe), 30)
+        self.assertEqual(set(first.y_train.unique()), {0, 1})
+        self.assertTrue(first.X_probe.equals(second.X_probe))
+        self.assertTrue(first.y_probe.equals(second.y_probe))
+
     def test_identical_explanations_produce_stable_metrics(self):
         values = np.array(
             [

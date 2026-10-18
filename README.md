@@ -209,3 +209,17 @@ This diagnostic keeps the quantile policy unchanged while testing whether the
 earlier control warnings were caused by a small calibration set.
 The verified results and interpretation are documented in
 [`docs/HELDOUT_POLICY_VALIDATION_RESULT.md`](docs/HELDOUT_POLICY_VALIDATION_RESULT.md).
+
+## Second-dataset validation
+
+Run the same held-out benchmark design on a binary subset of the scikit-learn
+Wine dataset:
+
+```bash
+PYTHONPATH=src python -m xai_regression benchmark \
+  --config config/wine_benchmark_calibration.yaml \
+  --scenarios config/wine_benchmark_heldout.yaml
+```
+
+The results are documented in
+[`docs/SECOND_DATASET_VALIDATION_RESULT.md`](docs/SECOND_DATASET_VALIDATION_RESULT.md).

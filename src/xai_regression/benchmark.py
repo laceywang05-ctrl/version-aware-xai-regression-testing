@@ -444,6 +444,12 @@ def run_version_benchmark(
     control_rows = run_summary[run_summary["change_type"] == "control"]
     summary = {
         "benchmark": "controlled-model-version-scenarios",
+        "dataset": config.dataset.name,
+        "samples": int(len(dataset.X_train) + len(dataset.X_test)),
+        "features": int(dataset.X_train.shape[1]),
+        "probe_samples": int(len(dataset.X_probe)),
+        "positive_class": config.explainer.target_class,
+        "calibration_run_count": len(config.model.benign_seeds),
         "scenario_count": len(scenario_summary),
         "candidate_run_count": len(run_summary),
         "control_run_count": len(control_rows),
