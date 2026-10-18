@@ -191,7 +191,7 @@ def run_validation(
     dataset = load_dataset(config)
     probe = dataset.X_probe.reset_index(names="source_row")
     probe.insert(0, "sample_id", range(len(probe)))
-    probe["target_malignant"] = dataset.y_probe.to_numpy()
+    probe["target_positive"] = dataset.y_probe.to_numpy()
     probe.to_csv(data_dir / "fixed_probe.csv", index=False)
 
     reference_model = train_reference_model(
@@ -312,7 +312,7 @@ def run_validation(
     summary = {
         "experiment_id": config.experiment_id,
         "config_path": str(Path(config_path)),
-        "dataset": "scikit-learn Breast Cancer Wisconsin Diagnostic",
+        "dataset": config.dataset.name,
         "samples": int(len(dataset.X_train) + len(dataset.X_test)),
         "features": int(dataset.X_train.shape[1]),
         "probe_samples": int(len(dataset.X_probe)),

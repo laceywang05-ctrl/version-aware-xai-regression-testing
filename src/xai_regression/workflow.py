@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import shap
-from sklearn.datasets import load_breast_cancer
+from sklearn.datasets import load_breast_cancer, load_wine
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
@@ -38,17 +38,24 @@ class DatasetSplit:
 
 def validate_supported_data_model(config: ExperimentConfig) -> None:
     """Reject dataset and model choices not implemented by the prototype."""
-    if config.dataset.name != "breast_cancer":
+    supported_targets = {
+        "breast_cancer": "malignant",
+        "wine_binary": "wine_class_1",
+    }
+    if config.dataset.name not in supported_targets:
         raise ValueError(
-            "The current workflow supports dataset.name=breast_cancer only."
+            "The current workflow supports dataset.name=breast_cancer or "
+            "dataset.name=wine_binary."
         )
     if config.model.family != "random_forest":
         raise ValueError(
             "The current workflow supports model.family=random_forest only."
         )
-    if config.explainer.target_class != "malignant":
+    expected_target = supported_targets[config.dataset.name]
+    if config.explainer.target_class != expected_target:
         raise ValueError(
-            "The breast-cancer workflow currently explains target_class=malignant."
+            f"The {config.dataset.name} workflow requires "
+            f"target_class={expected_target}."
         )
 
 
@@ -64,12 +71,20 @@ def validate_supported_workflow(config: ExperimentConfig) -> None:
 def load_dataset(config: ExperimentConfig) -> DatasetSplit:
     """Load and split the configured dataset, including a fixed probe subset."""
     validate_supported_data_model(config)
-    dataset = load_breast_cancer(as_frame=True)
-    X = dataset.data.copy()
+    if config.dataset.name == "breast_cancer":
+        dataset = load_breast_cancer(as_frame=True)
+        X = dataset.data.copy()
 
-    # The source dataset uses malignant=0 and benign=1. Recode malignant as the
-    # positive class so positive-class explanations describe cancer risk.
-    y = (dataset.target == 0).astype(int)
+        # The source dataset uses malignant=0 and benign=1. Recode malignant as
+        # the positive class so explanations describe cancer risk.
+        y = (dataset.target == 0).astype(int)
+    else:
+        dataset = load_wine(as_frame=True)
+        binary = dataset.target.isin([0, 1])
+        X = dataset.data.loc[binary].reset_index(drop=True)
+        # Use class 1 as the positive class and exclude class 2 to preserve the
+        # binary-class assumptions used by Tree SHAP and the policy workflow.
+        y = (dataset.target.loc[binary].reset_index(drop=True) == 1).astype(int)
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -139,13 +154,13 @@ def predictive_metrics(
     X_test: pd.DataFrame,
     y_test: pd.Series,
 ) -> dict[str, float]:
-    """Calculate predictive performance for the positive malignant class."""
+    """Calculate predictive performance for the configured positive class."""
     predictions = model.predict(X_test)
     probabilities = model.predict_proba(X_test)[:, 1]
     return {
         "accuracy": float(accuracy_score(y_test, predictions)),
         "balanced_accuracy": float(balanced_accuracy_score(y_test, predictions)),
-        "f1_malignant": float(f1_score(y_test, predictions)),
+        "f1_positive": float(f1_score(y_test, predictions)),
         "roc_auc": float(roc_auc_score(y_test, probabilities)),
     }
 
