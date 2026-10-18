@@ -45,6 +45,19 @@ def lime_summary():
     }
 
 
+def heldout_lime_summary():
+    return {
+        "status": "SEPARATED",
+        "matched_candidate_comparisons": 600,
+        "probe_prediction_agreement": 1.0,
+        "heldout_candidate_means": {"cosine_similarity": 0.97},
+        "paired_seed_cross_version_means": {"cosine_similarity": 0.99},
+        "heldout_control": {"review_rate": 0.1},
+        "candidate": {"review_rate": 0.6},
+        "flagged_metrics": ["cosine_similarity"],
+    }
+
+
 class PortfolioTests(unittest.TestCase):
     def test_shap_benchmark_preserves_control_semantics(self):
         row = normalize_shap_benchmark(
@@ -63,6 +76,16 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(row["cosine_similarity"], 0.96)
         self.assertEqual(row["paired_seed_cosine_similarity"], 0.99)
         self.assertEqual(row["flagged_metrics"], ["cosine_similarity"])
+
+    def test_heldout_lime_summary_preserves_control_rate(self):
+        row = normalize_lime_comparison(
+            heldout_lime_summary(), dataset_id="wine_binary"
+        )
+
+        self.assertEqual(row["evidence_type"], "held-out paired-seed validation")
+        self.assertEqual(row["headline_metric"], "candidate_review_rate")
+        self.assertEqual(row["headline_value"], 0.6)
+        self.assertEqual(row["control_review_rate"], 0.1)
 
     def test_cross_dataset_summary_writes_complete_matrix(self):
         with tempfile.TemporaryDirectory() as directory:

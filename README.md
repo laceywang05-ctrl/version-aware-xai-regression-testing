@@ -209,6 +209,21 @@ PYTHONPATH=src python -m xai_regression lime-compare --config config/wine_lime_c
 The design and observed results are documented in
 [`docs/WINE_LIME_VALIDATION_RESULT.md`](docs/WINE_LIME_VALIDATION_RESULT.md).
 
+Validate the LIME policy using 30 calibration seeds and a disjoint set of 30
+held-out evaluation seeds on both datasets:
+
+```bash
+PYTHONPATH=src python -m xai_regression lime-heldout \
+  --config config/lime_heldout.yaml
+PYTHONPATH=src python -m xai_regression lime-heldout \
+  --config config/wine_lime_heldout.yaml
+```
+
+The experiment reports held-out fixed-model false-positive behaviour,
+candidate review rates, Wilson 95% confidence intervals and an exact paired
+McNemar comparison. Results and limitations are documented in
+[`docs/LIME_HELDOUT_VALIDATION_RESULT.md`](docs/LIME_HELDOUT_VALIDATION_RESULT.md).
+
 ## Controlled version benchmark
 
 Evaluate the calibrated SHAP policy across several controlled candidate-model

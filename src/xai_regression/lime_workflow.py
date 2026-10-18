@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xai_regression.config import ExperimentConfig
+from xai_regression.benchmark import exact_mcnemar_p, wilson_interval
 from xai_regression.runner import METRIC_DIRECTIONS, calibrate_policy
 from xai_regression.workflow import (
     compare_explanations,
@@ -210,6 +211,133 @@ def _save_cross_version_figure(
     axes[1].set_title("Advisory Policy Evaluation")
     axes[1].legend()
     figure.suptitle("LIME Cross-Version Explanation Comparison")
+    figure.tight_layout()
+    figure.savefig(path, dpi=180, bbox_inches="tight")
+    plt.close(figure)
+
+
+def evaluate_heldout_lime_policy(
+    config: ExperimentConfig,
+    calibration_samples: pd.DataFrame,
+    control_samples: pd.DataFrame,
+    candidate_samples: pd.DataFrame,
+    *,
+    candidate_prediction_agreement: float,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Apply calibration-only limits to held-out control and candidate seeds."""
+    policy, sample_limits = calibrate_policy(
+        config,
+        calibration_samples,
+        candidate_samples,
+    )
+    control_flagged = apply_sample_policy_flags(control_samples, sample_limits)
+    candidate_flagged = apply_sample_policy_flags(
+        candidate_samples, sample_limits
+    )
+    policy = policy.copy()
+    policy["heldout_control_breach_rate"] = [
+        float(control_flagged[f"{metric}_breach"].mean())
+        for metric in policy["metric"]
+    ]
+
+    limit_by_metric = policy.set_index("metric")[
+        "run_level_limit_95_percent"
+    ].to_dict()
+
+    def summarize_runs(
+        frame: pd.DataFrame,
+        *,
+        scenario: str,
+        prediction_agreement: float,
+    ) -> pd.DataFrame:
+        rows = []
+        for seed, group in frame.groupby("seed", sort=True):
+            row: dict[str, Any] = {
+                "scenario": scenario,
+                "seed": int(seed),
+                "prediction_agreement": prediction_agreement,
+            }
+            flagged_metrics = []
+            for metric in config.comparison.metrics:
+                breach_rate = float(group[f"{metric}_breach"].mean())
+                row[f"mean_{metric}"] = float(group[metric].mean())
+                row[f"{metric}_breach_rate"] = breach_rate
+                if breach_rate > float(limit_by_metric[metric]):
+                    flagged_metrics.append(metric)
+            row["review_flag"] = bool(flagged_metrics)
+            row["flagged_metrics"] = ",".join(flagged_metrics)
+            rows.append(row)
+        return pd.DataFrame(rows)
+
+    control_runs = summarize_runs(
+        control_flagged,
+        scenario="heldout_fixed_model_control",
+        prediction_agreement=1.0,
+    )
+    candidate_runs = summarize_runs(
+        candidate_flagged,
+        scenario="heldout_cross_version_candidate",
+        prediction_agreement=candidate_prediction_agreement,
+    )
+    return policy, control_flagged, candidate_flagged, pd.concat(
+        [control_runs, candidate_runs], ignore_index=True
+    )
+
+
+def _save_heldout_figure(
+    policy: pd.DataFrame,
+    control_rate: float,
+    control_ci: tuple[float, float],
+    candidate_rate: float,
+    candidate_ci: tuple[float, float],
+    path: Path,
+) -> None:
+    figure, axes = plt.subplots(1, 2, figsize=(12.5, 5.2))
+    rates = np.asarray([control_rate, candidate_rate])
+    lower = rates - np.asarray([control_ci[0], candidate_ci[0]])
+    upper = np.asarray([control_ci[1], candidate_ci[1]]) - rates
+    axes[0].bar(
+        ["Held-out control", "Candidate"],
+        rates,
+        color=["#6baed6", "#fd8d3c"],
+        yerr=np.vstack([lower, upper]),
+        capsize=7,
+    )
+    axes[0].set_ylim(0, 1)
+    axes[0].set_ylabel("Run review rate")
+    axes[0].set_title("Held-out Run-Level Review Rates (95% CI)")
+
+    positions = np.arange(len(policy))
+    width = 0.25
+    axes[1].bar(
+        positions - width,
+        policy["heldout_control_breach_rate"],
+        width,
+        label="held-out control",
+        color="#6baed6",
+    )
+    axes[1].bar(
+        positions,
+        policy["candidate_breach_rate"],
+        width,
+        label="candidate",
+        color="#fd8d3c",
+    )
+    axes[1].bar(
+        positions + width,
+        policy["run_level_limit_95_percent"],
+        width,
+        label="calibrated limit",
+        color="#74c476",
+    )
+    axes[1].set_xticks(
+        positions,
+        [metric.replace("_", "\n") for metric in policy["metric"]],
+    )
+    axes[1].set_ylabel("Sample breach rate")
+    axes[1].set_title("Calibration Limits Applied to Held-out Seeds")
+    axes[1].legend(fontsize=8)
+    figure.suptitle("Held-out LIME Policy Validation")
     figure.tight_layout()
     figure.savefig(path, dpi=180, bbox_inches="tight")
     plt.close(figure)
@@ -521,6 +649,267 @@ def run_lime_cross_version(
             f"paired cross={paired:.6f}"
         )
     print(f"Flagged metrics: {summary['flagged_metrics']}")
+    print(f"Reports saved to: {reports_dir}")
+    print(f"Figure saved to: {figure_path}")
+    return summary
+
+
+def run_lime_heldout_validation(
+    config: ExperimentConfig,
+    *,
+    config_path: str | Path,
+    project_root: Path,
+) -> dict[str, Any]:
+    """Validate a LIME policy on seeds excluded from policy calibration."""
+    validate_supported_data_model(config)
+    if config.explainer.method != "lime" or config.lime is None:
+        raise ValueError("This command requires explainer.method=lime.")
+    if not config.lime.evaluation_seeds:
+        raise ValueError(
+            "Held-out LIME validation requires lime.evaluation_seeds."
+        )
+    calibration_seeds = set(config.lime.repeated_seeds)
+    evaluation_seeds = set(config.lime.evaluation_seeds)
+    if calibration_seeds & evaluation_seeds:
+        raise ValueError(
+            "LIME calibration and evaluation seeds must be disjoint."
+        )
+
+    split = load_dataset(config)
+    X_probe = split.X_probe.iloc[: config.lime.probe_size].copy()
+    reference_model = train_reference_model(
+        config,
+        config.model.reference_seed,
+        split.X_train,
+        split.y_train,
+    )
+    candidate_model = train_candidate_model(
+        config,
+        split.X_train,
+        split.y_train,
+    )
+    reference_predictions = reference_model.predict(X_probe)
+    candidate_predictions = candidate_model.predict(X_probe)
+    prediction_changes = reference_predictions != candidate_predictions
+    prediction_agreement = float(1.0 - prediction_changes.mean())
+
+    baseline_reference = generate_lime_matrix(
+        config,
+        reference_model,
+        split.X_train,
+        X_probe,
+        seed=config.lime.baseline_seed,
+    )
+
+    calibration_frames = []
+    for seed in config.lime.repeated_seeds:
+        values = generate_lime_matrix(
+            config,
+            reference_model,
+            split.X_train,
+            X_probe,
+            seed=seed,
+        )
+        comparison = compare_explanations(
+            config,
+            baseline_reference,
+            values,
+            np.zeros(len(X_probe), dtype=bool),
+        )
+        comparison.insert(0, "seed", seed)
+        calibration_frames.append(comparison)
+
+    control_frames = []
+    candidate_frames = []
+    paired_frames = []
+    for seed in config.lime.evaluation_seeds:
+        reference_values = generate_lime_matrix(
+            config,
+            reference_model,
+            split.X_train,
+            X_probe,
+            seed=seed,
+        )
+        control = compare_explanations(
+            config,
+            baseline_reference,
+            reference_values,
+            np.zeros(len(X_probe), dtype=bool),
+        )
+        control.insert(0, "seed", seed)
+        control_frames.append(control)
+
+        candidate_values = generate_lime_matrix(
+            config,
+            candidate_model,
+            split.X_train,
+            X_probe,
+            seed=seed,
+        )
+        candidate = compare_explanations(
+            config,
+            baseline_reference,
+            candidate_values,
+            prediction_changes,
+        )
+        candidate.insert(0, "seed", seed)
+        candidate_frames.append(candidate)
+
+        paired = compare_explanations(
+            config,
+            reference_values,
+            candidate_values,
+            prediction_changes,
+        )
+        paired.insert(0, "seed", seed)
+        paired_frames.append(paired)
+
+    calibration_samples = pd.concat(calibration_frames, ignore_index=True)
+    control_samples = pd.concat(control_frames, ignore_index=True)
+    candidate_samples = pd.concat(candidate_frames, ignore_index=True)
+    paired_samples = pd.concat(paired_frames, ignore_index=True)
+    policy, control_flagged, candidate_flagged, run_summary = (
+        evaluate_heldout_lime_policy(
+            config,
+            calibration_samples,
+            control_samples,
+            candidate_samples,
+            candidate_prediction_agreement=prediction_agreement,
+        )
+    )
+
+    control_runs = run_summary[
+        run_summary["scenario"] == "heldout_fixed_model_control"
+    ].sort_values("seed")
+    candidate_runs = run_summary[
+        run_summary["scenario"] == "heldout_cross_version_candidate"
+    ].sort_values("seed")
+    control_count = int(control_runs["review_flag"].sum())
+    candidate_count = int(candidate_runs["review_flag"].sum())
+    run_count = len(config.lime.evaluation_seeds)
+    control_rate = control_count / run_count
+    candidate_rate = candidate_count / run_count
+    control_ci = wilson_interval(control_count, run_count)
+    candidate_ci = wilson_interval(candidate_count, run_count)
+    control_clear, control_review, exact_p = exact_mcnemar_p(
+        control_runs["review_flag"].to_numpy(),
+        candidate_runs["review_flag"].to_numpy(),
+    )
+    status = "SEPARATED" if exact_p < 0.05 else "NO_SEPARATION"
+
+    output_dir = project_root / config.lime.output_dir
+    reports_dir = output_dir / "reports"
+    figures_dir = output_dir / "figures"
+    data_dir = output_dir / "data"
+    for directory in (reports_dir, figures_dir, data_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    probe = X_probe.reset_index(names="source_row")
+    probe.insert(0, "sample_id", range(len(probe)))
+    probe["target_positive"] = split.y_probe.iloc[: len(X_probe)].to_numpy()
+    probe.to_csv(data_dir / "fixed_probe.csv", index=False)
+    calibration_samples.to_csv(
+        reports_dir / "calibration_fixed_model.csv", index=False
+    )
+    control_flagged.to_csv(
+        reports_dir / "heldout_control_per_sample.csv", index=False
+    )
+    candidate_flagged.to_csv(
+        reports_dir / "heldout_candidate_per_sample.csv", index=False
+    )
+    paired_samples.to_csv(
+        reports_dir / "paired_seed_cross_version.csv", index=False
+    )
+    run_summary.to_csv(reports_dir / "run_evaluation.csv", index=False)
+    policy.to_csv(reports_dir / "policy_evaluation.csv", index=False)
+
+    figure_path = figures_dir / "lime_heldout_validation.png"
+    _save_heldout_figure(
+        policy,
+        control_rate,
+        control_ci,
+        candidate_rate,
+        candidate_ci,
+        figure_path,
+    )
+
+    summary: dict[str, Any] = {
+        "experiment_id": config.experiment_id,
+        "dataset": config.dataset.name,
+        "config_path": str(Path(config_path)),
+        "status": status,
+        "interpretation": (
+            "Calibration and evaluation use disjoint LIME random seeds. "
+            "SEPARATED means the paired candidate review flags differ from "
+            "the held-out fixed-model control at exact McNemar p < 0.05; it "
+            "does not show that the candidate model is harmful."
+        ),
+        "probe_samples": len(X_probe),
+        "calibration_seed_count": len(config.lime.repeated_seeds),
+        "evaluation_seed_count": run_count,
+        "calibration_evaluation_seeds_disjoint": True,
+        "matched_calibration_comparisons": len(calibration_samples),
+        "matched_heldout_control_comparisons": len(control_samples),
+        "matched_candidate_comparisons": len(candidate_samples),
+        "probe_prediction_agreement": prediction_agreement,
+        "reference_performance": predictive_metrics(
+            reference_model, split.X_test, split.y_test
+        ),
+        "candidate_performance": predictive_metrics(
+            candidate_model, split.X_test, split.y_test
+        ),
+        "heldout_control": {
+            "review_count": control_count,
+            "review_rate": control_rate,
+            "review_rate_ci_lower": control_ci[0],
+            "review_rate_ci_upper": control_ci[1],
+        },
+        "candidate": {
+            "review_count": candidate_count,
+            "review_rate": candidate_rate,
+            "review_rate_ci_lower": candidate_ci[0],
+            "review_rate_ci_upper": candidate_ci[1],
+        },
+        "paired_control_comparison": {
+            "control_clear_candidate_review": control_clear,
+            "control_review_candidate_clear": control_review,
+            "exact_mcnemar_p": exact_p,
+        },
+        "paired_seed_cross_version_means": {
+            metric: float(paired_samples[metric].mean())
+            for metric in METRIC_COLUMNS
+        },
+        "heldout_control_means": {
+            metric: float(control_samples[metric].mean())
+            for metric in METRIC_COLUMNS
+        },
+        "heldout_candidate_means": {
+            metric: float(candidate_samples[metric].mean())
+            for metric in METRIC_COLUMNS
+        },
+        "flagged_metrics": policy.loc[policy["review_flag"], "metric"].tolist(),
+    }
+    (reports_dir / "summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    print("Held-out LIME policy validation")
+    print("-------------------------------")
+    print(f"Dataset: {config.dataset.name}")
+    print(
+        f"Calibration/evaluation seeds: {len(config.lime.repeated_seeds)} / "
+        f"{run_count} (disjoint)"
+    )
+    print(
+        f"Held-out control review rate: {control_rate:.3f} "
+        f"({control_count}/{run_count})"
+    )
+    print(
+        f"Candidate review rate: {candidate_rate:.3f} "
+        f"({candidate_count}/{run_count})"
+    )
+    print(f"Exact paired p-value: {exact_p:.6f}")
+    print(f"Status: {status}")
     print(f"Reports saved to: {reports_dir}")
     print(f"Figure saved to: {figure_path}")
     return summary

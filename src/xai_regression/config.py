@@ -43,6 +43,7 @@ class ExplainerConfig:
 class LimeConfig:
     baseline_seed: int
     repeated_seeds: tuple[int, ...]
+    evaluation_seeds: tuple[int, ...]
     probe_size: int
     num_samples: int
     kernel_width: float | None
@@ -108,6 +109,13 @@ def _validate(config: ExperimentConfig) -> None:
             raise ConfigError("lime.num_samples must be at least 2.")
         if not config.lime.repeated_seeds:
             raise ConfigError("lime.repeated_seeds must contain at least one seed.")
+        overlap = set(config.lime.repeated_seeds) & set(
+            config.lime.evaluation_seeds
+        )
+        if overlap:
+            raise ConfigError(
+                "lime.repeated_seeds and lime.evaluation_seeds must be disjoint."
+            )
     if not 0 < config.policy.lower_quantile < config.policy.upper_quantile < 1:
         raise ConfigError(
             "policy quantiles must satisfy 0 < lower_quantile < "
@@ -176,6 +184,9 @@ def load_config(path: str | Path) -> ExperimentConfig:
                     baseline_seed=int(lime["baseline_seed"]),
                     repeated_seeds=tuple(
                         int(seed) for seed in lime["repeated_seeds"]
+                    ),
+                    evaluation_seeds=tuple(
+                        int(seed) for seed in lime.get("evaluation_seeds", [])
                     ),
                     probe_size=int(lime["probe_size"]),
                     num_samples=int(lime["num_samples"]),

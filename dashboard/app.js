@@ -117,6 +117,7 @@ function headlineLabel(entry) {
   const labels = {
     strongest_candidate_review_rate: "Strongest candidate review rate",
     any_metric_breach_rate: "Any-metric breach rate",
+    candidate_review_rate: "Candidate review rate",
   };
   return labels[entry.headline_metric] || String(entry.headline_metric).replaceAll("_", " ");
 }
@@ -146,7 +147,8 @@ function renderPortfolio(report, message) {
     card.querySelector(".portfolio-dataset").textContent = entry.dataset;
     const status = card.querySelector(".portfolio-status");
     status.textContent = entry.status;
-    status.className = `portfolio-status ${entry.status === "REVIEW" ? "review" : "evidence"}`;
+    const needsAttention = ["REVIEW", "SEPARATED"].includes(entry.status);
+    status.className = `portfolio-status ${needsAttention ? "review" : "evidence"}`;
     card.querySelector(".portfolio-evidence").textContent = entry.evidence_type;
     card.querySelector(".portfolio-agreement").textContent = formatPercent(entry.prediction_agreement);
     card.querySelector(".portfolio-cosine").textContent = formatScore(entry.cosine_similarity);
