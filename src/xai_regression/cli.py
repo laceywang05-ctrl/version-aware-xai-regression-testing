@@ -14,6 +14,7 @@ from xai_regression.lime_workflow import (
     run_lime_stability,
 )
 from xai_regression.multiplicity import run_multiplicity_analysis
+from xai_regression.model_family import run_model_family_summary
 from xai_regression.pipeline import run_pipeline
 from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
@@ -201,6 +202,30 @@ def build_parser() -> argparse.ArgumentParser:
     portfolio_parser.add_argument(
         "--output-dir",
         default="artifacts/experiment_14_cross_dataset_summary",
+    )
+    family_parser = subparsers.add_parser(
+        "model-family-summary",
+        help="Summarize SHAP evidence across two datasets and model families.",
+    )
+    family_parser.add_argument(
+        "--random-forest-breast-report",
+        default="artifacts/experiment_10_heldout_benchmark/reports/summary.json",
+    )
+    family_parser.add_argument(
+        "--random-forest-wine-report",
+        default="artifacts/experiment_11_wine_heldout_benchmark/reports/summary.json",
+    )
+    family_parser.add_argument(
+        "--gradient-boosting-breast-report",
+        default="artifacts/experiment_28_breast_gradient_boosting/reports/summary.json",
+    )
+    family_parser.add_argument(
+        "--gradient-boosting-wine-report",
+        default="artifacts/experiment_29_wine_gradient_boosting/reports/summary.json",
+    )
+    family_parser.add_argument(
+        "--output-dir",
+        default="artifacts/experiment_30_model_family_summary",
     )
     serve_parser.add_argument(
         "--portfolio-report",
@@ -444,6 +469,24 @@ def run_benchmark(config_path: str | Path, scenario_path: str | Path) -> int:
     return 0
 
 
+def run_family_summary(args: argparse.Namespace) -> int:
+    """Build the cross-model-family evidence summary."""
+    run_model_family_summary(
+        random_forest_breast_report=_project_path(
+            args.random_forest_breast_report
+        ),
+        random_forest_wine_report=_project_path(args.random_forest_wine_report),
+        gradient_boosting_breast_report=_project_path(
+            args.gradient_boosting_breast_report
+        ),
+        gradient_boosting_wine_report=_project_path(
+            args.gradient_boosting_wine_report
+        ),
+        output_dir=_project_path(args.output_dir),
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -501,6 +544,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.wine_lime_report,
                 args.output_dir,
             )
+        if args.command == "model-family-summary":
+            return run_family_summary(args)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 

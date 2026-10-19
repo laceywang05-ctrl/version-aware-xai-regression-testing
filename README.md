@@ -221,6 +221,17 @@ This uses 30 calibration seeds and 30 disjoint evaluation seeds per scenario.
 The observed cross-family result and its limitations are documented in
 [`docs/GRADIENT_BOOSTING_VALIDATION_RESULT.md`](docs/GRADIENT_BOOSTING_VALIDATION_RESULT.md).
 
+Combine the two Random Forest and two Gradient Boosting benchmark reports into
+one scenario-level generalisation matrix:
+
+```bash
+PYTHONPATH=src python -m xai_regression model-family-summary
+```
+
+The combined result identifies which controlled changes separate from benign
+retraining in every dataset-model cell. See
+[`docs/MODEL_FAMILY_SUMMARY_RESULT.md`](docs/MODEL_FAMILY_SUMMARY_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.
