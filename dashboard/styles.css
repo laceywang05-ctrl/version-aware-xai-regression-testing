@@ -101,6 +101,7 @@ h2 { margin-bottom: 8px; font-size: clamp(1.25rem, 2vw, 1.65rem); }
 main { display: grid; gap: 24px; }
 
 .dashboard-view { display: grid; gap: 24px; }
+.dashboard-view[hidden] { display: none; }
 .view-tabs {
   display: inline-flex;
   width: fit-content;

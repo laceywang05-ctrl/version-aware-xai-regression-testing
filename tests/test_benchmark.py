@@ -42,6 +42,26 @@ class BenchmarkTests(unittest.TestCase):
         self.assertTrue(heldout.isdisjoint(config.model.benign_seeds))
         self.assertNotIn(config.model.reference_seed, heldout)
 
+    def test_gradient_boosting_configs_use_disjoint_heldout_seeds(self):
+        for dataset in ("breast", "wine"):
+            config = load_config(
+                PROJECT_ROOT
+                / f"config/gradient_boosting_{dataset}_calibration.yaml"
+            )
+            _, scenarios = load_scenarios(
+                PROJECT_ROOT
+                / f"config/gradient_boosting_{dataset}_scenarios.yaml"
+            )
+            heldout = set(scenarios[0].random_seeds)
+
+            self.assertEqual(config.model.family, "gradient_boosting")
+            self.assertEqual(len(config.model.benign_seeds), 30)
+            self.assertEqual(len(heldout), 30)
+            self.assertTrue(heldout.isdisjoint(config.model.benign_seeds))
+            self.assertTrue(
+                all(set(scenario.random_seeds) == heldout for scenario in scenarios)
+            )
+
     def test_duplicate_scenario_ids_are_rejected(self):
         content = """
 benchmark:
@@ -113,6 +133,13 @@ scenarios:
     def test_wilson_interval_rejects_invalid_counts(self):
         with self.assertRaisesRegex(ValueError, "between zero and trials"):
             wilson_interval(2, 1)
+
+    def test_wilson_interval_has_exact_boundary_endpoints(self):
+        zero_lower, _ = wilson_interval(0, 30)
+        _, full_upper = wilson_interval(30, 30)
+
+        self.assertEqual(zero_lower, 0.0)
+        self.assertEqual(full_upper, 1.0)
 
     def test_exact_mcnemar_uses_discordant_pairs(self):
         control_clear, control_review, p_value = exact_mcnemar_p(
