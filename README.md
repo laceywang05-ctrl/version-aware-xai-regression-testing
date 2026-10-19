@@ -236,6 +236,23 @@ two policy rules are compared without rerunning LIME or changing the model.
 Results and limitations are documented in
 [`docs/LIME_MULTIPLICITY_POLICY_RESULT.md`](docs/LIME_MULTIPLICITY_POLICY_RESULT.md).
 
+Confirm the multiplicity-aware rule on a new evaluation-seed set that is
+disjoint from both calibration and the earlier held-out analysis:
+
+```bash
+PYTHONPATH=src python -m xai_regression lime-heldout \
+  --config config/lime_confirmatory.yaml
+PYTHONPATH=src python -m xai_regression lime-heldout \
+  --config config/wine_lime_confirmatory.yaml
+PYTHONPATH=src python -m xai_regression lime-multiplicity \
+  --breast-report-dir artifacts/experiment_18_breast_lime_confirmatory/reports \
+  --wine-report-dir artifacts/experiment_19_wine_lime_confirmatory/reports \
+  --output-dir artifacts/experiment_20_lime_confirmatory_policy
+```
+
+The independent-seed confirmation is documented in
+[`docs/LIME_CONFIRMATORY_POLICY_RESULT.md`](docs/LIME_CONFIRMATORY_POLICY_RESULT.md).
+
 ## Controlled version benchmark
 
 Evaluate the calibrated SHAP policy across several controlled candidate-model
