@@ -1,4 +1,5 @@
 import unittest
+from argparse import Namespace
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -241,6 +242,28 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             run.call_args.kwargs["scenario_config_path"],
             cli.PROJECT_ROOT / "config/version_benchmark.yaml",
+        )
+
+    def test_model_family_summary_resolves_all_paths(self):
+        args = Namespace(
+            random_forest_breast_report="rf-breast.json",
+            random_forest_wine_report="rf-wine.json",
+            gradient_boosting_breast_report="gb-breast.json",
+            gradient_boosting_wine_report="gb-wine.json",
+            output_dir="output",
+        )
+        with patch(
+            "xai_regression.cli.run_model_family_summary", return_value={}
+        ) as run:
+            exit_code = cli.run_family_summary(args)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            run.call_args.kwargs["gradient_boosting_wine_report"],
+            cli.PROJECT_ROOT / "gb-wine.json",
+        )
+        self.assertEqual(
+            run.call_args.kwargs["output_dir"], cli.PROJECT_ROOT / "output"
         )
 
 
