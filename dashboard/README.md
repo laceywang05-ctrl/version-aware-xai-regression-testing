@@ -29,3 +29,8 @@ It binds to `127.0.0.1` by default and does not upload report data externally.
 When the generated cross-dataset summary is available, the same command adds a
 **Cross-dataset overview** containing the completed SHAP/LIME evidence matrix
 for Breast Cancer Wisconsin and binary Wine.
+
+When the final split-and-probe robustness summary is available, it also adds a
+**Split robustness** view. This page presents each dataset/split result and the
+overall `SPLIT_SENSITIVE` conclusion. The default report is
+`artifacts/experiment_27_lime_split_probe_robustness/reports/summary.json`.

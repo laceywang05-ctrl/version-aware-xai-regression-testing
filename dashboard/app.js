@@ -4,6 +4,7 @@ const state = {
   benchmarks: [],
   selectedBenchmark: 0,
   portfolio: null,
+  robustness: null,
 };
 
 const elements = {
@@ -33,6 +34,13 @@ const elements = {
   portfolioResults: document.querySelector("#portfolio-results"),
   portfolioInterpretation: document.querySelector("#portfolio-interpretation"),
   portfolioComparability: document.querySelector("#portfolio-comparability"),
+  robustnessView: document.querySelector("#robustness-view"),
+  robustnessStatus: document.querySelector("#robustness-status"),
+  robustnessExplanation: document.querySelector("#robustness-explanation"),
+  robustnessSummary: document.querySelector("#robustness-summary"),
+  robustnessDatasetGrid: document.querySelector("#robustness-dataset-grid"),
+  robustnessResults: document.querySelector("#robustness-results"),
+  robustnessInterpretation: document.querySelector("#robustness-interpretation"),
 };
 
 function formatPercent(value) {
@@ -86,6 +94,21 @@ function validatePortfolio(report) {
   return report;
 }
 
+function validateRobustness(report) {
+  if (
+    !report ||
+    !Array.isArray(report.dataset_summaries) ||
+    !Array.isArray(report.split_results) ||
+    !Array.isArray(report.split_seeds)
+  ) {
+    throw new Error("This file is not a split-robustness summary.");
+  }
+  if (!report.dataset_summaries.length || !report.split_results.length) {
+    throw new Error("The split-robustness summary contains no results.");
+  }
+  return report;
+}
+
 function datasetLabel(report) {
   if (report.dataset === "wine_binary") return "Wine (binary)";
   if (report.dataset === "breast_cancer" || !report.dataset) return "Breast cancer";
@@ -105,12 +128,110 @@ function scenarioLabel(id) {
 function switchView(view) {
   const benchmark = view === "benchmark";
   const portfolio = view === "portfolio";
-  elements.comparisonView.hidden = benchmark || portfolio;
+  const robustness = view === "robustness";
+  elements.comparisonView.hidden = benchmark || portfolio || robustness;
   elements.benchmarkView.hidden = !benchmark;
   elements.portfolioView.hidden = !portfolio;
+  elements.robustnessView.hidden = !robustness;
   for (const tab of elements.viewTabs) {
     tab.classList.toggle("active", tab.dataset.view === view);
   }
+}
+
+function datasetName(value) {
+  return value === "wine_binary" ? "Wine (binary)" : "Breast Cancer Wisconsin";
+}
+
+function formatPValue(value) {
+  const number = Number(value);
+  return number < 0.001 ? number.toExponential(2) : number.toFixed(3);
+}
+
+function appendRobustnessSummary(label, value) {
+  const item = document.createElement("article");
+  const name = document.createElement("span");
+  const result = document.createElement("strong");
+  name.textContent = label;
+  result.textContent = value;
+  item.append(name, result);
+  elements.robustnessSummary.append(item);
+}
+
+function renderRobustness(report, message) {
+  state.robustness = validateRobustness(report);
+  const separated = report.split_results.filter((row) => row.status === "SEPARATED").length;
+  const total = report.split_results.length;
+  const statusLabel = report.status === "ROBUST_ACROSS_SPLITS" ? "ROBUST" : "SPLIT SENSITIVE";
+
+  elements.robustnessStatus.textContent = statusLabel;
+  elements.robustnessStatus.className = `status-badge ${report.status === "ROBUST_ACROSS_SPLITS" ? "within" : "review"}`;
+  elements.robustnessExplanation.textContent =
+    report.status === "ROBUST_ACROSS_SPLITS"
+      ? "Every tested dataset split separated the candidate from its held-out seed-only control."
+      : `${separated} of ${total} dataset-split evaluations separated the candidate from control; at least one conclusion changed with the fitted model and probe population.`;
+
+  elements.robustnessSummary.replaceChildren();
+  appendRobustnessSummary("Data splits", report.split_seeds.length);
+  appendRobustnessSummary("Separated results", `${separated} / ${total}`);
+  appendRobustnessSummary("Family-wise alpha", Number(report.family_alpha).toFixed(2));
+
+  elements.robustnessDatasetGrid.replaceChildren();
+  for (const dataset of report.dataset_summaries) {
+    const consistent = dataset.all_splits_separated && dataset.candidate_exceeds_control_on_all_splits;
+    const card = document.createElement("article");
+    card.className = `robustness-dataset-card ${consistent ? "consistent" : "sensitive"}`;
+    card.innerHTML = `
+      <div class="robustness-card-head">
+        <div><p class="portfolio-method">LIME</p><h3></h3></div>
+        <span class="portfolio-status"></span>
+      </div>
+      <p class="robustness-card-copy"></p>
+      <div class="robustness-ranges">
+        <div><span>Control review range</span><strong class="control-range"></strong></div>
+        <div><span>Candidate review range</span><strong class="candidate-range"></strong></div>
+      </div>`;
+    card.querySelector("h3").textContent = datasetName(dataset.dataset);
+    const badge = card.querySelector(".portfolio-status");
+    badge.textContent = consistent ? "CONSISTENT" : "SPLIT SENSITIVE";
+    badge.classList.add(consistent ? "evidence" : "review");
+    card.querySelector(".robustness-card-copy").textContent = consistent
+      ? `Candidate separation held on all ${dataset.split_count} tested splits.`
+      : `Candidate separation did not hold on every tested split.`;
+    card.querySelector(".control-range").textContent =
+      `${formatPercent(dataset.control_review_rate_min)}–${formatPercent(dataset.control_review_rate_max)}`;
+    card.querySelector(".candidate-range").textContent =
+      `${formatPercent(dataset.candidate_review_rate_min)}–${formatPercent(dataset.candidate_review_rate_max)}`;
+    elements.robustnessDatasetGrid.append(card);
+  }
+
+  elements.robustnessResults.replaceChildren();
+  for (const result of report.split_results) {
+    const row = document.createElement("tr");
+    const difference = Number(result.candidate_review_rate) - Number(result.control_review_rate);
+    const values = [
+      datasetName(result.dataset),
+      result.split_seed,
+      `${formatPercent(result.control_review_rate)} (${result.control_review_count}/${result.run_count})`,
+      `${formatPercent(result.candidate_review_rate)} (${result.candidate_review_count}/${result.run_count})`,
+      `${difference >= 0 ? "+" : ""}${formatPercent(difference)}`,
+      formatPValue(result.exact_mcnemar_p),
+    ];
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    const statusCell = document.createElement("td");
+    const status = document.createElement("span");
+    status.className = `evidence-pill ${result.status === "SEPARATED" ? "separated" : "exploratory"}`;
+    status.textContent = result.status === "SEPARATED" ? "Separated" : "No separation";
+    statusCell.append(status);
+    row.append(statusCell);
+    elements.robustnessResults.append(row);
+  }
+
+  elements.robustnessInterpretation.textContent = report.interpretation;
+  if (message) elements.message.textContent = message;
 }
 
 function headlineLabel(entry) {
@@ -423,7 +544,10 @@ elements.upload.addEventListener("change", async (event) => {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (Array.isArray(payload.entries) && payload.coverage) {
+    if (Array.isArray(payload.split_results) && Array.isArray(payload.dataset_summaries)) {
+      renderRobustness(payload, `Loaded split-robustness summary locally from ${file.name}.`);
+      switchView("robustness");
+    } else if (Array.isArray(payload.entries) && payload.coverage) {
       renderPortfolio(payload, `Loaded cross-dataset summary locally from ${file.name}.`);
       switchView("portfolio");
     } else if (Array.isArray(payload.benchmarks)) {
@@ -491,6 +615,14 @@ async function loadInitialReport() {
     renderPortfolio(await response.json());
   } catch (_error) {
     // Cross-dataset evidence is optional when the dashboard is served statically.
+  }
+
+  try {
+    const response = await fetch("data/robustness.json", { cache: "no-store" });
+    if (!response.ok) return;
+    renderRobustness(await response.json());
+  } catch (_error) {
+    // Split-robustness evidence is optional when served statically.
   }
 }
 

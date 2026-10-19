@@ -240,6 +240,19 @@ main { display: grid; gap: 24px; }
 .portfolio-stats div { padding-top: 12px; border-top: 1px solid var(--line); }
 .portfolio-stats span { display: block; min-height: 32px; color: var(--muted); font-size: .67rem; line-height: 1.35; }
 .portfolio-stats strong { display: block; margin-top: 5px; color: var(--navy); font-size: 1.05rem; }
+.robustness-status { border-left: 5px solid var(--orange); }
+.robustness-dataset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.robustness-dataset-card { padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: #fbfcfc; }
+.robustness-dataset-card.consistent { border-top: 4px solid var(--green); }
+.robustness-dataset-card.sensitive { border-top: 4px solid var(--orange); }
+.robustness-card-head { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+.robustness-card-head h3 { margin: 0; font-size: 1.08rem; }
+.robustness-card-copy { margin: 14px 0 18px; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.robustness-ranges { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.robustness-ranges div { padding-top: 12px; border-top: 1px solid var(--line); }
+.robustness-ranges span { display: block; min-height: 30px; color: var(--muted); font-size: .68rem; line-height: 1.35; }
+.robustness-ranges strong { display: block; margin-top: 5px; color: var(--navy); font-size: 1.05rem; }
+.warning-boundary { border-left-color: var(--orange); }
 footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px 0 40px; color: var(--muted); font-size: .72rem; }
 
 @media (max-width: 820px) {
@@ -247,6 +260,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .method-grid, .metric-grid { grid-template-columns: 1fr; }
   .scenario-grid { grid-template-columns: 1fr; }
   .portfolio-grid { grid-template-columns: 1fr; }
+  .robustness-dataset-grid { grid-template-columns: 1fr; }
   .benchmark-summary { grid-template-columns: repeat(2, 1fr); }
   .section-heading { align-items: start; flex-direction: column; }
   .section-heading > p { text-align: left; }
@@ -263,6 +277,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .summary-grid span { min-height: auto; }
   .method-stats { grid-template-columns: 1fr; }
   .portfolio-stats { grid-template-columns: 1fr; }
+  .robustness-ranges { grid-template-columns: 1fr; }
   footer { flex-direction: column; }
 }
 

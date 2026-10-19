@@ -195,6 +195,14 @@ different meanings of SHAP review rates and LIME breach rates instead of
 combining them into one score. Results and limitations are documented in
 [`docs/CROSS_DATASET_SUMMARY_RESULT.md`](docs/CROSS_DATASET_SUMMARY_RESULT.md).
 
+When the final split-and-probe robustness summary is present, the same command
+also adds a **Split robustness** page. It shows all six held-out dataset/split
+comparisons and makes the `SPLIT_SENSITIVE` limitation visible instead of
+presenting only the successful fixed-split results. Supply a different summary
+with `--robustness-report PATH` when needed. The final experiment is documented
+in
+[`docs/LIME_SPLIT_PROBE_ROBUSTNESS_RESULT.md`](docs/LIME_SPLIT_PROBE_ROBUSTNESS_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.

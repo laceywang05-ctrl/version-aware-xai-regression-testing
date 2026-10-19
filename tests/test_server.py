@@ -9,6 +9,7 @@ from xai_regression.server import (
     validate_benchmark_files,
     validate_portfolio_file,
     validate_report_file,
+    validate_robustness_file,
 )
 
 
@@ -64,6 +65,22 @@ class DashboardServerTests(unittest.TestCase):
             path.write_text(json.dumps({"methods": []}), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "entries and coverage"):
                 validate_portfolio_file(path)
+
+    def test_split_robustness_report_is_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "robustness.json"
+            path.write_text(
+                json.dumps({"dataset_summaries": [], "split_results": []}),
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_robustness_file(path), path.resolve())
+
+    def test_non_split_robustness_report_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "robustness.json"
+            path.write_text(json.dumps({"entries": []}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "dataset_summaries"):
+                validate_robustness_file(path)
 
     def test_socket_error_has_actionable_message(self):
         with tempfile.TemporaryDirectory() as directory:
