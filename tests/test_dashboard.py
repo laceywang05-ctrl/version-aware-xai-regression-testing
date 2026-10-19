@@ -76,6 +76,10 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function validateRobustness", script)
         self.assertIn("function renderRobustness", script)
 
+    def test_hidden_dashboard_views_are_not_displayed(self):
+        styles = (DASHBOARD / "styles.css").read_text(encoding="utf-8")
+        self.assertIn(".dashboard-view[hidden] { display: none; }", styles)
+
 
 if __name__ == "__main__":
     unittest.main()
