@@ -203,6 +203,24 @@ with `--robustness-report PATH` when needed. The final experiment is documented
 in
 [`docs/LIME_SPLIT_PROBE_ROBUSTNESS_RESULT.md`](docs/LIME_SPLIT_PROBE_ROBUSTNESS_RESULT.md).
 
+## Second model-family validation
+
+Repeat the held-out Tree SHAP benchmark with gradient boosting on both datasets:
+
+```bash
+PYTHONPATH=src python -m xai_regression benchmark \
+  --config config/gradient_boosting_breast_calibration.yaml \
+  --scenarios config/gradient_boosting_breast_scenarios.yaml
+
+PYTHONPATH=src python -m xai_regression benchmark \
+  --config config/gradient_boosting_wine_calibration.yaml \
+  --scenarios config/gradient_boosting_wine_scenarios.yaml
+```
+
+This uses 30 calibration seeds and 30 disjoint evaluation seeds per scenario.
+The observed cross-family result and its limitations are documented in
+[`docs/GRADIENT_BOOSTING_VALIDATION_RESULT.md`](docs/GRADIENT_BOOSTING_VALIDATION_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.

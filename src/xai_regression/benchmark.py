@@ -13,7 +13,6 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import yaml
-from sklearn.ensemble import RandomForestClassifier
 
 from xai_regression.config import ExperimentConfig
 from xai_regression.runner import METRIC_DIRECTIONS, calibrate_policy
@@ -22,6 +21,7 @@ from xai_regression.workflow import (
     load_dataset,
     positive_class_shap_values,
     predictive_metrics,
+    train_configured_model,
     train_reference_model,
     validate_supported_workflow,
 )
@@ -116,17 +116,15 @@ def _train_scenario_model(
     X_train: pd.DataFrame,
     y_train: pd.Series,
     random_seed: int,
-) -> RandomForestClassifier:
-    model = RandomForestClassifier(
-        n_estimators=config.model.n_estimators,
+) -> Any:
+    return train_configured_model(
+        config,
+        seed=random_seed,
+        X_train=X_train,
+        y_train=y_train,
         max_depth=scenario.max_depth,
         min_samples_leaf=scenario.min_samples_leaf,
-        class_weight=config.model.class_weight,
-        random_state=random_seed,
-        n_jobs=-1,
     )
-    model.fit(X_train, y_train)
-    return model
 
 
 def _build_benign_baseline(
@@ -226,7 +224,9 @@ def wilson_interval(
         )
         / denominator
     )
-    return max(0.0, centre - margin), min(1.0, centre + margin)
+    lower = 0.0 if successes == 0 else max(0.0, centre - margin)
+    upper = 1.0 if successes == trials else min(1.0, centre + margin)
+    return lower, upper
 
 
 def exact_mcnemar_p(control_flags, candidate_flags) -> tuple[int, int, float]:
@@ -445,6 +445,7 @@ def run_version_benchmark(
     summary = {
         "benchmark": "controlled-model-version-scenarios",
         "dataset": config.dataset.name,
+        "model_family": config.model.family,
         "samples": int(len(dataset.X_train) + len(dataset.X_test)),
         "features": int(dataset.X_train.shape[1]),
         "probe_samples": int(len(dataset.X_probe)),

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import shap
 from sklearn.datasets import load_breast_cancer, load_wine
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -16,6 +17,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_sample_weight
 
 from xai_regression.config import ExperimentConfig
 from xai_regression.metrics import (
@@ -47,9 +49,11 @@ def validate_supported_data_model(config: ExperimentConfig) -> None:
             "The current workflow supports dataset.name=breast_cancer or "
             "dataset.name=wine_binary."
         )
-    if config.model.family != "random_forest":
+    supported_families = {"random_forest", "gradient_boosting"}
+    if config.model.family not in supported_families:
         raise ValueError(
-            "The current workflow supports model.family=random_forest only."
+            "The current workflow supports model.family=random_forest or "
+            "model.family=gradient_boosting."
         )
     expected_target = supported_targets[config.dataset.name]
     if config.explainer.target_class != expected_target:
@@ -98,43 +102,82 @@ def load_dataset(config: ExperimentConfig) -> DatasetSplit:
     return DatasetSplit(X_train, X_test, y_train, y_test, X_probe, y_probe)
 
 
+def train_configured_model(
+    config: ExperimentConfig,
+    *,
+    seed: int,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    max_depth: int | None,
+    min_samples_leaf: int,
+) -> Any:
+    """Train a supported tree model using comparable structural controls."""
+    if config.model.family == "random_forest":
+        model = RandomForestClassifier(
+            n_estimators=config.model.n_estimators,
+            max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
+            class_weight=config.model.class_weight,
+            random_state=seed,
+            n_jobs=-1,
+        )
+        model.fit(X_train, y_train)
+        return model
+
+    if config.model.family == "gradient_boosting":
+        # ``None`` denotes the family default in shared scenario files.  The
+        # sklearn default for gradient boosting trees is depth 3.
+        effective_max_depth = 3 if max_depth is None else max_depth
+        model = GradientBoostingClassifier(
+            n_estimators=config.model.n_estimators,
+            max_depth=effective_max_depth,
+            min_samples_leaf=min_samples_leaf,
+            random_state=seed,
+        )
+        sample_weight = None
+        if config.model.class_weight == "balanced":
+            sample_weight = compute_sample_weight("balanced", y_train)
+        model.fit(X_train, y_train, sample_weight=sample_weight)
+        return model
+
+    raise ValueError(f"Unsupported model family: {config.model.family}")
+
+
 def train_reference_model(
     config: ExperimentConfig,
     seed: int,
     X_train: pd.DataFrame,
     y_train: pd.Series,
-) -> RandomForestClassifier:
+) -> Any:
     """Train one model with the accepted reference configuration."""
-    model = RandomForestClassifier(
-        n_estimators=config.model.n_estimators,
-        class_weight=config.model.class_weight,
-        random_state=seed,
-        n_jobs=-1,
+    return train_configured_model(
+        config,
+        seed=seed,
+        X_train=X_train,
+        y_train=y_train,
+        max_depth=None,
+        min_samples_leaf=1,
     )
-    model.fit(X_train, y_train)
-    return model
 
 
 def train_candidate_model(
     config: ExperimentConfig,
     X_train: pd.DataFrame,
     y_train: pd.Series,
-) -> RandomForestClassifier:
+) -> Any:
     """Train the controlled candidate model version."""
-    model = RandomForestClassifier(
-        n_estimators=config.model.n_estimators,
+    return train_configured_model(
+        config,
+        seed=config.model.candidate_random_seed,
+        X_train=X_train,
+        y_train=y_train,
         max_depth=config.model.candidate_max_depth,
         min_samples_leaf=config.model.candidate_min_samples_leaf,
-        class_weight=config.model.class_weight,
-        random_state=config.model.candidate_random_seed,
-        n_jobs=-1,
     )
-    model.fit(X_train, y_train)
-    return model
 
 
 def positive_class_shap_values(
-    model: RandomForestClassifier,
+    model: Any,
     X_probe: pd.DataFrame,
 ) -> np.ndarray:
     """Return a two-dimensional positive-class Tree SHAP matrix."""
@@ -150,7 +193,7 @@ def positive_class_shap_values(
 
 
 def predictive_metrics(
-    model: RandomForestClassifier,
+    model: Any,
     X_test: pd.DataFrame,
     y_test: pd.Series,
 ) -> dict[str, float]:

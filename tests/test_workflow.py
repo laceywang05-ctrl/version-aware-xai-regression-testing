@@ -4,7 +4,12 @@ from pathlib import Path
 import numpy as np
 
 from xai_regression.config import load_config
-from xai_regression.workflow import compare_explanations, load_dataset
+from xai_regression.workflow import (
+    compare_explanations,
+    load_dataset,
+    positive_class_shap_values,
+    train_reference_model,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -58,6 +63,22 @@ class WorkflowTests(unittest.TestCase):
         )
         self.assertTrue(np.allclose(comparison["rank_correlation"], 1.0))
         self.assertTrue((comparison["direction_flip_rate"] == 0.0).all())
+
+    def test_gradient_boosting_produces_binary_shap_matrix(self):
+        config = load_config(
+            PROJECT_ROOT / "config/gradient_boosting_breast_calibration.yaml"
+        )
+        dataset = load_dataset(config)
+        model = train_reference_model(
+            config,
+            config.model.reference_seed,
+            dataset.X_train,
+            dataset.y_train,
+        )
+        values = positive_class_shap_values(model, dataset.X_probe.iloc[:5])
+
+        self.assertEqual(values.shape, (5, dataset.X_train.shape[1]))
+        self.assertEqual(model.__class__.__name__, "GradientBoostingClassifier")
 
 
 if __name__ == "__main__":
