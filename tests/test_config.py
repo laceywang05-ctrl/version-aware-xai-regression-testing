@@ -66,6 +66,24 @@ policy: {lower_quantile: 0.05, upper_quantile: 0.95}
             )
         )
 
+    def test_confirmatory_lime_seeds_are_new_and_disjoint(self):
+        earlier = load_config(PROJECT_ROOT / "config/lime_heldout.yaml")
+        confirmatory = load_config(
+            PROJECT_ROOT / "config/lime_confirmatory.yaml"
+        )
+
+        self.assertEqual(len(confirmatory.lime.evaluation_seeds), 30)
+        self.assertTrue(
+            set(confirmatory.lime.evaluation_seeds).isdisjoint(
+                confirmatory.lime.repeated_seeds
+            )
+        )
+        self.assertTrue(
+            set(confirmatory.lime.evaluation_seeds).isdisjoint(
+                earlier.lime.evaluation_seeds
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
