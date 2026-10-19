@@ -20,6 +20,7 @@ from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
 from xai_regression.reporting import run_unified_report
 from xai_regression.server import serve_dashboard
+from xai_regression.shap_split_robustness import run_shap_split_robustness
 from xai_regression.split_robustness import run_split_robustness
 
 
@@ -226,6 +227,14 @@ def build_parser() -> argparse.ArgumentParser:
     family_parser.add_argument(
         "--output-dir",
         default="artifacts/experiment_30_model_family_summary",
+    )
+    shap_split_parser = subparsers.add_parser(
+        "shap-split-robustness",
+        help="Retest the cross-model SHAP result on additional data splits.",
+    )
+    shap_split_parser.add_argument(
+        "--config",
+        default="config/shap_split_robustness.yaml",
     )
     serve_parser.add_argument(
         "--portfolio-report",
@@ -546,6 +555,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         if args.command == "model-family-summary":
             return run_family_summary(args)
+        if args.command == "shap-split-robustness":
+            run_shap_split_robustness(
+                _project_path(args.config),
+                project_root=PROJECT_ROOT,
+            )
+            return 0
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 

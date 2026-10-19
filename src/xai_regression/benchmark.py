@@ -335,14 +335,23 @@ def save_benchmark_figure(summary: pd.DataFrame, path: Path) -> None:
 def run_version_benchmark(
     config: ExperimentConfig,
     *,
-    scenario_config_path: str | Path,
+    scenario_config_path: str | Path | None = None,
     project_root: str | Path,
+    scenarios_override: tuple[VersionScenario, ...] | None = None,
+    output_dir_override: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run controlled candidates against one calibrated SHAP policy."""
     validate_supported_workflow(config)
     root = Path(project_root)
-    scenario_path = Path(scenario_config_path)
-    output_dir, scenarios = load_scenarios(scenario_path)
+    if scenarios_override is None:
+        if scenario_config_path is None:
+            raise ValueError("A scenario configuration path is required.")
+        output_dir, scenarios = load_scenarios(Path(scenario_config_path))
+    else:
+        if output_dir_override is None:
+            raise ValueError("An output directory is required with scenario overrides.")
+        output_dir = Path(output_dir_override)
+        scenarios = scenarios_override
     if not output_dir.is_absolute():
         output_dir = root / output_dir
     report_dir = output_dir / "reports"
