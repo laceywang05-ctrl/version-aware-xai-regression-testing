@@ -115,6 +115,17 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(run.call_args.kwargs["alpha"], 0.05)
 
+    def test_lime_split_robustness_resolves_config_path(self):
+        with patch(
+            "xai_regression.cli.run_split_robustness",
+            return_value={},
+        ) as run:
+            exit_code = cli.run_lime_split_robustness("split.yaml")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(run.call_args.args[0], cli.PROJECT_ROOT / "split.yaml")
+        self.assertEqual(run.call_args.kwargs["project_root"], cli.PROJECT_ROOT)
+
     def test_report_command_resolves_project_paths(self):
         with patch(
             "xai_regression.cli.run_unified_report",
