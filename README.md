@@ -232,6 +232,17 @@ The combined result identifies which controlled changes separate from benign
 retraining in every dataset-model cell. See
 [`docs/MODEL_FAMILY_SUMMARY_RESULT.md`](docs/MODEL_FAMILY_SUMMARY_RESULT.md).
 
+Retest the preselected combined-change scenario on data splits 17 and 73 for
+both datasets and both model families:
+
+```bash
+PYTHONPATH=src python -m xai_regression shap-split-robustness
+```
+
+This produces eight additional held-out comparisons and records whether the
+cross-model result depends on the original split 42. Results are documented in
+[`docs/SHAP_SPLIT_ROBUSTNESS_RESULT.md`](docs/SHAP_SPLIT_ROBUSTNESS_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.

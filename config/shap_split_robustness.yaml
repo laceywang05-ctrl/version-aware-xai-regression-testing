@@ -1,0 +1,38 @@
+experiment:
+  id: shap-cross-model-split-robustness-v1
+  output_dir: artifacts/experiment_31_shap_split_robustness
+
+split_seeds: [17, 73]
+heldout_model_seeds:
+  [853, 877, 901, 925, 949, 973, 997, 1021, 1045, 1069,
+   1093, 1117, 1141, 1165, 1189, 1213, 1237, 1261, 1285, 1309,
+   1333, 1357, 1381, 1405, 1429, 1453, 1477, 1501, 1525, 1549]
+
+cases:
+  - id: breast_random_forest
+    dataset: breast_cancer
+    model_family: random_forest
+    base_config: config/benchmark_calibration.yaml
+    candidate_max_depth: 4
+    candidate_min_samples_leaf: 5
+
+  - id: wine_random_forest
+    dataset: wine_binary
+    model_family: random_forest
+    base_config: config/wine_benchmark_calibration.yaml
+    candidate_max_depth: 4
+    candidate_min_samples_leaf: 5
+
+  - id: breast_gradient_boosting
+    dataset: breast_cancer
+    model_family: gradient_boosting
+    base_config: config/gradient_boosting_breast_calibration.yaml
+    candidate_max_depth: 1
+    candidate_min_samples_leaf: 5
+
+  - id: wine_gradient_boosting
+    dataset: wine_binary
+    model_family: gradient_boosting
+    base_config: config/gradient_boosting_wine_calibration.yaml
+    candidate_max_depth: 1
+    candidate_min_samples_leaf: 5
