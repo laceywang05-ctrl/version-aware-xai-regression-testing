@@ -1,0 +1,8 @@
+robustness:
+  output_dir: artifacts/experiment_27_lime_split_probe_robustness
+  family_alpha: 0.05
+  reference_split_seed: 42
+  new_split_seeds: [17, 73]
+  breast_config: config/lime_confirmatory.yaml
+  wine_config: config/wine_lime_confirmatory.yaml
+  reference_policy_report: artifacts/experiment_20_lime_confirmatory_policy/reports/summary.json

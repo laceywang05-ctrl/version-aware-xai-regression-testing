@@ -210,14 +210,26 @@ def _save_figure(comparison: pd.DataFrame, path: Path) -> None:
         candidate_rates = subset["candidate_review_rate"].to_numpy()
         control_error = np.vstack(
             [
-                control_rates - subset["control_ci_lower"].to_numpy(),
-                subset["control_ci_upper"].to_numpy() - control_rates,
+                np.maximum(
+                    control_rates - subset["control_ci_lower"].to_numpy(),
+                    0.0,
+                ),
+                np.maximum(
+                    subset["control_ci_upper"].to_numpy() - control_rates,
+                    0.0,
+                ),
             ]
         )
         candidate_error = np.vstack(
             [
-                candidate_rates - subset["candidate_ci_lower"].to_numpy(),
-                subset["candidate_ci_upper"].to_numpy() - candidate_rates,
+                np.maximum(
+                    candidate_rates - subset["candidate_ci_lower"].to_numpy(),
+                    0.0,
+                ),
+                np.maximum(
+                    subset["candidate_ci_upper"].to_numpy() - candidate_rates,
+                    0.0,
+                ),
             ]
         )
         axis.bar(

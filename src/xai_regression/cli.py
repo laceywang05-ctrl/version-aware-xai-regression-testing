@@ -19,6 +19,7 @@ from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
 from xai_regression.reporting import run_unified_report
 from xai_regression.server import serve_dashboard
+from xai_regression.split_robustness import run_split_robustness
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -91,6 +92,14 @@ def build_parser() -> argparse.ArgumentParser:
         default="artifacts/experiment_17_lime_multiplicity_policy",
     )
     multiplicity_parser.add_argument("--alpha", type=float, default=0.05)
+    split_parser = subparsers.add_parser(
+        "lime-split-robustness",
+        help="Confirm the adjusted LIME policy across data splits and probes.",
+    )
+    split_parser.add_argument(
+        "--config",
+        default="config/lime_split_robustness.yaml",
+    )
     report_parser = subparsers.add_parser(
         "report",
         help="Combine existing SHAP and LIME experiment artifacts.",
@@ -284,6 +293,15 @@ def run_lime_multiplicity(
     return 0
 
 
+def run_lime_split_robustness(config_path: str | Path) -> int:
+    """Run the final cross-split and probe robustness experiment."""
+    run_split_robustness(
+        _project_path(config_path),
+        project_root=PROJECT_ROOT,
+    )
+    return 0
+
+
 def _project_path(value: str | Path) -> Path:
     path = Path(value)
     return path if path.is_absolute() else PROJECT_ROOT / path
@@ -423,6 +441,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.output_dir,
                 alpha=args.alpha,
             )
+        if args.command == "lime-split-robustness":
+            return run_lime_split_robustness(args.config)
         if args.command == "report":
             return run_report(
                 args.shap_report_dir,

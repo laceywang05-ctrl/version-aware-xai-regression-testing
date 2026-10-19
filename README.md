@@ -253,6 +253,18 @@ PYTHONPATH=src python -m xai_regression lime-multiplicity \
 The independent-seed confirmation is documented in
 [`docs/LIME_CONFIRMATORY_POLICY_RESULT.md`](docs/LIME_CONFIRMATORY_POLICY_RESULT.md).
 
+Run the final robustness check across three train/test splits and nearly
+disjoint fixed-probe subsets:
+
+```bash
+PYTHONPATH=src python -m xai_regression lime-split-robustness
+```
+
+Each split recalibrates and evaluates the same Bonferroni-adjusted policy. The
+experiment reports per-split evidence rather than treating overlapping dataset
+splits as independent replicates. Results are documented in
+[`docs/LIME_SPLIT_PROBE_ROBUSTNESS_RESULT.md`](docs/LIME_SPLIT_PROBE_ROBUSTNESS_RESULT.md).
+
 ## Controlled version benchmark
 
 Evaluate the calibrated SHAP policy across several controlled candidate-model
