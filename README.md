@@ -243,6 +243,18 @@ This produces eight additional held-out comparisons and records whether the
 cross-model result depends on the original split 42. Results are documented in
 [`docs/SHAP_SPLIT_ROBUSTNESS_RESULT.md`](docs/SHAP_SPLIT_ROBUSTNESS_RESULT.md).
 
+Compare the ordinary Tree SHAP run rule with a Bonferroni-adjusted rule across
+the eight split-robustness cells:
+
+```bash
+PYTHONPATH=src python -m xai_regression shap-multiplicity
+```
+
+The adjusted rule reduces benign-control warnings but also loses one held-out
+separation, motivating separate advisory and high-confidence review levels.
+See
+[`docs/SHAP_MULTIPLICITY_POLICY_RESULT.md`](docs/SHAP_MULTIPLICITY_POLICY_RESULT.md).
+
 ## Important interpretation rule
 
 An explanation change is evidence for investigation, not automatic proof of model regression or concept drift. Changes can also come from sampling, background data, preprocessing, explainer settings or model retraining.

@@ -442,6 +442,7 @@ def run_version_benchmark(
     per_sample = pd.concat(per_sample_frames, ignore_index=True)
     scenario_summary.to_csv(report_dir / "scenario_summary.csv", index=False)
     run_summary.to_csv(report_dir / "scenario_run_summary.csv", index=False)
+    benign_samples.to_csv(report_dir / "benign_per_sample.csv", index=False)
     paired_comparisons.to_csv(
         report_dir / "paired_control_comparisons.csv",
         index=False,
