@@ -30,6 +30,9 @@ DEFAULT_BENCHMARK_REPORTS = (
 DEFAULT_PORTFOLIO_REPORT = (
     "artifacts/experiment_14_cross_dataset_summary/reports/summary.json"
 )
+DEFAULT_ROBUSTNESS_REPORT = (
+    "artifacts/experiment_27_lime_split_probe_robustness/reports/summary.json"
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -204,6 +207,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional cross-dataset summary JSON.",
     )
+    serve_parser.add_argument(
+        "--robustness-report",
+        default=None,
+        help="Optional split-and-probe robustness summary JSON.",
+    )
     return parser
 
 
@@ -356,6 +364,11 @@ def run_workflow(
                 if _project_path(DEFAULT_PORTFOLIO_REPORT).is_file()
                 else None
             ),
+            robustness_path=(
+                _project_path(DEFAULT_ROBUSTNESS_REPORT)
+                if _project_path(DEFAULT_ROBUSTNESS_REPORT).is_file()
+                else None
+            ),
             host=host,
             port=port,
         )
@@ -369,6 +382,7 @@ def run_dashboard(
     port: int,
     benchmark_reports: Sequence[str] | None = None,
     portfolio_report: str | Path | None = None,
+    robustness_report: str | Path | None = None,
 ) -> int:
     """Serve the dashboard with a previously generated unified report."""
     serve_dashboard(
@@ -381,6 +395,15 @@ def run_dashboard(
             else (
                 _project_path(DEFAULT_PORTFOLIO_REPORT)
                 if _project_path(DEFAULT_PORTFOLIO_REPORT).is_file()
+                else None
+            )
+        ),
+        robustness_path=(
+            _project_path(robustness_report)
+            if robustness_report is not None
+            else (
+                _project_path(DEFAULT_ROBUSTNESS_REPORT)
+                if _project_path(DEFAULT_ROBUSTNESS_REPORT).is_file()
                 else None
             )
         ),
@@ -466,6 +489,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 port=args.port,
                 benchmark_reports=args.benchmark_report,
                 portfolio_report=args.portfolio_report,
+                robustness_report=args.robustness_report,
             )
         if args.command == "benchmark":
             return run_benchmark(args.config, args.scenarios)

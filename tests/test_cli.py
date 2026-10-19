@@ -189,6 +189,7 @@ class CliTests(unittest.TestCase):
                 port=8000,
                 benchmark_reports=["benchmark.json"],
                 portfolio_report="portfolio.json",
+                robustness_report="robustness.json",
             )
 
         self.assertEqual(exit_code, 0)
@@ -199,6 +200,10 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             serve.call_args.kwargs["portfolio_path"],
             cli.PROJECT_ROOT / "portfolio.json",
+        )
+        self.assertEqual(
+            serve.call_args.kwargs["robustness_path"],
+            cli.PROJECT_ROOT / "robustness.json",
         )
 
     def test_portfolio_command_resolves_all_paths(self):

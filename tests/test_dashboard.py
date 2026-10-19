@@ -51,6 +51,10 @@ class DashboardTests(unittest.TestCase):
             "portfolio-view",
             "portfolio-grid",
             "portfolio-results",
+            "robustness-view",
+            "robustness-status",
+            "robustness-dataset-grid",
+            "robustness-results",
         ):
             self.assertIn(f'id="{element_id}"', html)
 
@@ -60,6 +64,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('fetch("data/example-report.json"', script)
         self.assertIn('fetch("data/benchmarks.json"', script)
         self.assertIn('fetch("data/portfolio.json"', script)
+        self.assertIn('fetch("data/robustness.json"', script)
 
     def test_dashboard_supports_both_report_schemas(self):
         script = (DASHBOARD / "app.js").read_text(encoding="utf-8")
@@ -68,6 +73,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderBenchmark", script)
         self.assertIn("function validatePortfolio", script)
         self.assertIn("function renderPortfolio", script)
+        self.assertIn("function validateRobustness", script)
+        self.assertIn("function renderRobustness", script)
 
 
 if __name__ == "__main__":
