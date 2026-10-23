@@ -1,6 +1,7 @@
 from io import BytesIO
 import json
 import unittest
+from zipfile import ZipFile
 
 import joblib
 import numpy as np
@@ -10,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from xai_regression.upload_comparison import (
     compare_classifiers,
     compare_upload_payloads,
+    load_uploaded_images,
     parse_manifest,
 )
 
@@ -119,6 +121,57 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["total_samples"], 4)
         self.assertEqual(result["summary"]["prediction_agreement"], 1.0)
         self.assertEqual(result["summary"]["both_correct"], 4)
+
+    def test_uploaded_image_archive_is_attached_to_matching_samples(self):
+        archive = BytesIO()
+        with ZipFile(archive, "w") as output:
+            output.writestr("digits/sample-1.png", b"\x89PNG\r\n\x1a\nexample")
+        images = load_uploaded_images(archive.getvalue(), "samples.zip")
+        dataset = pd.DataFrame(
+            {"id": ["one"], "image": ["digits/sample-1.png"], "x": [1.0], "target": [1]}
+        )
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "id_column": "id",
+                "image_column": "image",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(
+            StubClassifier([1], [[0.1, 0.9]]),
+            StubClassifier([0], [[0.8, 0.2]]),
+            dataset,
+            manifest,
+            images,
+        )
+
+        self.assertEqual(result["samples"][0]["image_name"], "digits/sample-1.png")
+        self.assertTrue(
+            result["samples"][0]["image_data_url"].startswith("data:image/png;base64,")
+        )
+
+    def test_image_reference_must_exist_in_archive(self):
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "image_column": "image",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "was not found"):
+            compare_classifiers(
+                StubClassifier([1], [[0.1, 0.9]]),
+                StubClassifier([1], [[0.1, 0.9]]),
+                pd.DataFrame({"image": ["missing.png"], "x": [1.0], "target": [1]}),
+                manifest,
+                {},
+            )
 
 
 if __name__ == "__main__":

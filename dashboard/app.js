@@ -179,6 +179,23 @@ function renderUploadSamples() {
     const row = document.createElement("tr");
     if (sample.transition === "v1_correct_v2_wrong") row.className = "regression-row";
     if (sample.transition === "v1_wrong_v2_correct") row.className = "improvement-row";
+    const imageCell = document.createElement("td");
+    if (sample.image_data_url) {
+      const link = document.createElement("a");
+      link.href = sample.image_data_url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.title = `Open ${sample.image_name || "sample image"}`;
+      const thumbnail = document.createElement("img");
+      thumbnail.className = "sample-thumbnail";
+      thumbnail.src = sample.image_data_url;
+      thumbnail.alt = `Sample ${sample.sample_id}`;
+      link.append(thumbnail);
+      imageCell.append(link);
+    } else {
+      imageCell.textContent = "—";
+    }
+    row.append(imageCell);
     const values = [
       sample.sample_id,
       sample.actual,
@@ -652,6 +669,10 @@ elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
 elements.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(elements.uploadForm);
+  const optionalImages = form.get("images");
+  if (optionalImages instanceof File && optionalImages.size === 0) {
+    form.delete("images");
+  }
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";
   elements.uploadMessage.className = "upload-comparison-message working";

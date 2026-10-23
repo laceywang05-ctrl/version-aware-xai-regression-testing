@@ -35,12 +35,20 @@ Open **Compare uploaded models** when the dashboard is running through
 - a trusted candidate classifier in the same format;
 - a labelled CSV with no more than 5,000 rows; and
 - a JSON manifest describing the label, optional sample ID, ordered feature
-  columns, and optional class display names.
+  columns, optional class display names, and an optional image filename column;
+- optionally, a ZIP containing PNG, JPEG, WebP or GIF sample images.
 
 Download the example manifest from the page and edit it to match the CSV. Both
 models must expose `predict()` and accept the same selected features. Optional
 `predict_proba()` output is shown as confidence. Uploaded files are processed
 in memory and are not persisted by the local server.
+
+For image display, set `image_column` in the manifest and use that CSV column
+to reference the exact relative filename inside the ZIP, for example
+`digits/sample-1.png`. The comparison table shows a thumbnail for every
+matching sample; selecting it opens the full image. Images are display evidence
+only in this first iteration, while the model still receives the ordered
+feature columns declared in the manifest.
 
 Joblib files can execute Python while loading. Only use model files from a
 trusted source. This stage intentionally supports classification only; the

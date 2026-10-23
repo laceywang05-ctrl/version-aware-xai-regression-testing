@@ -62,6 +62,7 @@ class DashboardTests(unittest.TestCase):
             "model-v2-upload",
             "dataset-upload",
             "manifest-upload",
+            "images-upload",
             "upload-results",
             "upload-sample-results",
         ):
@@ -86,6 +87,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderRobustness", script)
         self.assertIn("function renderUploadComparison", script)
         self.assertIn('fetch("/api/classification/compare"', script)
+        self.assertIn("sample.image_data_url", script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):
         styles = (DASHBOARD / "styles.css").read_text(encoding="utf-8")

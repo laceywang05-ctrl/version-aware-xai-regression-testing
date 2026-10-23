@@ -272,6 +272,11 @@
               <small>Task, label and feature metadata</small>
               <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" required />
             </label>
+            <label class="file-field optional-image-field">
+              <span>Sample images <em>optional</em></span>
+              <small>ZIP of PNG, JPEG, WebP or GIF files referenced by the CSV</small>
+              <input id="images-upload" name="images" type="file" accept=".zip,application/zip" />
+            </label>
             <div class="upload-actions">
               <button id="run-upload-comparison" class="primary-action" type="submit">Run local comparison</button>
               <a href="data/upload-manifest-example.json" download>Download example manifest</a>
@@ -324,7 +329,7 @@
             </div>
             <div class="table-scroll">
               <table class="comparison-table sample-table">
-                <thead><tr><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 confidence</th><th>V2 prediction</th><th>V2 confidence</th><th>Transition</th></tr></thead>
+                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 confidence</th><th>V2 prediction</th><th>V2 confidence</th><th>Transition</th></tr></thead>
                 <tbody id="upload-sample-results"></tbody>
               </table>
             </div>

@@ -5,7 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 import json
+import base64
+from pathlib import PurePosixPath
 from typing import Any
+from zipfile import BadZipFile, ZipFile
 
 import joblib
 import numpy as np
@@ -13,6 +16,16 @@ import pandas as pd
 
 
 MAX_DATASET_ROWS = 5_000
+MAX_IMAGE_COUNT = 1_000
+MAX_IMAGE_BYTES = 2 * 1024 * 1024
+MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
+IMAGE_MEDIA_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
 
 
 @dataclass(frozen=True)
@@ -22,6 +35,7 @@ class UploadManifest:
     task: str
     label_column: str
     id_column: str | None
+    image_column: str | None
     feature_columns: tuple[str, ...] | None
     class_names: dict[str, str]
     trusted_model_files: bool
@@ -52,6 +66,9 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
     id_column = raw.get("id_column")
     if id_column is not None:
         id_column = str(id_column).strip() or None
+    image_column = raw.get("image_column")
+    if image_column is not None:
+        image_column = str(image_column).strip() or None
     features = raw.get("feature_columns")
     if features is not None:
         if not isinstance(features, list) or not features:
@@ -73,6 +90,7 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
         task=task,
         label_column=label_column,
         id_column=id_column,
+        image_column=image_column,
         feature_columns=feature_columns,
         class_names={str(key): str(value) for key, value in names.items()},
         trusted_model_files=trusted,
@@ -109,6 +127,46 @@ def load_uploaded_dataset(payload: bytes, filename: str) -> pd.DataFrame:
     return frame
 
 
+def load_uploaded_images(payload: bytes, filename: str) -> dict[str, str]:
+    """Read a bounded archive of display images into data URLs."""
+    if not filename.lower().endswith(".zip"):
+        raise ValueError("The optional image archive must use the .zip format.")
+    images: dict[str, str] = {}
+    total_bytes = 0
+    try:
+        with ZipFile(BytesIO(payload)) as archive:
+            entries = [entry for entry in archive.infolist() if not entry.is_dir()]
+            if len(entries) > MAX_IMAGE_COUNT:
+                raise ValueError(
+                    f"The image archive accepts at most {MAX_IMAGE_COUNT} files."
+                )
+            for entry in entries:
+                path = PurePosixPath(entry.filename)
+                if path.is_absolute() or ".." in path.parts:
+                    raise ValueError("The image archive contains an unsafe path.")
+                suffix = path.suffix.lower()
+                media_type = IMAGE_MEDIA_TYPES.get(suffix)
+                if media_type is None:
+                    raise ValueError(
+                        f"Unsupported image type in archive: {entry.filename}."
+                    )
+                if entry.file_size > MAX_IMAGE_BYTES:
+                    raise ValueError(
+                        f"Image {entry.filename} exceeds the 2 MB limit."
+                    )
+                total_bytes += entry.file_size
+                if total_bytes > MAX_TOTAL_IMAGE_BYTES:
+                    raise ValueError("Uncompressed images exceed the 25 MB limit.")
+                content = archive.read(entry)
+                encoded = base64.b64encode(content).decode("ascii")
+                images[path.as_posix()] = f"data:{media_type};base64,{encoded}"
+    except BadZipFile as error:
+        raise ValueError(f"Could not read image archive {filename}.") from error
+    if not images:
+        raise ValueError("The uploaded image archive contains no images.")
+    return images
+
+
 def _json_value(value: Any) -> Any:
     if isinstance(value, np.generic):
         return value.item()
@@ -137,6 +195,7 @@ def compare_classifiers(
     model_v2: Any,
     dataset: pd.DataFrame,
     manifest: UploadManifest,
+    images: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run a matched, sample-level classification comparison."""
     if manifest.label_column not in dataset:
@@ -145,9 +204,19 @@ def compare_classifiers(
         )
     if manifest.id_column is not None and manifest.id_column not in dataset:
         raise ValueError(f"Dataset is missing id column: {manifest.id_column}.")
+    if manifest.image_column is not None and manifest.image_column not in dataset:
+        raise ValueError(
+            f"Dataset is missing image column: {manifest.image_column}."
+        )
+    if images is not None and manifest.image_column is None:
+        raise ValueError("Manifest requires image_column when an image ZIP is uploaded.")
+    if manifest.image_column is not None and images is None:
+        raise ValueError("Upload an image ZIP when manifest image_column is set.")
     excluded = {manifest.label_column}
     if manifest.id_column is not None:
         excluded.add(manifest.id_column)
+    if manifest.image_column is not None:
+        excluded.add(manifest.image_column)
     feature_columns = (
         list(manifest.feature_columns)
         if manifest.feature_columns is not None
@@ -189,6 +258,13 @@ def compare_classifiers(
     )
     samples = []
     for index in range(len(dataset)):
+        image_name = None
+        image_data_url = None
+        if manifest.image_column is not None:
+            image_name = str(dataset.iloc[index][manifest.image_column])
+            image_data_url = images.get(image_name) if images is not None else None
+            if image_data_url is None:
+                raise ValueError(f"Image referenced by CSV was not found: {image_name}.")
         samples.append(
             {
                 "sample_id": _json_value(identifiers[index]),
@@ -207,6 +283,8 @@ def compare_classifiers(
                     prediction_v1[index] != prediction_v2[index]
                 ),
                 "transition": str(transitions[index]),
+                "image_name": image_name,
+                "image_data_url": image_data_url,
             }
         )
     counts = {
@@ -254,10 +332,14 @@ def compare_upload_payloads(
     model_v2: tuple[str, bytes],
     dataset: tuple[str, bytes],
     manifest: bytes,
+    images: tuple[str, bytes] | None = None,
 ) -> dict[str, Any]:
     """Load the four uploaded files and return their comparison report."""
     contract = parse_manifest(manifest)
     first = load_uploaded_model(model_v1[1], model_v1[0])
     second = load_uploaded_model(model_v2[1], model_v2[0])
     frame = load_uploaded_dataset(dataset[1], dataset[0])
-    return compare_classifiers(first, second, frame, contract)
+    image_lookup = (
+        load_uploaded_images(images[1], images[0]) if images is not None else None
+    )
+    return compare_classifiers(first, second, frame, contract, image_lookup)
