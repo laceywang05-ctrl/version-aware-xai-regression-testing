@@ -172,11 +172,15 @@ def _handler_class(
                     raise ValueError(
                         "Missing upload fields: " + ", ".join(missing)
                     )
+                image_field = fields.get("images")
+                if image_field is not None and not image_field[1]:
+                    image_field = None
                 result = compare_upload_payloads(
                     model_v1=fields["model_v1"],
                     model_v2=fields["model_v2"],
                     dataset=fields["dataset"],
                     manifest=fields["manifest"][1],
+                    images=image_field,
                 )
                 self._send_json(200, result)
             except ValueError as error:

@@ -183,6 +183,12 @@ execute Python, only trusted model files should be used. The current upload
 workflow is intentionally limited to classification; regression and uploaded
 model explanation adapters remain future extensions.
 
+An optional image ZIP can be matched to a CSV `image_column`. When present,
+the sample-level table displays each image beside its true label, both model
+predictions, confidence values, and correctness transition. This supports the
+planned MNIST/CIFAR-style error inspection while retaining the tabular upload
+path.
+
 When the held-out breast-cancer and wine benchmark summaries are present, the
 same command also exposes a **Benchmark validation** view. It compares four
 model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence

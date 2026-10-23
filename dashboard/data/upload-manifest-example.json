@@ -2,6 +2,7 @@
   "task": "classification",
   "label_column": "target",
   "id_column": "sample_id",
+  "image_column": "image_filename",
   "feature_columns": [
     "feature_a",
     "feature_b"
