@@ -174,6 +174,15 @@ rerunning the experiments, use:
 PYTHONPATH=src python -m xai_regression serve
 ```
 
+The server-backed dashboard now includes a **Compare uploaded models** MVP.
+It accepts two trusted scikit-learn-compatible `.joblib` classifiers, one
+labelled CSV, and a JSON manifest, then reports overall accuracy and the exact
+samples that changed from correct to wrong or wrong to correct. Files are
+processed locally in memory and are not persisted. Because loading joblib can
+execute Python, only trusted model files should be used. The current upload
+workflow is intentionally limited to classification; regression and uploaded
+model explanation adapters remain future extensions.
+
 When the held-out breast-cancer and wine benchmark summaries are present, the
 same command also exposes a **Benchmark validation** view. It compares four
 model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence

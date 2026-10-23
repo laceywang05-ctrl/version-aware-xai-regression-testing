@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from xai_regression.server import (
+    parse_multipart_form,
     serve_dashboard,
     validate_benchmark_files,
     validate_portfolio_file,
@@ -14,6 +15,25 @@ from xai_regression.server import (
 
 
 class DashboardServerTests(unittest.TestCase):
+    def test_multipart_upload_fields_are_parsed_in_memory(self):
+        boundary = "xai-boundary"
+        payload = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="manifest"; filename="manifest.json"\r\n'
+            "Content-Type: application/json\r\n\r\n"
+            '{"task":"classification"}\r\n'
+            f"--{boundary}--\r\n"
+        ).encode("utf-8")
+
+        fields = parse_multipart_form(
+            f"multipart/form-data; boundary={boundary}", payload
+        )
+
+        self.assertEqual(fields["manifest"][0], "manifest.json")
+        self.assertEqual(
+            json.loads(fields["manifest"][1]), {"task": "classification"}
+        )
+
     def test_unified_report_is_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "summary.json"

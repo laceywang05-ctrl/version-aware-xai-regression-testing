@@ -14,6 +14,7 @@ class DashboardTests(unittest.TestCase):
             "styles.css",
             "app.js",
             "data/example-report.json",
+            "data/upload-manifest-example.json",
         ):
             self.assertTrue((DASHBOARD / relative_path).is_file())
 
@@ -55,6 +56,14 @@ class DashboardTests(unittest.TestCase):
             "robustness-status",
             "robustness-dataset-grid",
             "robustness-results",
+            "upload-view",
+            "classification-upload-form",
+            "model-v1-upload",
+            "model-v2-upload",
+            "dataset-upload",
+            "manifest-upload",
+            "upload-results",
+            "upload-sample-results",
         ):
             self.assertIn(f'id="{element_id}"', html)
 
@@ -75,6 +84,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderPortfolio", script)
         self.assertIn("function validateRobustness", script)
         self.assertIn("function renderRobustness", script)
+        self.assertIn("function renderUploadComparison", script)
+        self.assertIn('fetch("/api/classification/compare"', script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):
         styles = (DASHBOARD / "styles.css").read_text(encoding="utf-8")

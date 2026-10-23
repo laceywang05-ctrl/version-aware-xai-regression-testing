@@ -254,6 +254,37 @@ main { display: grid; gap: 24px; }
 .robustness-ranges span { display: block; min-height: 30px; color: var(--muted); font-size: .68rem; line-height: 1.35; }
 .robustness-ranges strong { display: block; margin-top: 5px; color: var(--navy); font-size: 1.05rem; }
 .warning-boundary { border-left-color: var(--orange); }
+.local-warning { padding: 14px 16px; border: 1px solid #f2cfb9; border-radius: 12px; background: var(--orange-soft); color: #784125; font-size: .78rem; line-height: 1.5; }
+.comparison-upload-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.file-field { display: grid; gap: 6px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfc; }
+.file-field span { color: var(--navy); font-weight: 800; }
+.file-field small { color: var(--muted); }
+.file-field input { width: 100%; margin-top: 8px; color: var(--muted); font: inherit; font-size: .76rem; }
+.file-field input::file-selector-button { margin-right: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--navy); cursor: pointer; font-weight: 750; }
+.upload-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding-top: 6px; }
+.primary-action { border: 0; border-radius: 10px; padding: 12px 18px; background: var(--navy); color: white; cursor: pointer; font: inherit; font-weight: 800; }
+.primary-action:disabled { cursor: wait; opacity: .6; }
+.upload-actions a { color: var(--blue); font-size: .78rem; font-weight: 750; }
+.upload-comparison-message { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .78rem; }
+.upload-comparison-message.error { color: #a84518; }
+.upload-comparison-message.success { color: var(--green); }
+.upload-status { border-left: 5px solid var(--cyan); }
+.upload-summary { grid-template-columns: repeat(2, 1fr); }
+.transition-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.transition-card { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfc; }
+.transition-card span { color: var(--muted); font-size: .76rem; }
+.transition-card strong { color: var(--navy); font-size: 1.35rem; }
+.transition-card.v1_wrong_v2_correct { border-top: 4px solid var(--green); }
+.transition-card.v1_correct_v2_wrong { border-top: 4px solid var(--orange); }
+.transition-pill { display: inline-flex; padding: 5px 9px; border-radius: 99px; white-space: nowrap; font-size: .68rem; font-weight: 800; }
+.transition-pill.both_correct { background: #e5f5ef; color: var(--green); }
+.transition-pill.v1_wrong_v2_correct { background: #def3f4; color: var(--blue); }
+.transition-pill.v1_correct_v2_wrong { background: var(--orange-soft); color: #a84518; }
+.transition-pill.both_wrong { background: #edf0f1; color: var(--muted); }
+.sample-table .regression-row { background: #fff9f5; }
+.sample-table .improvement-row { background: #f6fbfa; }
+.table-note { margin: 14px 0 0; color: var(--muted); font-size: .72rem; }
+.limitation-list { margin: 4px 0 0; padding-left: 18px; color: var(--muted); font-size: .82rem; line-height: 1.65; }
 footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px 0 40px; color: var(--muted); font-size: .72rem; }
 
 @media (max-width: 820px) {
@@ -262,6 +293,8 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .scenario-grid { grid-template-columns: 1fr; }
   .portfolio-grid { grid-template-columns: 1fr; }
   .robustness-dataset-grid { grid-template-columns: 1fr; }
+  .comparison-upload-form { grid-template-columns: 1fr; }
+  .transition-grid { grid-template-columns: repeat(2, 1fr); }
   .benchmark-summary { grid-template-columns: repeat(2, 1fr); }
   .section-heading { align-items: start; flex-direction: column; }
   .section-heading > p { text-align: left; }
@@ -279,6 +312,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .method-stats { grid-template-columns: 1fr; }
   .portfolio-stats { grid-template-columns: 1fr; }
   .robustness-ranges { grid-template-columns: 1fr; }
+  .transition-grid { grid-template-columns: 1fr; }
   footer { flex-direction: column; }
 }
 

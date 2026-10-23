@@ -3,16 +3,45 @@
 from __future__ import annotations
 
 import json
+from email.parser import BytesParser
+from email.policy import default
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+
+from xai_regression.upload_comparison import compare_upload_payloads
 
 
 REPORT_ROUTE = "/data/report.json"
 BENCHMARK_ROUTE = "/data/benchmarks.json"
 PORTFOLIO_ROUTE = "/data/portfolio.json"
 ROBUSTNESS_ROUTE = "/data/robustness.json"
+CLASSIFICATION_COMPARE_ROUTE = "/api/classification/compare"
+MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+
+
+def parse_multipart_form(content_type: str, payload: bytes) -> dict[str, tuple[str, bytes]]:
+    """Parse a bounded multipart request into named in-memory file fields."""
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise ValueError("Comparison requests must use multipart/form-data.")
+    message = BytesParser(policy=default).parsebytes(
+        (
+            f"Content-Type: {content_type}\r\n"
+            "MIME-Version: 1.0\r\n\r\n"
+        ).encode("utf-8")
+        + payload
+    )
+    if not message.is_multipart():
+        raise ValueError("Could not parse multipart upload.")
+    fields: dict[str, tuple[str, bytes]] = {}
+    for part in message.iter_parts():
+        name = part.get_param("name", header="content-disposition")
+        if not name:
+            continue
+        filename = part.get_filename() or name
+        fields[str(name)] = (str(filename), part.get_payload(decode=True) or b"")
+    return fields
 
 
 def validate_report_file(path: str | Path) -> Path:
@@ -113,6 +142,51 @@ def _handler_class(
     robustness_path: Path | None,
 ):
     class DashboardRequestHandler(SimpleHTTPRequestHandler):
+        def _send_json(self, status: int, value: object) -> None:
+            payload = json.dumps(value, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def do_POST(self):  # noqa: N802 - inherited HTTP method name
+            route = urlparse(self.path).path
+            if route != CLASSIFICATION_COMPARE_ROUTE:
+                self._send_json(404, {"error": "Unknown API route."})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length < 1:
+                    raise ValueError("The upload request is empty.")
+                if length > MAX_UPLOAD_BYTES:
+                    raise ValueError("The upload exceeds the 100 MB local limit.")
+                fields = parse_multipart_form(
+                    self.headers.get("Content-Type", ""),
+                    self.rfile.read(length),
+                )
+                required = {"model_v1", "model_v2", "dataset", "manifest"}
+                missing = sorted(required - fields.keys())
+                if missing:
+                    raise ValueError(
+                        "Missing upload fields: " + ", ".join(missing)
+                    )
+                result = compare_upload_payloads(
+                    model_v1=fields["model_v1"],
+                    model_v2=fields["model_v2"],
+                    dataset=fields["dataset"],
+                    manifest=fields["manifest"][1],
+                )
+                self._send_json(200, result)
+            except ValueError as error:
+                self._send_json(400, {"error": str(error)})
+            except Exception:
+                self._send_json(
+                    500,
+                    {"error": "The local comparison failed unexpectedly."},
+                )
+
         def do_GET(self):  # noqa: N802 - inherited HTTP method name
             route = urlparse(self.path).path
             if route == REPORT_ROUTE:
