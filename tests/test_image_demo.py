@@ -1,0 +1,57 @@
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import unittest
+from zipfile import ZipFile
+
+from xai_regression.image_demo import build_digits_image_demo
+from xai_regression.upload_comparison import compare_upload_payloads
+
+
+class ImageDemoTests(unittest.TestCase):
+    def test_demo_bundle_runs_through_upload_comparison(self):
+        with TemporaryDirectory() as temporary:
+            output = Path(temporary) / "demo"
+            result = build_digits_image_demo(output)
+
+            expected = {
+                "model_v1.joblib",
+                "model_v2.joblib",
+                "samples.csv",
+                "manifest.json",
+                "images.zip",
+                "README.json",
+            }
+            self.assertEqual({path.name for path in output.iterdir()}, expected)
+            self.assertGreater(result["v2_accuracy"], result["v1_accuracy"])
+            with ZipFile(output / "images.zip") as archive:
+                self.assertEqual(len(archive.namelist()), result["sample_count"])
+
+            comparison = compare_upload_payloads(
+                model_v1=("model_v1.joblib", (output / "model_v1.joblib").read_bytes()),
+                model_v2=("model_v2.joblib", (output / "model_v2.joblib").read_bytes()),
+                dataset=("samples.csv", (output / "samples.csv").read_bytes()),
+                manifest=(output / "manifest.json").read_bytes(),
+                images=("images.zip", (output / "images.zip").read_bytes()),
+            )
+
+            self.assertEqual(
+                comparison["summary"]["total_samples"], result["sample_count"]
+            )
+            self.assertGreater(
+                comparison["summary"]["v1_wrong_v2_correct"], 0
+            )
+            self.assertGreater(
+                comparison["summary"]["v1_correct_v2_wrong"], 0
+            )
+            self.assertTrue(
+                comparison["samples"][0]["image_data_url"].startswith(
+                    "data:image/png;base64,"
+                )
+            )
+            summary = json.loads((output / "README.json").read_text())
+            self.assertIn("DecisionTreeClassifier", summary["model_v1"])
+
+
+if __name__ == "__main__":
+    unittest.main()

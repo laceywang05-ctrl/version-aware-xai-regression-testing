@@ -189,6 +189,20 @@ predictions, confidence values, and correctness transition. This supports the
 planned MNIST/CIFAR-style error inspection while retaining the tabular upload
 path.
 
+Generate a complete offline handwritten-digit demonstration bundle with:
+
+```bash
+PYTHONPATH=src python -m xai_regression image-demo
+```
+
+The command trains a deliberately limited decision-tree V1 and a stronger
+random-forest V2, then writes both trusted model files, a labelled sample CSV,
+an image ZIP, and the matching manifest under
+`artifacts/demo_image_upload/`. Upload those five files on **Compare uploaded
+models** to demonstrate concrete image-level improvements and regressions.
+This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
+offline; true MNIST and CIFAR-10 remain the next dataset integrations.
+
 When the held-out breast-cancer and wine benchmark summaries are present, the
 same command also exposes a **Benchmark validation** view. It compares four
 model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence
