@@ -1,0 +1,14 @@
+{
+  "task": "classification",
+  "label_column": "target",
+  "id_column": "sample_id",
+  "feature_columns": [
+    "feature_a",
+    "feature_b"
+  ],
+  "class_names": {
+    "0": "negative",
+    "1": "positive"
+  },
+  "trusted_model_files": true
+}

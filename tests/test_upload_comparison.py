@@ -1,0 +1,125 @@
+from io import BytesIO
+import json
+import unittest
+
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+
+from xai_regression.upload_comparison import (
+    compare_classifiers,
+    compare_upload_payloads,
+    parse_manifest,
+)
+
+
+class StubClassifier:
+    def __init__(self, predictions, probabilities=None):
+        self.predictions = np.asarray(predictions)
+        self.probabilities = probabilities
+
+    def predict(self, features):
+        return self.predictions
+
+    def predict_proba(self, features):
+        if self.probabilities is None:
+            raise AttributeError
+        return np.asarray(self.probabilities)
+
+
+class UploadComparisonTests(unittest.TestCase):
+    def test_manifest_requires_classification_and_trust_acknowledgement(self):
+        with self.assertRaisesRegex(ValueError, "classification only"):
+            parse_manifest(
+                {"task": "regression", "label_column": "target", "trusted_model_files": True}
+            )
+        with self.assertRaisesRegex(ValueError, "trusted_model_files"):
+            parse_manifest({"task": "classification", "label_column": "target"})
+
+    def test_comparison_reports_all_correctness_transitions(self):
+        dataset = pd.DataFrame(
+            {
+                "id": ["a", "b", "c", "d"],
+                "x": [0.0, 1.0, 2.0, 3.0],
+                "target": [0, 1, 0, 1],
+            }
+        )
+        v1 = StubClassifier(
+            [0, 1, 1, 0],
+            [[0.9, 0.1], [0.1, 0.9], [0.3, 0.7], [0.6, 0.4]],
+        )
+        v2 = StubClassifier(
+            [0, 0, 0, 0],
+            [[0.8, 0.2], [0.7, 0.3], [0.8, 0.2], [0.7, 0.3]],
+        )
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "id_column": "id",
+                "feature_columns": ["x"],
+                "class_names": {"0": "negative", "1": "positive"},
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(v1, v2, dataset, manifest)
+
+        self.assertEqual(result["summary"]["both_correct"], 1)
+        self.assertEqual(result["summary"]["v1_correct_v2_wrong"], 1)
+        self.assertEqual(result["summary"]["v1_wrong_v2_correct"], 1)
+        self.assertEqual(result["summary"]["both_wrong"], 1)
+        self.assertEqual(result["samples"][1]["actual"], "positive")
+        self.assertAlmostEqual(result["samples"][0]["v1_confidence"], 0.9)
+
+    def test_missing_label_column_is_rejected(self):
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "trusted_model_files": True,
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "label column"):
+            compare_classifiers(
+                StubClassifier([0]),
+                StubClassifier([0]),
+                pd.DataFrame({"x": [1]}),
+                manifest,
+            )
+
+    def test_uploaded_joblib_models_and_csv_are_compared_in_memory(self):
+        features = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]})
+        labels = np.asarray([0, 0, 1, 1])
+        model = DecisionTreeClassifier(max_depth=1, random_state=7).fit(
+            features, labels
+        )
+        first = BytesIO()
+        second = BytesIO()
+        joblib.dump(model, first)
+        joblib.dump(model, second)
+        dataset = features.assign(target=labels).to_csv(index=False).encode("utf-8")
+        manifest = json.dumps(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        ).encode("utf-8")
+
+        result = compare_upload_payloads(
+            model_v1=("v1.joblib", first.getvalue()),
+            model_v2=("v2.joblib", second.getvalue()),
+            dataset=("samples.csv", dataset),
+            manifest=manifest,
+        )
+
+        self.assertEqual(result["summary"]["total_samples"], 4)
+        self.assertEqual(result["summary"]["prediction_agreement"], 1.0)
+        self.assertEqual(result["summary"]["both_correct"], 4)
+
+
+if __name__ == "__main__":
+    unittest.main()

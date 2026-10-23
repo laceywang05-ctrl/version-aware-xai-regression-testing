@@ -21,6 +21,7 @@ from xai_regression.runner import run_validation
 from xai_regression.reporting import run_unified_report
 from xai_regression.server import serve_dashboard
 from xai_regression.shap_split_robustness import run_shap_split_robustness
+from xai_regression.shap_multiplicity import run_shap_multiplicity_analysis
 from xai_regression.split_robustness import run_split_robustness
 
 
@@ -236,6 +237,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         default="config/shap_split_robustness.yaml",
     )
+    shap_multiplicity_parser = subparsers.add_parser(
+        "shap-multiplicity",
+        help="Compare ordinary and multiplicity-aware SHAP run policies.",
+    )
+    shap_multiplicity_parser.add_argument(
+        "--robustness-dir",
+        default="artifacts/experiment_31_shap_split_robustness",
+    )
+    shap_multiplicity_parser.add_argument(
+        "--output-dir",
+        default="artifacts/experiment_32_shap_multiplicity_policy",
+    )
+    shap_multiplicity_parser.add_argument("--alpha", type=float, default=0.05)
     serve_parser.add_argument(
         "--portfolio-report",
         default=None,
@@ -559,6 +573,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_shap_split_robustness(
                 _project_path(args.config),
                 project_root=PROJECT_ROOT,
+            )
+            return 0
+        if args.command == "shap-multiplicity":
+            run_shap_multiplicity_analysis(
+                robustness_dir=_project_path(args.robustness_dir),
+                output_dir=_project_path(args.output_dir),
+                alpha=args.alpha,
             )
             return 0
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:

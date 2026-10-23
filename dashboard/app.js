@@ -5,6 +5,7 @@ const state = {
   selectedBenchmark: 0,
   portfolio: null,
   robustness: null,
+  uploadComparison: null,
 };
 
 const elements = {
@@ -41,6 +42,20 @@ const elements = {
   robustnessDatasetGrid: document.querySelector("#robustness-dataset-grid"),
   robustnessResults: document.querySelector("#robustness-results"),
   robustnessInterpretation: document.querySelector("#robustness-interpretation"),
+  uploadView: document.querySelector("#upload-view"),
+  uploadForm: document.querySelector("#classification-upload-form"),
+  uploadSubmit: document.querySelector("#run-upload-comparison"),
+  uploadMessage: document.querySelector("#upload-comparison-message"),
+  uploadResults: document.querySelector("#upload-results"),
+  uploadTotal: document.querySelector("#upload-total"),
+  uploadV1Accuracy: document.querySelector("#upload-v1-accuracy"),
+  uploadV2Accuracy: document.querySelector("#upload-v2-accuracy"),
+  uploadAgreement: document.querySelector("#upload-agreement"),
+  uploadTransitionGrid: document.querySelector("#upload-transition-grid"),
+  uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
+  uploadSampleResults: document.querySelector("#upload-sample-results"),
+  uploadTableNote: document.querySelector("#upload-table-note"),
+  uploadLimitations: document.querySelector("#upload-limitations"),
 };
 
 function formatPercent(value) {
@@ -129,13 +144,106 @@ function switchView(view) {
   const benchmark = view === "benchmark";
   const portfolio = view === "portfolio";
   const robustness = view === "robustness";
-  elements.comparisonView.hidden = benchmark || portfolio || robustness;
+  const upload = view === "upload";
+  elements.comparisonView.hidden = benchmark || portfolio || robustness || upload;
   elements.benchmarkView.hidden = !benchmark;
   elements.portfolioView.hidden = !portfolio;
   elements.robustnessView.hidden = !robustness;
+  elements.uploadView.hidden = !upload;
   for (const tab of elements.viewTabs) {
     tab.classList.toggle("active", tab.dataset.view === view);
   }
+}
+
+const transitionLabels = {
+  both_correct: "Both correct",
+  v1_correct_v2_wrong: "Correct → wrong",
+  v1_wrong_v2_correct: "Wrong → correct",
+  both_wrong: "Both wrong",
+};
+
+function formatConfidence(value) {
+  return value === null || value === undefined ? "Not available" : formatPercent(value);
+}
+
+function renderUploadSamples() {
+  const report = state.uploadComparison;
+  if (!report) return;
+  const selected = elements.uploadTransitionFilter.value;
+  const matching = report.samples.filter(
+    (sample) => selected === "all" || sample.transition === selected,
+  );
+  const displayed = matching.slice(0, 500);
+  elements.uploadSampleResults.replaceChildren();
+  for (const sample of displayed) {
+    const row = document.createElement("tr");
+    if (sample.transition === "v1_correct_v2_wrong") row.className = "regression-row";
+    if (sample.transition === "v1_wrong_v2_correct") row.className = "improvement-row";
+    const values = [
+      sample.sample_id,
+      sample.actual,
+      sample.v1_prediction,
+      formatConfidence(sample.v1_confidence),
+      sample.v2_prediction,
+      formatConfidence(sample.v2_confidence),
+    ];
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    const transitionCell = document.createElement("td");
+    const badge = document.createElement("span");
+    badge.className = `transition-pill ${sample.transition}`;
+    badge.textContent = transitionLabels[sample.transition] || sample.transition;
+    transitionCell.append(badge);
+    row.append(transitionCell);
+    elements.uploadSampleResults.append(row);
+  }
+  elements.uploadTableNote.textContent = matching.length > displayed.length
+    ? `Showing the first ${displayed.length} of ${matching.length} matching samples.`
+    : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`;
+}
+
+function renderUploadComparison(report) {
+  if (!report || report.task !== "classification" || !report.summary || !Array.isArray(report.samples)) {
+    throw new Error("The server returned an invalid classification comparison.");
+  }
+  state.uploadComparison = report;
+  const summary = report.summary;
+  elements.uploadTotal.textContent = summary.total_samples;
+  elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
+  elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
+  elements.uploadAgreement.textContent = formatPercent(summary.prediction_agreement);
+
+  const transitions = [
+    ["both_correct", "Both correct"],
+    ["v1_wrong_v2_correct", "Wrong → correct"],
+    ["v1_correct_v2_wrong", "Correct → wrong"],
+    ["both_wrong", "Both wrong"],
+  ];
+  elements.uploadTransitionGrid.replaceChildren();
+  for (const [key, label] of transitions) {
+    const card = document.createElement("article");
+    card.className = `transition-card ${key}`;
+    const name = document.createElement("span");
+    const value = document.createElement("strong");
+    name.textContent = label;
+    value.textContent = summary[key];
+    card.append(name, value);
+    elements.uploadTransitionGrid.append(card);
+  }
+
+  elements.uploadLimitations.replaceChildren();
+  for (const limitation of report.limitations || []) {
+    const item = document.createElement("li");
+    item.textContent = limitation;
+    elements.uploadLimitations.append(item);
+  }
+  elements.uploadTransitionFilter.value = "all";
+  renderUploadSamples();
+  elements.uploadResults.hidden = false;
+  elements.uploadResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function datasetName(value) {
@@ -537,6 +645,34 @@ for (const tab of elements.viewTabs) {
 elements.benchmarkSelector.addEventListener("change", (event) => {
   state.selectedBenchmark = Number(event.target.value);
   renderBenchmark();
+});
+
+elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
+
+elements.uploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData(elements.uploadForm);
+  elements.uploadSubmit.disabled = true;
+  elements.uploadSubmit.textContent = "Comparing…";
+  elements.uploadMessage.className = "upload-comparison-message working";
+  elements.uploadMessage.textContent = "Running both models on the labelled samples locally.";
+  try {
+    const response = await fetch("/api/classification/compare", {
+      method: "POST",
+      body: form,
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+    renderUploadComparison(payload);
+    elements.uploadMessage.className = "upload-comparison-message success";
+    elements.uploadMessage.textContent = "Comparison complete. No uploaded file was saved.";
+  } catch (error) {
+    elements.uploadMessage.className = "upload-comparison-message error";
+    elements.uploadMessage.textContent = `Could not run comparison: ${error.message}`;
+  } finally {
+    elements.uploadSubmit.disabled = false;
+    elements.uploadSubmit.textContent = "Run local comparison";
+  }
 });
 
 elements.upload.addEventListener("change", async (event) => {

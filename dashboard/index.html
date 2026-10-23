@@ -32,6 +32,7 @@
         <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
         <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
         <button class="view-tab" data-view="robustness" type="button">Split robustness</button>
+        <button class="view-tab" data-view="upload" type="button">Compare uploaded models</button>
       </nav>
 
       <div id="comparison-view" class="dashboard-view">
@@ -228,11 +229,123 @@
         </section>
       </div>
 
+      <div id="upload-view" class="dashboard-view" hidden>
+        <section class="content-section upload-intro" aria-labelledby="upload-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Classification MVP</p>
+              <h2 id="upload-heading">Compare your Model V1 and Model V2</h2>
+            </div>
+            <p>Run both trusted classifiers on the same labelled samples and inspect exactly which predictions improved or regressed.</p>
+          </div>
+          <div class="local-warning">
+            <strong>Local prototype:</strong> only load <code>.joblib</code> files that you trust. Files are processed in memory by the local server and are not saved.
+          </div>
+        </section>
+
+        <section class="content-section" aria-labelledby="upload-files-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Four required files</p>
+              <h2 id="upload-files-heading">Upload comparison inputs</h2>
+            </div>
+            <p>Both models must accept the same feature columns. The CSV must include the known label for every sample.</p>
+          </div>
+          <form id="classification-upload-form" class="comparison-upload-form">
+            <label class="file-field">
+              <span>Model V1</span>
+              <small>Trusted baseline classifier</small>
+              <input id="model-v1-upload" name="model_v1" type="file" accept=".joblib" required />
+            </label>
+            <label class="file-field">
+              <span>Model V2</span>
+              <small>Trusted candidate classifier</small>
+              <input id="model-v2-upload" name="model_v2" type="file" accept=".joblib" required />
+            </label>
+            <label class="file-field">
+              <span>Labelled dataset</span>
+              <small>CSV, up to 5,000 rows</small>
+              <input id="dataset-upload" name="dataset" type="file" accept=".csv,text/csv" required />
+            </label>
+            <label class="file-field">
+              <span>Manifest</span>
+              <small>Task, label and feature metadata</small>
+              <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" required />
+            </label>
+            <div class="upload-actions">
+              <button id="run-upload-comparison" class="primary-action" type="submit">Run local comparison</button>
+              <a href="data/upload-manifest-example.json" download>Download example manifest</a>
+              <p id="upload-comparison-message" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+        </section>
+
+        <div id="upload-results" hidden>
+          <section class="status-panel upload-status" aria-labelledby="upload-results-heading">
+            <div>
+              <p class="eyebrow">Uploaded comparison</p>
+              <h2 id="upload-results-heading">Prediction-level result</h2>
+              <p class="status-explanation">Accuracy summarizes the versions; the table below shows the concrete sample-level changes behind it.</p>
+            </div>
+            <div class="summary-grid upload-summary" aria-label="Uploaded model summary">
+              <article><span>Samples</span><strong id="upload-total">—</strong></article>
+              <article><span>V1 accuracy</span><strong id="upload-v1-accuracy">—</strong></article>
+              <article><span>V2 accuracy</span><strong id="upload-v2-accuracy">—</strong></article>
+              <article><span>Prediction agreement</span><strong id="upload-agreement">—</strong></article>
+            </div>
+          </section>
+
+          <section class="content-section" aria-labelledby="transition-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Version transitions</p>
+                <h2 id="transition-heading">What changed from V1 to V2</h2>
+              </div>
+              <p>“Wrong → correct” is an improvement; “correct → wrong” is a regression on the supplied labelled sample.</p>
+            </div>
+            <div id="upload-transition-grid" class="transition-grid"></div>
+          </section>
+
+          <section class="content-section" aria-labelledby="sample-results-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Concrete examples</p>
+                <h2 id="sample-results-heading">Sample-by-sample predictions</h2>
+              </div>
+              <label class="dataset-picker">Show
+                <select id="upload-transition-filter">
+                  <option value="all">All samples</option>
+                  <option value="v1_correct_v2_wrong">Correct → wrong</option>
+                  <option value="v1_wrong_v2_correct">Wrong → correct</option>
+                  <option value="both_correct">Both correct</option>
+                  <option value="both_wrong">Both wrong</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table sample-table">
+                <thead><tr><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 confidence</th><th>V2 prediction</th><th>V2 confidence</th><th>Transition</th></tr></thead>
+                <tbody id="upload-sample-results"></tbody>
+              </table>
+            </div>
+            <p id="upload-table-note" class="table-note"></p>
+          </section>
+
+          <section class="interpretation-panel" aria-labelledby="upload-boundary-heading">
+            <div class="interpretation-icon" aria-hidden="true">i</div>
+            <div>
+              <h2 id="upload-boundary-heading">Current scope</h2>
+              <ul id="upload-limitations" class="limitation-list"></ul>
+            </div>
+          </section>
+        </div>
+      </div>
+
     </main>
 
     <footer>
       <span>FYP prototype</span>
-      <span>Local data only · No external upload</span>
+      <span>Local processing · Uploaded files are not persisted</span>
     </footer>
     <script src="app.js" defer></script>
   </body>

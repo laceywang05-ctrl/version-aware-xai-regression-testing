@@ -26,6 +26,27 @@ PYTHONPATH=src python -m xai_regression serve
 The local server exposes only the selected report at a fixed read-only route.
 It binds to `127.0.0.1` by default and does not upload report data externally.
 
+## Compare uploaded classification models
+
+Open **Compare uploaded models** when the dashboard is running through
+`xai_regression serve`. The first upload workflow accepts:
+
+- a trusted baseline classifier named with the `.joblib` extension;
+- a trusted candidate classifier in the same format;
+- a labelled CSV with no more than 5,000 rows; and
+- a JSON manifest describing the label, optional sample ID, ordered feature
+  columns, and optional class display names.
+
+Download the example manifest from the page and edit it to match the CSV. Both
+models must expose `predict()` and accept the same selected features. Optional
+`predict_proba()` output is shown as confidence. Uploaded files are processed
+in memory and are not persisted by the local server.
+
+Joblib files can execute Python while loading. Only use model files from a
+trusted source. This stage intentionally supports classification only; the
+same upload contract can later be extended with regression and explanation
+adapters.
+
 When the generated cross-dataset summary is available, the same command adds a
 **Cross-dataset overview** containing the completed SHAP/LIME evidence matrix
 for Breast Cancer Wisconsin and binary Wine.
