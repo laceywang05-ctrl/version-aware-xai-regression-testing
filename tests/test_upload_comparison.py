@@ -87,6 +87,8 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["both_wrong"], 1)
         self.assertEqual(result["samples"][1]["actual"], "positive")
         self.assertAlmostEqual(result["samples"][0]["v1_confidence"], 0.9)
+        self.assertEqual(result["summary"]["high_confidence_threshold"], 0.8)
+        self.assertEqual(result["summary"]["v2_high_confidence_wrong_count"], 0)
         self.assertEqual(result["class_diagnostics"][0]["class_label"], "negative")
         self.assertAlmostEqual(result["class_diagnostics"][0]["accuracy_change"], 0.5)
         self.assertEqual(result["class_diagnostics"][1]["class_label"], "positive")
@@ -97,6 +99,30 @@ class UploadComparisonTests(unittest.TestCase):
         }
         self.assertEqual(confusion[("negative", "positive")]["error_change"], -1)
         self.assertEqual(confusion[("positive", "negative")]["error_change"], 1)
+
+    def test_high_confidence_candidate_errors_are_prioritized(self):
+        dataset = pd.DataFrame(
+            {"id": ["safe", "risk"], "x": [0.0, 1.0], "target": [0, 1]}
+        )
+        v1 = StubClassifier([0, 1], [[0.9, 0.1], [0.1, 0.9]])
+        v2 = StubClassifier([0, 0], [[0.95, 0.05], [0.92, 0.08]])
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "id_column": "id",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(v1, v2, dataset, manifest)
+
+        self.assertEqual(result["summary"]["v2_high_confidence_wrong_count"], 1)
+        self.assertEqual(result["summary"]["high_confidence_regression_count"], 1)
+        self.assertFalse(result["samples"][0]["v2_high_confidence_wrong"])
+        self.assertTrue(result["samples"][1]["v2_high_confidence_wrong"])
+        self.assertTrue(result["samples"][1]["high_confidence_regression"])
 
     def test_missing_label_column_is_rejected(self):
         manifest = parse_manifest(

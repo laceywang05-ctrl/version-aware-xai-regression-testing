@@ -43,6 +43,12 @@ models must expose `predict()` and accept the same selected features. Optional
 `predict_proba()` output is shown as confidence. Uploaded files are processed
 in memory and are not persisted by the local server.
 
+The sample table also provides confidence-risk triage. A prediction is treated
+as high confidence at 80% or above. Users can filter candidate-model
+high-confidence errors and the narrower set where the baseline was correct but
+the candidate became confidently wrong. This fixed descriptive threshold helps
+prioritize inspection; it is not a calibrated statistical acceptance rule.
+
 After selecting two to five models, choose one as the baseline and another as
 the candidate. Only that pair is sent to the local comparison endpoint. To
 compare another pair, change the two selectors and run again; the browser keeps

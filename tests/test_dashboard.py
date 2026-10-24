@@ -88,6 +88,7 @@ class DashboardTests(unittest.TestCase):
             "confusion-empty-message",
             "download-comparison-json",
             "download-samples-csv",
+            "confidence-risk-summary",
             "upload-sample-results",
             "explanation-dialog",
             "v1-heatmap",
@@ -132,6 +133,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function selectedManifestFile", script)
         self.assertIn('"generated-manifest.json"', script)
         self.assertIn("slice(0, 3)", script)
+        self.assertIn('selected === "v2_high_confidence_wrong"', script)
+        self.assertIn('selected === "high_confidence_regression"', script)
+        self.assertIn('"v2_high_confidence_wrong", "high_confidence_regression"', script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):
         styles = (DASHBOARD / "styles.css").read_text(encoding="utf-8")

@@ -283,6 +283,9 @@ main { display: grid; gap: 24px; }
 .transition-pill.both_wrong { background: #edf0f1; color: var(--muted); }
 .sample-table .regression-row { background: #fff9f5; }
 .sample-table .improvement-row { background: #f6fbfa; }
+.confidence-risk-summary { max-width: 760px; margin: 0.55rem 0 0; color: var(--muted); }
+.sample-table .high-confidence-risk-row { box-shadow: inset 4px 0 0 #d65a20; }
+.sample-table .high-confidence-risk-row td { background: rgba(255, 239, 228, 0.72); }
 .sample-thumbnail { display: block; width: 68px; height: 68px; border: 1px solid var(--line); border-radius: 10px; background: white; object-fit: contain; }
 .sample-table td { vertical-align: middle; }
 .optional-image-field { grid-column: 1 / -1; }
