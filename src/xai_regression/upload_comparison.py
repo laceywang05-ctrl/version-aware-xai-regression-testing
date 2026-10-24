@@ -525,4 +525,9 @@ def compare_upload_payloads(
     image_lookup = (
         load_uploaded_images(images[1], images[0]) if images is not None else None
     )
-    return compare_classifiers(first, second, frame, contract, image_lookup)
+    result = compare_classifiers(first, second, frame, contract, image_lookup)
+    result["models"] = {
+        "v1": {"filename": model_v1[0]},
+        "v2": {"filename": model_v2[0]},
+    }
+    return result

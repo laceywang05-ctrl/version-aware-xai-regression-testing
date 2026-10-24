@@ -246,20 +246,20 @@
         <section class="content-section" aria-labelledby="upload-files-heading">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Four required files</p>
+              <p class="eyebrow">Model collection and shared evidence</p>
               <h2 id="upload-files-heading">Upload comparison inputs</h2>
             </div>
             <p>Both models must accept the same feature columns. The CSV must include the known label for every sample.</p>
           </div>
           <form id="classification-upload-form" class="comparison-upload-form">
             <label class="file-field">
-              <span>Model V1</span>
-              <small>Trusted baseline classifier</small>
+              <span>Model file 1</span>
+              <small>Trusted classifier</small>
               <input id="model-v1-upload" name="model_v1" type="file" accept=".joblib" required />
             </label>
             <label class="file-field">
-              <span>Model V2</span>
-              <small>Trusted candidate classifier</small>
+              <span>Model file 2</span>
+              <small>Trusted classifier</small>
               <input id="model-v2-upload" name="model_v2" type="file" accept=".joblib" required />
             </label>
             <label class="file-field">
@@ -272,6 +272,21 @@
               <small>Task, label and feature metadata</small>
               <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" required />
             </label>
+            <label class="file-field optional-image-field">
+              <span>Additional models <em>optional</em></span>
+              <small>Select up to three more trusted .joblib classifiers</small>
+              <input id="additional-models-upload" type="file" accept=".joblib" multiple />
+            </label>
+            <div class="model-pair-picker">
+              <label>Baseline model
+                <select id="baseline-model-selector"></select>
+              </label>
+              <span aria-hidden="true">→</span>
+              <label>Candidate model
+                <select id="candidate-model-selector"></select>
+              </label>
+              <p id="model-collection-message">Upload two to five models, then select the pair to compare.</p>
+            </div>
             <label class="file-field optional-image-field">
               <span>Sample images <em>optional</em></span>
               <small>ZIP of PNG, JPEG, WebP or GIF files referenced by the CSV</small>
@@ -294,8 +309,8 @@
             </div>
             <div class="summary-grid upload-summary" aria-label="Uploaded model summary">
               <article><span>Samples</span><strong id="upload-total">—</strong></article>
-              <article><span>V1 accuracy</span><strong id="upload-v1-accuracy">—</strong></article>
-              <article><span>V2 accuracy</span><strong id="upload-v2-accuracy">—</strong></article>
+              <article><span id="upload-v1-label">V1 accuracy</span><strong id="upload-v1-accuracy">—</strong></article>
+              <article><span id="upload-v2-label">V2 accuracy</span><strong id="upload-v2-accuracy">—</strong></article>
               <article><span>Prediction agreement</span><strong id="upload-agreement">—</strong></article>
             </div>
           </section>
@@ -329,7 +344,7 @@
             </div>
             <div class="table-scroll">
               <table class="comparison-table sample-table">
-                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 confidence</th><th>V2 prediction</th><th>V2 confidence</th><th>Transition</th><th>Explanation</th></tr></thead>
+                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th id="v1-prediction-heading">V1 prediction</th><th id="v1-confidence-heading">V1 confidence</th><th id="v2-prediction-heading">V2 prediction</th><th id="v2-confidence-heading">V2 confidence</th><th>Transition</th><th>Explanation</th></tr></thead>
                 <tbody id="upload-sample-results"></tbody>
               </table>
             </div>

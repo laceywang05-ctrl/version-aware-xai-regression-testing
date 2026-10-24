@@ -29,10 +29,10 @@ It binds to `127.0.0.1` by default and does not upload report data externally.
 ## Compare uploaded classification models
 
 Open **Compare uploaded models** when the dashboard is running through
-`xai_regression serve`. The first upload workflow accepts:
+`xai_regression serve`. The upload workflow accepts:
 
-- a trusted baseline classifier named with the `.joblib` extension;
-- a trusted candidate classifier in the same format;
+- two required trusted classifiers plus up to three additional classifiers,
+  each named with the `.joblib` extension;
 - a labelled CSV with no more than 5,000 rows; and
 - a JSON manifest describing the label, optional sample ID, ordered feature
   columns, optional class display names, and an optional image filename column;
@@ -42,6 +42,11 @@ Download the example manifest from the page and edit it to match the CSV. Both
 models must expose `predict()` and accept the same selected features. Optional
 `predict_proba()` output is shown as confidence. Uploaded files are processed
 in memory and are not persisted by the local server.
+
+After selecting two to five models, choose one as the baseline and another as
+the candidate. Only that pair is sent to the local comparison endpoint. To
+compare another pair, change the two selectors and run again; the browser keeps
+the same dataset, manifest, and optional image ZIP selected.
 
 For image display, set `image_column` in the manifest and use that CSV column
 to reference the exact relative filename inside the ZIP, for example

@@ -131,6 +131,8 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["total_samples"], 4)
         self.assertEqual(result["summary"]["prediction_agreement"], 1.0)
         self.assertEqual(result["summary"]["both_correct"], 4)
+        self.assertEqual(result["models"]["v1"]["filename"], "v1.joblib")
+        self.assertEqual(result["models"]["v2"]["filename"], "v2.joblib")
 
     def test_uploaded_image_archive_is_attached_to_matching_samples(self):
         archive = BytesIO()

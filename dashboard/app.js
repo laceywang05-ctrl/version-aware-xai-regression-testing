@@ -44,13 +44,28 @@ const elements = {
   robustnessInterpretation: document.querySelector("#robustness-interpretation"),
   uploadView: document.querySelector("#upload-view"),
   uploadForm: document.querySelector("#classification-upload-form"),
+  modelV1Upload: document.querySelector("#model-v1-upload"),
+  modelV2Upload: document.querySelector("#model-v2-upload"),
+  additionalModelsUpload: document.querySelector("#additional-models-upload"),
+  baselineModelSelector: document.querySelector("#baseline-model-selector"),
+  candidateModelSelector: document.querySelector("#candidate-model-selector"),
+  modelCollectionMessage: document.querySelector("#model-collection-message"),
+  datasetUpload: document.querySelector("#dataset-upload"),
+  manifestUpload: document.querySelector("#manifest-upload"),
+  imagesUpload: document.querySelector("#images-upload"),
   uploadSubmit: document.querySelector("#run-upload-comparison"),
   uploadMessage: document.querySelector("#upload-comparison-message"),
   uploadResults: document.querySelector("#upload-results"),
   uploadTotal: document.querySelector("#upload-total"),
   uploadV1Accuracy: document.querySelector("#upload-v1-accuracy"),
   uploadV2Accuracy: document.querySelector("#upload-v2-accuracy"),
+  uploadV1Label: document.querySelector("#upload-v1-label"),
+  uploadV2Label: document.querySelector("#upload-v2-label"),
   uploadAgreement: document.querySelector("#upload-agreement"),
+  v1PredictionHeading: document.querySelector("#v1-prediction-heading"),
+  v1ConfidenceHeading: document.querySelector("#v1-confidence-heading"),
+  v2PredictionHeading: document.querySelector("#v2-prediction-heading"),
+  v2ConfidenceHeading: document.querySelector("#v2-confidence-heading"),
   uploadScopeNote: document.querySelector("#upload-scope-note"),
   uploadTransitionGrid: document.querySelector("#upload-transition-grid"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
@@ -177,6 +192,47 @@ function formatConfidence(value) {
   return value === null || value === undefined ? "Not available" : formatPercent(value);
 }
 
+function uploadedModels() {
+  const files = [];
+  if (elements.modelV1Upload.files[0]) files.push(elements.modelV1Upload.files[0]);
+  if (elements.modelV2Upload.files[0]) files.push(elements.modelV2Upload.files[0]);
+  files.push(...Array.from(elements.additionalModelsUpload.files).slice(0, 3));
+  return files;
+}
+
+function updateModelSelectors() {
+  const files = uploadedModels();
+  const previousBaseline = elements.baselineModelSelector.value;
+  const previousCandidate = elements.candidateModelSelector.value;
+  for (const selector of [elements.baselineModelSelector, elements.candidateModelSelector]) {
+    selector.replaceChildren();
+    files.forEach((file, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = file.name;
+      selector.append(option);
+    });
+  }
+  if (previousBaseline !== "" && files[Number(previousBaseline)]) {
+    elements.baselineModelSelector.value = previousBaseline;
+  } else if (files.length) {
+    elements.baselineModelSelector.value = "0";
+  }
+  if (previousCandidate !== "" && files[Number(previousCandidate)]) {
+    elements.candidateModelSelector.value = previousCandidate;
+  } else if (files.length > 1) {
+    elements.candidateModelSelector.value = "1";
+  }
+  const extraCount = elements.additionalModelsUpload.files.length;
+  elements.modelCollectionMessage.textContent = extraCount > 3
+    ? "Only the first three additional models will be available (five total)."
+    : `${files.length} model${files.length === 1 ? "" : "s"} ready; select two different models.`;
+}
+
+function reportModelName(key, fallback) {
+  return state.uploadComparison?.models?.[key]?.filename || fallback;
+}
+
 function renderPixelHeatmap(container, values) {
   container.replaceChildren();
   if (!Array.isArray(values) || !values.length || !Array.isArray(values[0])) {
@@ -220,8 +276,8 @@ function openExplanation(sample) {
   renderPixelHeatmap(elements.v2Heatmap, sample.v2_explanation);
   const v1Method = state.uploadComparison.explanations?.v1?.label || "Explanation";
   const v2Method = state.uploadComparison.explanations?.v2?.label || "Explanation";
-  elements.v1HeatmapCaption.textContent = `Model V1 · ${v1Method} toward “${sample.v1_prediction}”`;
-  elements.v2HeatmapCaption.textContent = `Model V2 · ${v2Method} toward “${sample.v2_prediction}”`;
+  elements.v1HeatmapCaption.textContent = `${reportModelName("v1", "Model V1")} · ${v1Method} toward “${sample.v1_prediction}”`;
+  elements.v2HeatmapCaption.textContent = `${reportModelName("v2", "Model V2")} · ${v2Method} toward “${sample.v2_prediction}”`;
   elements.v1Heatmap.title = state.uploadComparison.explanations?.v1?.note || "";
   elements.v2Heatmap.title = state.uploadComparison.explanations?.v2?.note || "";
   elements.explanationBoundary.textContent = state.uploadComparison.explanations?.interpretation
@@ -301,10 +357,18 @@ function renderUploadComparison(report) {
   }
   state.uploadComparison = report;
   const summary = report.summary;
+  const v1Name = report.models?.v1?.filename || "Model V1";
+  const v2Name = report.models?.v2?.filename || "Model V2";
   elements.uploadTotal.textContent = summary.total_samples;
   elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
   elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
   elements.uploadAgreement.textContent = formatPercent(summary.prediction_agreement);
+  elements.uploadV1Label.textContent = `${v1Name} accuracy`;
+  elements.uploadV2Label.textContent = `${v2Name} accuracy`;
+  elements.v1PredictionHeading.textContent = `${v1Name} prediction`;
+  elements.v1ConfidenceHeading.textContent = `${v1Name} confidence`;
+  elements.v2PredictionHeading.textContent = `${v2Name} prediction`;
+  elements.v2ConfidenceHeading.textContent = `${v2Name} confidence`;
   elements.uploadScopeNote.textContent = report.dataset?.note
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
 
@@ -740,6 +804,13 @@ elements.benchmarkSelector.addEventListener("change", (event) => {
 });
 
 elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
+for (const input of [
+  elements.modelV1Upload,
+  elements.modelV2Upload,
+  elements.additionalModelsUpload,
+]) {
+  input.addEventListener("change", updateModelSelectors);
+}
 elements.closeExplanationDialog.addEventListener("click", () => {
   elements.explanationDialog.close();
 });
@@ -749,10 +820,21 @@ elements.explanationDialog.addEventListener("click", (event) => {
 
 elements.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const form = new FormData(elements.uploadForm);
-  const optionalImages = form.get("images");
-  if (optionalImages instanceof File && optionalImages.size === 0) {
-    form.delete("images");
+  const models = uploadedModels();
+  const baselineIndex = Number(elements.baselineModelSelector.value);
+  const candidateIndex = Number(elements.candidateModelSelector.value);
+  if (models.length < 2 || baselineIndex === candidateIndex) {
+    elements.uploadMessage.className = "upload-comparison-message error";
+    elements.uploadMessage.textContent = "Select two different uploaded models.";
+    return;
+  }
+  const form = new FormData();
+  form.append("model_v1", models[baselineIndex]);
+  form.append("model_v2", models[candidateIndex]);
+  form.append("dataset", elements.datasetUpload.files[0]);
+  form.append("manifest", elements.manifestUpload.files[0]);
+  if (elements.imagesUpload.files[0]) {
+    form.append("images", elements.imagesUpload.files[0]);
   }
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";

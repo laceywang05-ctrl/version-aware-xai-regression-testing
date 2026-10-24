@@ -60,6 +60,10 @@ class DashboardTests(unittest.TestCase):
             "classification-upload-form",
             "model-v1-upload",
             "model-v2-upload",
+            "additional-models-upload",
+            "baseline-model-selector",
+            "candidate-model-selector",
+            "model-collection-message",
             "dataset-upload",
             "manifest-upload",
             "images-upload",
@@ -93,6 +97,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("sample.image_data_url", script)
         self.assertIn("function renderPixelHeatmap", script)
         self.assertIn("function openExplanation", script)
+        self.assertIn("function uploadedModels", script)
+        self.assertIn("function updateModelSelectors", script)
+        self.assertIn("slice(0, 3)", script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):
         styles = (DASHBOARD / "styles.css").read_text(encoding="utf-8")
