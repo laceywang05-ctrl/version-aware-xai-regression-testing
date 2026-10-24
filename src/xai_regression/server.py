@@ -15,7 +15,10 @@ from xai_regression.upload_comparison import (
     summarize_upload_models,
     validate_upload_models,
 )
-from xai_regression.regression_comparison import compare_regression_upload_payloads
+from xai_regression.regression_comparison import (
+    compare_regression_upload_payloads,
+    summarize_regression_upload_models,
+)
 
 
 REPORT_ROUTE = "/data/report.json"
@@ -26,6 +29,7 @@ CLASSIFICATION_COMPARE_ROUTE = "/api/classification/compare"
 CLASSIFICATION_OVERVIEW_ROUTE = "/api/classification/overview"
 CLASSIFICATION_VALIDATE_ROUTE = "/api/classification/validate"
 REGRESSION_COMPARE_ROUTE = "/api/regression/compare"
+REGRESSION_OVERVIEW_ROUTE = "/api/regression/overview"
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
 
@@ -166,6 +170,7 @@ def _handler_class(
                 CLASSIFICATION_OVERVIEW_ROUTE,
                 CLASSIFICATION_VALIDATE_ROUTE,
                 REGRESSION_COMPARE_ROUTE,
+                REGRESSION_OVERVIEW_ROUTE,
             }:
                 self._send_json(404, {"error": "Unknown API route."})
                 return
@@ -187,15 +192,15 @@ def _handler_class(
                     raise ValueError(
                         "Missing upload fields: " + ", ".join(missing)
                     )
-                if route in {CLASSIFICATION_OVERVIEW_ROUTE, CLASSIFICATION_VALIDATE_ROUTE}:
+                if route in {CLASSIFICATION_OVERVIEW_ROUTE, CLASSIFICATION_VALIDATE_ROUTE, REGRESSION_OVERVIEW_ROUTE}:
                     model_fields = [
                         fields[name]
                         for name in sorted(fields)
                         if name.startswith("model_") and name[6:].isdigit()
                     ]
-                    operation = (
-                        validate_upload_models
-                        if route == CLASSIFICATION_VALIDATE_ROUTE
+                    operation = validate_upload_models if route == CLASSIFICATION_VALIDATE_ROUTE else (
+                        summarize_regression_upload_models
+                        if route == REGRESSION_OVERVIEW_ROUTE
                         else summarize_upload_models
                     )
                     result = operation(

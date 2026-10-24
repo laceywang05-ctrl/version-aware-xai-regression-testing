@@ -249,7 +249,7 @@
               <p class="eyebrow">Model collection and shared evidence</p>
               <h2 id="upload-files-heading">Upload comparison inputs</h2>
             </div>
-            <p>Both models must accept the same feature columns. The CSV must include the known label for every sample.</p>
+            <p>All models must accept the same feature columns. The CSV must include the known label for every sample.</p>
           </div>
           <form id="classification-upload-form" class="comparison-upload-form">
             <label class="file-field task-field">
@@ -293,12 +293,12 @@
               <label class="trust-check"><input id="manifest-trust-models" type="checkbox" /> I confirm that these model files come from a trusted source.</label>
               <p class="table-note">All remaining CSV columns become model features in their existing order.</p>
             </details>
-            <label class="file-field optional-image-field classification-only">
+            <label class="file-field optional-image-field">
               <span>Additional models <em>optional</em></span>
-              <small>Select up to three more trusted .joblib classifiers</small>
+              <small>Select up to three more trusted .joblib models</small>
               <input id="additional-models-upload" type="file" accept=".joblib" multiple />
             </label>
-            <div class="model-pair-picker classification-only">
+            <div class="model-pair-picker">
               <label>Baseline model
                 <select id="baseline-model-selector"></select>
               </label>
@@ -486,6 +486,13 @@
         </div>
 
         <div id="regression-results" hidden>
+          <section class="content-section" aria-labelledby="regression-overview-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">All uploaded regressors</p><h2 id="regression-overview-heading">Regression model overview</h2></div>
+              <p>Models are ranked by MAE on the same labelled samples; lower MAE and RMSE are better.</p>
+            </div>
+            <div id="regression-model-overview-grid" class="model-overview-grid"></div>
+          </section>
           <section class="status-panel regression-status" aria-labelledby="regression-results-heading">
             <div>
               <p class="eyebrow">Uploaded regression comparison</p>

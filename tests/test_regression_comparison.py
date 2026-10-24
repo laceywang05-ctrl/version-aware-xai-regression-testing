@@ -11,6 +11,7 @@ from xai_regression.regression_comparison import (
     compare_regression_upload_payloads,
     compare_regressors,
     parse_regression_manifest,
+    summarize_regression_upload_models,
 )
 
 
@@ -112,6 +113,15 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertEqual(result["feature_importance"]["evaluated_feature_count"], 1)
         self.assertEqual(result["feature_importance"]["features"][0]["feature"], "x")
         self.assertGreater(result["feature_importance"]["features"][0]["v1_importance"], 0)
+
+        overview = summarize_regression_upload_models(
+            models=[("v1.joblib", payload.getvalue()), ("v2.joblib", payload.getvalue())],
+            dataset=("samples.csv", features.assign(target=labels).to_csv(index=False).encode()),
+            manifest=manifest,
+        )
+        self.assertEqual(len(overview["models"]), 2)
+        self.assertEqual(overview["models"][0]["rank"], 1)
+        self.assertEqual(overview["best_model_index"], 0)
 
 
 if __name__ == "__main__":
