@@ -271,6 +271,24 @@ main { display: grid; gap: 24px; }
 .regression-summary { grid-template-columns: repeat(3, 1fr); }
 .regression-sample-table .improved-row { background: #f4fbf8; }
 .regression-sample-table .worsened-row { background: #fff7f2; }
+.regression-visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.regression-chart-card { margin: 0; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: #fbfdfe; }
+.regression-chart-card figcaption { margin-bottom: 10px; color: var(--ink); font-weight: 750; }
+.regression-chart { display: block; width: 100%; min-height: 220px; overflow: visible; }
+.parity-reference { stroke: #9babb3; stroke-width: 2; stroke-dasharray: 7 6; }
+.parity-v1 { fill: #ef7b3a; fill-opacity: .65; }
+.parity-v2 { fill: #16846c; fill-opacity: .65; }
+.error-zero-line { stroke: #6f818b; stroke-width: 1.5; }
+.error-improved { fill: #39a98d; }
+.error-worsened { fill: #ef7b3a; }
+.error-unchanged { fill: #9babb3; }
+.chart-axis-label { fill: var(--muted); font-size: 12px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .8rem; }
+.chart-legend span::before { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; content: ""; }
+.chart-legend .legend-v1::before { background: #ef7b3a; }
+.chart-legend .legend-v2::before { background: #16846c; }
+.chart-legend .legend-reference::before { border-radius: 0; background: #9babb3; }
+.chart-note { margin: 8px 0 0; color: var(--muted); font-size: .8rem; }
 .upload-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding-top: 6px; }
 .primary-action { border: 0; border-radius: 10px; padding: 12px 18px; background: var(--navy); color: white; cursor: pointer; font: inherit; font-weight: 800; }
 .primary-action:disabled { cursor: wait; opacity: .6; }
@@ -396,6 +414,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .manifest-builder-grid { grid-template-columns: 1fr; }
   .model-pair-picker > span { display: none; }
   .transition-grid { grid-template-columns: repeat(2, 1fr); }
+  .regression-visual-grid { grid-template-columns: 1fr; }
   .explanation-visuals { grid-template-columns: 1fr; }
   .benchmark-summary { grid-template-columns: repeat(2, 1fr); }
   .section-heading { align-items: start; flex-direction: column; }
