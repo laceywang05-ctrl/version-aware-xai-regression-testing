@@ -291,6 +291,14 @@ main { display: grid; gap: 24px; }
 .model-pair-picker select { min-width: 0; width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
 .model-pair-picker > span { padding-bottom: 10px; color: var(--blue); font-size: 1.2rem; font-weight: 800; }
 .model-pair-picker p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .7rem; }
+.model-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.model-overview-card { position: relative; display: grid; gap: 9px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfc; }
+.model-overview-card.best { border-top: 4px solid var(--green); background: #f5fbf9; }
+.model-overview-card .rank { color: var(--blue); font-size: .68rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.model-overview-card strong { overflow-wrap: anywhere; color: var(--navy); font-size: .85rem; }
+.model-overview-card .accuracy { color: var(--navy); font-size: 1.7rem; font-weight: 850; }
+.model-overview-card small { color: var(--muted); font-size: .7rem; }
+.agreement-table { margin-top: 4px; }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }

@@ -8,12 +8,14 @@ import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.dummy import DummyClassifier
 
 from xai_regression.upload_comparison import (
     compare_classifiers,
     compare_upload_payloads,
     load_uploaded_images,
     parse_manifest,
+    summarize_upload_models,
 )
 
 
@@ -133,6 +135,45 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["both_correct"], 4)
         self.assertEqual(result["models"]["v1"]["filename"], "v1.joblib")
         self.assertEqual(result["models"]["v2"]["filename"], "v2.joblib")
+
+    def test_uploaded_model_collection_is_ranked_and_compared(self):
+        features = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]})
+        labels = np.asarray([0, 0, 1, 1])
+        strong = DecisionTreeClassifier(max_depth=1, random_state=7).fit(
+            features, labels
+        )
+        weak = DummyClassifier(strategy="constant", constant=0).fit(features, labels)
+        payloads = []
+        for filename, model in (
+            ("strong.joblib", strong),
+            ("copy.joblib", strong),
+            ("weak.joblib", weak),
+        ):
+            buffer = BytesIO()
+            joblib.dump(model, buffer)
+            payloads.append((filename, buffer.getvalue()))
+        dataset = features.assign(target=labels).to_csv(index=False).encode("utf-8")
+        manifest = json.dumps(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        ).encode("utf-8")
+
+        result = summarize_upload_models(
+            models=payloads,
+            dataset=("samples.csv", dataset),
+            manifest=manifest,
+        )
+
+        self.assertEqual(len(result["models"]), 3)
+        self.assertEqual(result["models"][0]["accuracy"], 1.0)
+        self.assertEqual(result["models"][2]["accuracy"], 0.5)
+        self.assertEqual(result["best_model_index"], 0)
+        self.assertEqual(len(result["pairwise_agreements"]), 3)
+        self.assertEqual(result["pairwise_agreements"][0]["agreement"], 1.0)
 
     def test_uploaded_image_archive_is_attached_to_matching_samples(self):
         archive = BytesIO()

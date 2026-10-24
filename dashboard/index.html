@@ -301,6 +301,23 @@
         </section>
 
         <div id="upload-results" hidden>
+          <section class="content-section" aria-labelledby="model-overview-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">All uploaded models</p>
+                <h2 id="model-overview-heading">Model performance overview</h2>
+              </div>
+              <p>Accuracy ranks every uploaded model on the same labelled samples. Agreement shows how often two models return the same class.</p>
+            </div>
+            <div id="model-overview-grid" class="model-overview-grid"></div>
+            <div class="table-scroll">
+              <table class="comparison-table agreement-table">
+                <thead><tr><th>Model pair</th><th>Prediction agreement</th></tr></thead>
+                <tbody id="model-agreement-results"></tbody>
+              </table>
+            </div>
+          </section>
+
           <section class="status-panel upload-status" aria-labelledby="upload-results-heading">
             <div>
               <p class="eyebrow">Uploaded comparison</p>

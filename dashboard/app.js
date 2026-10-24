@@ -6,6 +6,7 @@ const state = {
   portfolio: null,
   robustness: null,
   uploadComparison: null,
+  modelOverview: null,
 };
 
 const elements = {
@@ -56,6 +57,8 @@ const elements = {
   uploadSubmit: document.querySelector("#run-upload-comparison"),
   uploadMessage: document.querySelector("#upload-comparison-message"),
   uploadResults: document.querySelector("#upload-results"),
+  modelOverviewGrid: document.querySelector("#model-overview-grid"),
+  modelAgreementResults: document.querySelector("#model-agreement-results"),
   uploadTotal: document.querySelector("#upload-total"),
   uploadV1Accuracy: document.querySelector("#upload-v1-accuracy"),
   uploadV2Accuracy: document.querySelector("#upload-v2-accuracy"),
@@ -231,6 +234,41 @@ function updateModelSelectors() {
 
 function reportModelName(key, fallback) {
   return state.uploadComparison?.models?.[key]?.filename || fallback;
+}
+
+function renderModelOverview(report) {
+  if (!report || !Array.isArray(report.models) || !Array.isArray(report.pairwise_agreements)) {
+    throw new Error("The server returned an invalid multi-model overview.");
+  }
+  state.modelOverview = report;
+  elements.modelOverviewGrid.replaceChildren();
+  const models = [...report.models].sort((left, right) => left.rank - right.rank);
+  for (const model of models) {
+    const card = document.createElement("article");
+    card.className = `model-overview-card${model.index === report.best_model_index ? " best" : ""}`;
+    const rank = document.createElement("span");
+    rank.className = "rank";
+    rank.textContent = model.index === report.best_model_index ? `Rank ${model.rank} · Best accuracy` : `Rank ${model.rank}`;
+    const name = document.createElement("strong");
+    name.textContent = model.filename;
+    const accuracy = document.createElement("span");
+    accuracy.className = "accuracy";
+    accuracy.textContent = formatPercent(model.accuracy);
+    const count = document.createElement("small");
+    count.textContent = `${model.correct_count} of ${report.dataset.rows} samples correct`;
+    card.append(rank, name, accuracy, count);
+    elements.modelOverviewGrid.append(card);
+  }
+  elements.modelAgreementResults.replaceChildren();
+  for (const pair of report.pairwise_agreements) {
+    const row = document.createElement("tr");
+    const names = document.createElement("td");
+    names.textContent = `${report.models[pair.left_index].filename} ↔ ${report.models[pair.right_index].filename}`;
+    const agreement = document.createElement("td");
+    agreement.textContent = formatPercent(pair.agreement);
+    row.append(names, agreement);
+    elements.modelAgreementResults.append(row);
+  }
 }
 
 function renderPixelHeatmap(container, values) {
@@ -828,22 +866,33 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     elements.uploadMessage.textContent = "Select two different uploaded models.";
     return;
   }
-  const form = new FormData();
-  form.append("model_v1", models[baselineIndex]);
-  form.append("model_v2", models[candidateIndex]);
-  form.append("dataset", elements.datasetUpload.files[0]);
-  form.append("manifest", elements.manifestUpload.files[0]);
+  const overviewForm = new FormData();
+  models.forEach((model, index) => overviewForm.append(`model_${index}`, model));
+  overviewForm.append("dataset", elements.datasetUpload.files[0]);
+  overviewForm.append("manifest", elements.manifestUpload.files[0]);
+  const comparisonForm = new FormData();
+  comparisonForm.append("model_v1", models[baselineIndex]);
+  comparisonForm.append("model_v2", models[candidateIndex]);
+  comparisonForm.append("dataset", elements.datasetUpload.files[0]);
+  comparisonForm.append("manifest", elements.manifestUpload.files[0]);
   if (elements.imagesUpload.files[0]) {
-    form.append("images", elements.imagesUpload.files[0]);
+    comparisonForm.append("images", elements.imagesUpload.files[0]);
   }
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";
   elements.uploadMessage.className = "upload-comparison-message working";
   elements.uploadMessage.textContent = "Running both models on the labelled samples locally.";
   try {
+    const overviewResponse = await fetch("/api/classification/overview", {
+      method: "POST",
+      body: overviewForm,
+    });
+    const overview = await overviewResponse.json();
+    if (!overviewResponse.ok) throw new Error(overview.error || `HTTP ${overviewResponse.status}`);
+    renderModelOverview(overview);
     const response = await fetch("/api/classification/compare", {
       method: "POST",
-      body: form,
+      body: comparisonForm,
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);

@@ -10,7 +10,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from xai_regression.upload_comparison import compare_upload_payloads
+from xai_regression.upload_comparison import (
+    compare_upload_payloads,
+    summarize_upload_models,
+)
 
 
 REPORT_ROUTE = "/data/report.json"
@@ -18,6 +21,7 @@ BENCHMARK_ROUTE = "/data/benchmarks.json"
 PORTFOLIO_ROUTE = "/data/portfolio.json"
 ROBUSTNESS_ROUTE = "/data/robustness.json"
 CLASSIFICATION_COMPARE_ROUTE = "/api/classification/compare"
+CLASSIFICATION_OVERVIEW_ROUTE = "/api/classification/overview"
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
 
@@ -153,7 +157,10 @@ def _handler_class(
 
         def do_POST(self):  # noqa: N802 - inherited HTTP method name
             route = urlparse(self.path).path
-            if route != CLASSIFICATION_COMPARE_ROUTE:
+            if route not in {
+                CLASSIFICATION_COMPARE_ROUTE,
+                CLASSIFICATION_OVERVIEW_ROUTE,
+            }:
                 self._send_json(404, {"error": "Unknown API route."})
                 return
             try:
@@ -166,22 +173,36 @@ def _handler_class(
                     self.headers.get("Content-Type", ""),
                     self.rfile.read(length),
                 )
-                required = {"model_v1", "model_v2", "dataset", "manifest"}
+                required = {"dataset", "manifest"}
+                if route == CLASSIFICATION_COMPARE_ROUTE:
+                    required.update({"model_v1", "model_v2"})
                 missing = sorted(required - fields.keys())
                 if missing:
                     raise ValueError(
                         "Missing upload fields: " + ", ".join(missing)
                     )
-                image_field = fields.get("images")
-                if image_field is not None and not image_field[1]:
-                    image_field = None
-                result = compare_upload_payloads(
-                    model_v1=fields["model_v1"],
-                    model_v2=fields["model_v2"],
-                    dataset=fields["dataset"],
-                    manifest=fields["manifest"][1],
-                    images=image_field,
-                )
+                if route == CLASSIFICATION_OVERVIEW_ROUTE:
+                    model_fields = [
+                        fields[name]
+                        for name in sorted(fields)
+                        if name.startswith("model_") and name[6:].isdigit()
+                    ]
+                    result = summarize_upload_models(
+                        models=model_fields,
+                        dataset=fields["dataset"],
+                        manifest=fields["manifest"][1],
+                    )
+                else:
+                    image_field = fields.get("images")
+                    if image_field is not None and not image_field[1]:
+                        image_field = None
+                    result = compare_upload_payloads(
+                        model_v1=fields["model_v1"],
+                        model_v2=fields["model_v2"],
+                        dataset=fields["dataset"],
+                        manifest=fields["manifest"][1],
+                        images=image_field,
+                    )
                 self._send_json(200, result)
             except ValueError as error:
                 self._send_json(400, {"error": str(error)})
