@@ -199,6 +199,10 @@ and candidate accuracy, and the signed accuracy change for every true class.
 This makes class-specific improvements and regressions visible for multiclass
 image datasets such as handwritten digits and CIFAR-style labels.
 
+Misclassification-path diagnostics then show the concrete true-class to
+predicted-class error pairs for both versions, including whether each error
+count increased or decreased in the candidate model.
+
 An optional image ZIP can be matched to a CSV `image_column`. When present,
 the sample-level table displays each image beside its true label, both model
 predictions, confidence values, and correctness transition. This supports the

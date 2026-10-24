@@ -485,6 +485,32 @@ def compare_classifiers(
                 "accuracy_change": v2_class_accuracy - v1_class_accuracy,
             }
         )
+    confusion_counts: dict[tuple[str, str], list[int]] = {}
+    for index in range(total):
+        actual_label = _label(labels[index], manifest.class_names)
+        if not correct_v1[index]:
+            key = (actual_label, _label(prediction_v1[index], manifest.class_names))
+            confusion_counts.setdefault(key, [0, 0])[0] += 1
+        if not correct_v2[index]:
+            key = (actual_label, _label(prediction_v2[index], manifest.class_names))
+            confusion_counts.setdefault(key, [0, 0])[1] += 1
+    confusion_diagnostics = [
+        {
+            "actual_class": actual,
+            "predicted_class": predicted,
+            "v1_count": counts[0],
+            "v2_count": counts[1],
+            "error_change": counts[1] - counts[0],
+        }
+        for (actual, predicted), counts in confusion_counts.items()
+    ]
+    confusion_diagnostics.sort(
+        key=lambda item: (
+            -max(item["v1_count"], item["v2_count"]),
+            item["actual_class"],
+            item["predicted_class"],
+        )
+    )
     return {
         "schema_version": 1,
         "task": "classification",
@@ -507,6 +533,7 @@ def compare_classifiers(
             **counts,
         },
         "class_diagnostics": class_diagnostics,
+        "confusion_diagnostics": confusion_diagnostics,
         "samples": samples,
         "limitations": [
             "Only trusted local .joblib classifiers are supported in this stage.",
