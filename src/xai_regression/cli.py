@@ -13,6 +13,7 @@ from xai_regression.lime_workflow import (
     run_lime_heldout_validation,
     run_lime_stability,
 )
+from xai_regression.image_demo import build_digits_image_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
 from xai_regression.pipeline import run_pipeline
@@ -250,6 +251,14 @@ def build_parser() -> argparse.ArgumentParser:
         default="artifacts/experiment_32_shap_multiplicity_policy",
     )
     shap_multiplicity_parser.add_argument("--alpha", type=float, default=0.05)
+    image_demo_parser = subparsers.add_parser(
+        "image-demo",
+        help="Build a ready-to-upload handwritten-digit comparison bundle.",
+    )
+    image_demo_parser.add_argument(
+        "--output-dir",
+        default="artifacts/demo_image_upload",
+    )
     serve_parser.add_argument(
         "--portfolio-report",
         default=None,
@@ -510,6 +519,18 @@ def run_family_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_image_demo(output_dir: str | Path) -> int:
+    """Build and describe the local image upload demonstration."""
+    result = build_digits_image_demo(_project_path(output_dir))
+    print("Handwritten-digit upload demo", flush=True)
+    print("-----------------------------", flush=True)
+    print(f"Samples: {result['sample_count']}", flush=True)
+    print(f"Model V1 accuracy: {result['v1_accuracy']:.1%}", flush=True)
+    print(f"Model V2 accuracy: {result['v2_accuracy']:.1%}", flush=True)
+    print(f"Files saved to: {result['output_dir']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -582,6 +603,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 alpha=args.alpha,
             )
             return 0
+        if args.command == "image-demo":
+            return run_image_demo(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 

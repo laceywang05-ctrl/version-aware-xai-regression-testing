@@ -38,6 +38,15 @@ class UploadComparisonTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "trusted_model_files"):
             parse_manifest({"task": "classification", "label_column": "target"})
+        with self.assertRaisesRegex(ValueError, "image_shape"):
+            parse_manifest(
+                {
+                    "task": "classification",
+                    "label_column": "target",
+                    "image_shape": [8],
+                    "trusted_model_files": True,
+                }
+            )
 
     def test_comparison_reports_all_correctness_transitions(self):
         dataset = pd.DataFrame(

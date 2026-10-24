@@ -266,6 +266,24 @@ class CliTests(unittest.TestCase):
             run.call_args.kwargs["output_dir"], cli.PROJECT_ROOT / "output"
         )
 
+    def test_image_demo_resolves_output_path(self):
+        with (
+            patch(
+                "xai_regression.cli.build_digits_image_demo",
+                return_value={
+                    "sample_count": 12,
+                    "v1_accuracy": 0.5,
+                    "v2_accuracy": 0.9,
+                    "output_dir": cli.PROJECT_ROOT / "demo",
+                },
+            ) as build,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_image_demo("demo")
+
+        self.assertEqual(exit_code, 0)
+        build.assert_called_once_with(cli.PROJECT_ROOT / "demo")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -51,11 +51,22 @@ const elements = {
   uploadV1Accuracy: document.querySelector("#upload-v1-accuracy"),
   uploadV2Accuracy: document.querySelector("#upload-v2-accuracy"),
   uploadAgreement: document.querySelector("#upload-agreement"),
+  uploadScopeNote: document.querySelector("#upload-scope-note"),
   uploadTransitionGrid: document.querySelector("#upload-transition-grid"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
   uploadLimitations: document.querySelector("#upload-limitations"),
+  explanationDialog: document.querySelector("#explanation-dialog"),
+  explanationDialogTitle: document.querySelector("#explanation-dialog-title"),
+  explanationMeta: document.querySelector("#explanation-meta"),
+  explanationOriginal: document.querySelector("#explanation-original"),
+  v1Heatmap: document.querySelector("#v1-heatmap"),
+  v2Heatmap: document.querySelector("#v2-heatmap"),
+  v1HeatmapCaption: document.querySelector("#v1-heatmap-caption"),
+  v2HeatmapCaption: document.querySelector("#v2-heatmap-caption"),
+  explanationBoundary: document.querySelector("#explanation-boundary"),
+  closeExplanationDialog: document.querySelector("#close-explanation-dialog"),
 };
 
 function formatPercent(value) {
@@ -166,6 +177,54 @@ function formatConfidence(value) {
   return value === null || value === undefined ? "Not available" : formatPercent(value);
 }
 
+function renderPixelHeatmap(container, values) {
+  container.replaceChildren();
+  if (!Array.isArray(values) || !values.length || !Array.isArray(values[0])) {
+    container.textContent = "Explanation unavailable";
+    container.classList.add("unavailable");
+    return;
+  }
+  container.classList.remove("unavailable");
+  container.style.gridTemplateColumns = `repeat(${values[0].length}, 1fr)`;
+  for (const row of values) {
+    for (const rawValue of row) {
+      const value = Number(rawValue);
+      const cell = document.createElement("span");
+      const intensity = Math.min(1, Math.abs(value));
+      cell.style.background = value >= 0
+        ? `rgba(239, 100, 54, ${0.08 + intensity * 0.92})`
+        : `rgba(40, 125, 174, ${0.08 + intensity * 0.92})`;
+      cell.title = `Normalized contribution: ${value.toFixed(3)}`;
+      container.append(cell);
+    }
+  }
+}
+
+function openExplanation(sample) {
+  elements.explanationDialogTitle.textContent = `Sample ${sample.sample_id}`;
+  elements.explanationMeta.replaceChildren();
+  const facts = [
+    `Actual: ${sample.actual}`,
+    `V1: ${sample.v1_prediction} (${formatConfidence(sample.v1_confidence)})`,
+    `V2: ${sample.v2_prediction} (${formatConfidence(sample.v2_confidence)})`,
+    transitionLabels[sample.transition] || sample.transition,
+  ];
+  for (const fact of facts) {
+    const item = document.createElement("span");
+    item.textContent = fact;
+    elements.explanationMeta.append(item);
+  }
+  elements.explanationOriginal.src = sample.image_data_url || "";
+  elements.explanationOriginal.hidden = !sample.image_data_url;
+  renderPixelHeatmap(elements.v1Heatmap, sample.v1_explanation);
+  renderPixelHeatmap(elements.v2Heatmap, sample.v2_explanation);
+  elements.v1HeatmapCaption.textContent = `Model V1 contribution toward “${sample.v1_prediction}”`;
+  elements.v2HeatmapCaption.textContent = `Model V2 contribution toward “${sample.v2_prediction}”`;
+  elements.explanationBoundary.textContent = state.uploadComparison.explanations?.interpretation
+    || "The map describes feature contributions, not causal effects.";
+  elements.explanationDialog.showModal();
+}
+
 function renderUploadSamples() {
   const report = state.uploadComparison;
   if (!report) return;
@@ -215,6 +274,16 @@ function renderUploadSamples() {
     badge.textContent = transitionLabels[sample.transition] || sample.transition;
     transitionCell.append(badge);
     row.append(transitionCell);
+    const explanationCell = document.createElement("td");
+    const explanationButton = document.createElement("button");
+    explanationButton.className = "explanation-button";
+    explanationButton.type = "button";
+    const available = Array.isArray(sample.v1_explanation) || Array.isArray(sample.v2_explanation);
+    explanationButton.textContent = available ? "Compare maps" : "Unavailable";
+    explanationButton.disabled = !available;
+    if (available) explanationButton.addEventListener("click", () => openExplanation(sample));
+    explanationCell.append(explanationButton);
+    row.append(explanationCell);
     elements.uploadSampleResults.append(row);
   }
   elements.uploadTableNote.textContent = matching.length > displayed.length
@@ -232,6 +301,8 @@ function renderUploadComparison(report) {
   elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
   elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
   elements.uploadAgreement.textContent = formatPercent(summary.prediction_agreement);
+  elements.uploadScopeNote.textContent = report.dataset?.note
+    || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
 
   const transitions = [
     ["both_correct", "Both correct"],
@@ -665,6 +736,12 @@ elements.benchmarkSelector.addEventListener("change", (event) => {
 });
 
 elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
+elements.closeExplanationDialog.addEventListener("click", () => {
+  elements.explanationDialog.close();
+});
+elements.explanationDialog.addEventListener("click", (event) => {
+  if (event.target === elements.explanationDialog) elements.explanationDialog.close();
+});
 
 elements.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();

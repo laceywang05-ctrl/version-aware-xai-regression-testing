@@ -65,6 +65,9 @@ class DashboardTests(unittest.TestCase):
             "images-upload",
             "upload-results",
             "upload-sample-results",
+            "explanation-dialog",
+            "v1-heatmap",
+            "v2-heatmap",
         ):
             self.assertIn(f'id="{element_id}"', html)
 
@@ -88,6 +91,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderUploadComparison", script)
         self.assertIn('fetch("/api/classification/compare"', script)
         self.assertIn("sample.image_data_url", script)
+        self.assertIn("function renderPixelHeatmap", script)
+        self.assertIn("function openExplanation", script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):
         styles = (DASHBOARD / "styles.css").read_text(encoding="utf-8")
