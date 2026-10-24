@@ -93,6 +93,8 @@ const elements = {
   downloadComparisonJson: document.querySelector("#download-comparison-json"),
   downloadSamplesCsv: document.querySelector("#download-samples-csv"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
+  confidenceThresholdInput: document.querySelector("#confidence-threshold-input"),
+  explanationThresholdInput: document.querySelector("#explanation-threshold-input"),
   confidenceRiskSummary: document.querySelector("#confidence-risk-summary"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
@@ -219,6 +221,32 @@ function formatConfidence(value) {
 
 function formatSimilarity(value) {
   return value === null || value === undefined ? "Not available" : Number(value).toFixed(3);
+}
+
+function triageThresholds() {
+  const confidenceValue = Number(elements.confidenceThresholdInput.value);
+  const explanationValue = Number(elements.explanationThresholdInput.value);
+  const confidence = Math.min(100, Math.max(50, Number.isFinite(confidenceValue) ? confidenceValue : 80)) / 100;
+  const explanation = Math.min(100, Math.max(0, Number.isFinite(explanationValue) ? explanationValue : 80)) / 100;
+  return { confidence, explanation };
+}
+
+function sampleTriage(sample) {
+  const thresholds = triageThresholds();
+  const v1HighConfidenceWrong = sample.v1_correct === false
+    && sample.v1_confidence !== null && sample.v1_confidence >= thresholds.confidence;
+  const v2HighConfidenceWrong = sample.v2_correct === false
+    && sample.v2_confidence !== null && sample.v2_confidence >= thresholds.confidence;
+  const explanationDrift = sample.explanation_similarity !== null
+    && sample.explanation_similarity !== undefined
+    && sample.explanation_similarity < thresholds.explanation;
+  return {
+    v1_high_confidence_wrong: v1HighConfidenceWrong,
+    v2_high_confidence_wrong: v2HighConfidenceWrong,
+    high_confidence_regression: v2HighConfidenceWrong && sample.transition === "v1_correct_v2_wrong",
+    explanation_drift: explanationDrift,
+    hidden_explanation_drift: explanationDrift && sample.prediction_changed === false,
+  };
 }
 
 function uploadedModels() {
@@ -442,13 +470,35 @@ function exportTimestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+function comparisonForExport() {
+  const thresholds = triageThresholds();
+  const samples = state.uploadComparison.samples.map((sample) => ({
+    ...sample,
+    ...sampleTriage(sample),
+  }));
+  return {
+    ...state.uploadComparison,
+    summary: {
+      ...state.uploadComparison.summary,
+      high_confidence_threshold: thresholds.confidence,
+      explanation_similarity_threshold: thresholds.explanation,
+      v2_high_confidence_wrong_count: samples.filter((sample) => sample.v2_high_confidence_wrong).length,
+      high_confidence_regression_count: samples.filter((sample) => sample.high_confidence_regression).length,
+      explanation_drift_count: samples.filter((sample) => sample.explanation_drift).length,
+      hidden_explanation_drift_count: samples.filter((sample) => sample.hidden_explanation_drift).length,
+    },
+    samples,
+  };
+}
+
 function downloadComparisonJson() {
   if (!state.uploadComparison || !state.modelOverview) return;
   const artifact = {
+    triage_settings: triageThresholds(),
     exported_at: new Date().toISOString(),
     validation: state.uploadValidation,
     overview: state.modelOverview,
-    comparison: state.uploadComparison,
+    comparison: comparisonForExport(),
   };
   downloadLocalFile(
     `xai-comparison-${exportTimestamp()}.json`,
@@ -474,6 +524,7 @@ function downloadSamplesCsv() {
   const rows = state.uploadComparison.samples.map((sample) => {
     const record = {
       ...sample,
+      ...sampleTriage(sample),
       v1_model: reportModelName("v1", "Model V1"),
       v2_model: reportModelName("v2", "Model V2"),
     };
@@ -544,21 +595,23 @@ function renderUploadSamples() {
   if (!report) return;
   const selected = elements.uploadTransitionFilter.value;
   const matching = report.samples.filter((sample) => {
+    const triage = sampleTriage(sample);
     if (selected === "all") return true;
-    if (selected === "v2_high_confidence_wrong") return sample.v2_high_confidence_wrong === true;
-    if (selected === "high_confidence_regression") return sample.high_confidence_regression === true;
-    if (selected === "explanation_drift") return sample.explanation_drift === true;
-    if (selected === "hidden_explanation_drift") return sample.hidden_explanation_drift === true;
+    if (selected === "v2_high_confidence_wrong") return triage.v2_high_confidence_wrong;
+    if (selected === "high_confidence_regression") return triage.high_confidence_regression;
+    if (selected === "explanation_drift") return triage.explanation_drift;
+    if (selected === "hidden_explanation_drift") return triage.hidden_explanation_drift;
     return sample.transition === selected;
   });
   const displayed = matching.slice(0, 500);
   elements.uploadSampleResults.replaceChildren();
   for (const sample of displayed) {
+    const triage = sampleTriage(sample);
     const row = document.createElement("tr");
     if (sample.transition === "v1_correct_v2_wrong") row.className = "regression-row";
     if (sample.transition === "v1_wrong_v2_correct") row.className = "improvement-row";
-    if (sample.v2_high_confidence_wrong) row.classList.add("high-confidence-risk-row");
-    if (sample.hidden_explanation_drift) row.classList.add("explanation-drift-row");
+    if (triage.v2_high_confidence_wrong) row.classList.add("high-confidence-risk-row");
+    if (triage.hidden_explanation_drift) row.classList.add("explanation-drift-row");
     const imageCell = document.createElement("td");
     if (sample.image_data_url) {
       const link = document.createElement("a");
@@ -613,6 +666,25 @@ function renderUploadSamples() {
     : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`;
 }
 
+function renderTriageSummary() {
+  if (!state.uploadComparison) return;
+  const report = state.uploadComparison;
+  const thresholds = triageThresholds();
+  const triage = report.samples.map(sampleTriage);
+  const candidateRiskCount = triage.filter((item) => item.v2_high_confidence_wrong).length;
+  const regressionRiskCount = triage.filter((item) => item.high_confidence_regression).length;
+  const hiddenDriftCount = triage.filter((item) => item.hidden_explanation_drift).length;
+  const explanationCount = report.samples.filter(
+    (sample) => sample.explanation_similarity !== null && sample.explanation_similarity !== undefined,
+  ).length;
+  const v1Name = report.models?.v1?.filename || "Model V1";
+  const v2Name = report.models?.v2?.filename || "Model V2";
+  elements.confidenceRiskSummary.textContent =
+    `${v2Name} made ${candidateRiskCount} wrong prediction${candidateRiskCount === 1 ? "" : "s"} `
+    + `at or above ${formatPercent(thresholds.confidence)} confidence; ${regressionRiskCount} were regressions from a correct ${v1Name} result. `
+    + `${explanationCount} samples had comparable explanation maps; ${hiddenDriftCount} kept the same prediction with similarity below ${formatPercent(thresholds.explanation)}.`;
+}
+
 function renderUploadComparison(report) {
   if (
     !report || report.task !== "classification" || !report.summary
@@ -641,15 +713,9 @@ function renderUploadComparison(report) {
   elements.confusionV2Heading.textContent = `${v2Name} errors`;
   elements.uploadScopeNote.textContent = report.dataset?.note
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
-  const threshold = formatPercent(summary.high_confidence_threshold ?? 0.8);
-  const candidateRiskCount = summary.v2_high_confidence_wrong_count ?? 0;
-  const regressionRiskCount = summary.high_confidence_regression_count ?? 0;
-  const explanationCount = summary.explanation_compared_count ?? 0;
-  const hiddenDriftCount = summary.hidden_explanation_drift_count ?? 0;
-  elements.confidenceRiskSummary.textContent =
-    `${v2Name} made ${candidateRiskCount} wrong prediction${candidateRiskCount === 1 ? "" : "s"} `
-    + `at or above ${threshold} confidence; ${regressionRiskCount} were regressions from a correct ${v1Name} result. `
-    + `${explanationCount} samples had comparable explanation maps; ${hiddenDriftCount} kept the same prediction but changed explanation substantially.`;
+  elements.confidenceThresholdInput.value = String((summary.high_confidence_threshold ?? 0.8) * 100);
+  elements.explanationThresholdInput.value = String((summary.explanation_similarity_threshold ?? 0.8) * 100);
+  renderTriageSummary();
 
   const transitions = [
     ["both_correct", "Both correct"],
@@ -1137,6 +1203,12 @@ elements.benchmarkSelector.addEventListener("change", (event) => {
 });
 
 elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
+for (const input of [elements.confidenceThresholdInput, elements.explanationThresholdInput]) {
+  input.addEventListener("change", () => {
+    renderTriageSummary();
+    renderUploadSamples();
+  });
+}
 elements.downloadComparisonJson.addEventListener("click", downloadComparisonJson);
 elements.downloadSamplesCsv.addEventListener("click", downloadSamplesCsv);
 for (const input of [
