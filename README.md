@@ -185,6 +185,11 @@ joblib can execute Python, only trusted model files should be used. The current
 upload workflow is intentionally limited to classification; regression remains
 a future extension.
 
+The results first rank every uploaded model by accuracy on the shared labelled
+sample and report pairwise prediction agreement. The detailed section then
+compares the selected baseline and candidate at sample level, including image
+transitions and compatible explanation maps.
+
 An optional image ZIP can be matched to a CSV `image_column`. When present,
 the sample-level table displays each image beside its true label, both model
 predictions, confidence values, and correctness transition. This supports the

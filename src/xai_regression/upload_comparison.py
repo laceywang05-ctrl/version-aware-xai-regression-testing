@@ -531,3 +531,84 @@ def compare_upload_payloads(
         "v2": {"filename": model_v2[0]},
     }
     return result
+
+
+def summarize_upload_models(
+    *,
+    models: list[tuple[str, bytes]],
+    dataset: tuple[str, bytes],
+    manifest: bytes,
+) -> dict[str, Any]:
+    """Score two to five uploaded classifiers on one labelled dataset."""
+    if not 2 <= len(models) <= 5:
+        raise ValueError("Upload between two and five models for the overview.")
+    contract = parse_manifest(manifest)
+    frame = load_uploaded_dataset(dataset[1], dataset[0])
+    if contract.label_column not in frame:
+        raise ValueError(f"Dataset is missing label column: {contract.label_column}.")
+    excluded = {contract.label_column}
+    if contract.id_column is not None:
+        excluded.add(contract.id_column)
+    if contract.image_column is not None:
+        excluded.add(contract.image_column)
+    feature_columns = (
+        list(contract.feature_columns)
+        if contract.feature_columns is not None
+        else [column for column in frame.columns if column not in excluded]
+    )
+    missing = [column for column in feature_columns if column not in frame]
+    if missing:
+        raise ValueError("Dataset is missing feature columns: " + ", ".join(missing))
+    if not feature_columns:
+        raise ValueError("No model feature columns were selected.")
+    features = frame.loc[:, feature_columns]
+    labels = frame[contract.label_column].to_numpy()
+    predictions: list[np.ndarray] = []
+    summaries: list[dict[str, Any]] = []
+    for index, (filename, payload) in enumerate(models):
+        model = load_uploaded_model(payload, filename)
+        try:
+            prediction = np.asarray(model.predict(features))
+        except Exception as error:
+            raise ValueError(
+                f"Model {filename} could not predict this dataset. "
+                "Check feature order and preprocessing."
+            ) from error
+        if prediction.shape != labels.shape:
+            raise ValueError(
+                f"Model {filename} must return one prediction per dataset row."
+            )
+        predictions.append(prediction)
+        summaries.append(
+            {
+                "index": index,
+                "filename": filename,
+                "accuracy": float((prediction == labels).mean()),
+                "correct_count": int(np.count_nonzero(prediction == labels)),
+            }
+        )
+    ranked = sorted(summaries, key=lambda item: (-item["accuracy"], item["index"]))
+    for rank, item in enumerate(ranked, start=1):
+        summaries[item["index"]]["rank"] = rank
+    agreements = []
+    for left in range(len(predictions)):
+        for right in range(left + 1, len(predictions)):
+            agreements.append(
+                {
+                    "left_index": left,
+                    "right_index": right,
+                    "agreement": float((predictions[left] == predictions[right]).mean()),
+                }
+            )
+    return {
+        "schema_version": 1,
+        "task": "classification",
+        "dataset": {
+            "rows": len(frame),
+            "feature_count": len(feature_columns),
+            "label_column": contract.label_column,
+        },
+        "models": summaries,
+        "pairwise_agreements": agreements,
+        "best_model_index": ranked[0]["index"],
+    }
