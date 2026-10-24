@@ -241,6 +241,19 @@ models** to demonstrate concrete image-level improvements and regressions.
 This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
 offline; true MNIST and CIFAR-10 remain the next dataset integrations.
 
+Generate a ready-to-upload four-model regression demonstration with:
+
+```bash
+PYTHONPATH=src python -m xai_regression regression-demo
+```
+
+This trains linear regression, decision-tree, random-forest and
+gradient-boosting models on a fixed split of scikit-learn's bundled diabetes
+dataset. The command writes four trusted `.joblib` files, `samples.csv` and
+`manifest.json` under `artifacts/demo_regression_upload/`. Select Regression
+on the upload page, use two model files as the initial pair, and select the
+remaining two under Additional models.
+
 When the manifest supplies `image_shape`, each sample row can open a
 contribution comparison. Compatible tree estimators use Tree SHAP. Other
 classifiers exposing `predict_proba()` and `classes_` automatically use pixel

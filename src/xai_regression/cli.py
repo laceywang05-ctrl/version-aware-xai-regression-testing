@@ -14,6 +14,7 @@ from xai_regression.lime_workflow import (
     run_lime_stability,
 )
 from xai_regression.image_demo import build_digits_image_demo
+from xai_regression.regression_demo import build_regression_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
 from xai_regression.pipeline import run_pipeline
@@ -258,6 +259,14 @@ def build_parser() -> argparse.ArgumentParser:
     image_demo_parser.add_argument(
         "--output-dir",
         default="artifacts/demo_image_upload",
+    )
+    regression_demo_parser = subparsers.add_parser(
+        "regression-demo",
+        help="Build a ready-to-upload four-model regression bundle.",
+    )
+    regression_demo_parser.add_argument(
+        "--output-dir",
+        default="artifacts/demo_regression_upload",
     )
     serve_parser.add_argument(
         "--portfolio-report",
@@ -531,6 +540,18 @@ def run_image_demo(output_dir: str | Path) -> int:
     return 0
 
 
+def run_regression_demo(output_dir: str | Path) -> int:
+    """Build and describe the local multi-model regression demonstration."""
+    result = build_regression_demo(_project_path(output_dir))
+    print("Multi-model regression upload demo", flush=True)
+    print("----------------------------------", flush=True)
+    print(f"Models: {result['model_count']}", flush=True)
+    print(f"Samples: {result['sample_count']}", flush=True)
+    print(f"Best MAE: {result['best_mae']:.3f}", flush=True)
+    print(f"Files saved to: {result['output_dir']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -605,6 +626,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "image-demo":
             return run_image_demo(args.output_dir)
+        if args.command == "regression-demo":
+            return run_regression_demo(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 
