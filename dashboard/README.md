@@ -29,8 +29,11 @@ It binds to `127.0.0.1` by default and does not upload report data externally.
 The server also exposes an initial `POST /api/regression/compare` endpoint for
 two trusted `.joblib` regressors. It returns MAE, RMSE, R², paired improvement
 and worsening counts, an exact paired sign-test result, and per-sample absolute
-error changes. This is the backend foundation for the upcoming regression UI;
-the current upload page remains classification-focused.
+error changes. The upload page exposes this workflow through the **Prediction
+task** selector. Regression mode keeps the two required model files, dataset
+and manifest, while hiding classification-only images, additional model ranking
+and pixel explanations. Its result panel reports aggregate metrics, paired
+outcome counts and a filterable sample error table.
 
 ## Compare uploaded classification models
 

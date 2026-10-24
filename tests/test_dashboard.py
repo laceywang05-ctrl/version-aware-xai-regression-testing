@@ -58,6 +58,7 @@ class DashboardTests(unittest.TestCase):
             "robustness-results",
             "upload-view",
             "classification-upload-form",
+            "upload-task-selector",
             "model-v1-upload",
             "model-v2-upload",
             "additional-models-upload",
@@ -100,6 +101,16 @@ class DashboardTests(unittest.TestCase):
             "explanation-dialog",
             "v1-heatmap",
             "v2-heatmap",
+            "regression-results",
+            "regression-v1-mae",
+            "regression-v2-mae",
+            "regression-v1-rmse",
+            "regression-v2-rmse",
+            "regression-v1-r2",
+            "regression-v2-r2",
+            "regression-outcome-grid",
+            "regression-outcome-filter",
+            "regression-sample-results",
         ):
             self.assertIn(f'id="{element_id}"', html)
 
@@ -121,9 +132,13 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function validateRobustness", script)
         self.assertIn("function renderRobustness", script)
         self.assertIn("function renderUploadComparison", script)
+        self.assertIn("function renderRegressionComparison", script)
+        self.assertIn("function renderRegressionSamples", script)
+        self.assertIn("function updateUploadTask", script)
         self.assertIn('fetch("/api/classification/compare"', script)
         self.assertIn('fetch("/api/classification/overview"', script)
         self.assertIn('fetch("/api/classification/validate"', script)
+        self.assertIn('fetch("/api/regression/compare"', script)
         self.assertIn("function renderModelOverview", script)
         self.assertIn('calibration.className = "calibration-summary"', script)
         self.assertIn("expected_calibration_error", script)

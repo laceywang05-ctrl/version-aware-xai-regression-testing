@@ -8,6 +8,7 @@ const state = {
   uploadComparison: null,
   modelOverview: null,
   uploadValidation: null,
+  regressionComparison: null,
 };
 
 const elements = {
@@ -46,6 +47,7 @@ const elements = {
   robustnessInterpretation: document.querySelector("#robustness-interpretation"),
   uploadView: document.querySelector("#upload-view"),
   uploadForm: document.querySelector("#classification-upload-form"),
+  uploadTaskSelector: document.querySelector("#upload-task-selector"),
   modelV1Upload: document.querySelector("#model-v1-upload"),
   modelV2Upload: document.querySelector("#model-v2-upload"),
   additionalModelsUpload: document.querySelector("#additional-models-upload"),
@@ -69,6 +71,19 @@ const elements = {
   uploadValidationSummary: document.querySelector("#upload-validation-summary"),
   uploadValidationGrid: document.querySelector("#upload-validation-grid"),
   uploadResults: document.querySelector("#upload-results"),
+  regressionResults: document.querySelector("#regression-results"),
+  regressionScopeNote: document.querySelector("#regression-scope-note"),
+  regressionV1Mae: document.querySelector("#regression-v1-mae"),
+  regressionV2Mae: document.querySelector("#regression-v2-mae"),
+  regressionV1Rmse: document.querySelector("#regression-v1-rmse"),
+  regressionV2Rmse: document.querySelector("#regression-v2-rmse"),
+  regressionV1R2: document.querySelector("#regression-v1-r2"),
+  regressionV2R2: document.querySelector("#regression-v2-r2"),
+  regressionEvidenceNote: document.querySelector("#regression-evidence-note"),
+  regressionOutcomeGrid: document.querySelector("#regression-outcome-grid"),
+  regressionOutcomeFilter: document.querySelector("#regression-outcome-filter"),
+  regressionSampleResults: document.querySelector("#regression-sample-results"),
+  regressionTableNote: document.querySelector("#regression-table-note"),
   modelOverviewGrid: document.querySelector("#model-overview-grid"),
   modelAgreementResults: document.querySelector("#model-agreement-results"),
   uploadTotal: document.querySelector("#upload-total"),
@@ -228,6 +243,10 @@ function formatSimilarity(value) {
   return value === null || value === undefined ? "Not available" : Number(value).toFixed(3);
 }
 
+function formatNumber(value) {
+  return value === null || value === undefined ? "Not available" : Number(value).toFixed(4);
+}
+
 function triageThresholds() {
   const confidenceValue = Number(elements.confidenceThresholdInput.value);
   const explanationValue = Number(elements.explanationThresholdInput.value);
@@ -336,18 +355,19 @@ function selectedManifestFile() {
   }
   const allColumns = Array.from(elements.manifestLabelColumn.options).map((option) => option.value);
   const idColumn = elements.manifestIdColumn.value || null;
-  const imageColumn = elements.manifestImageColumn.value || null;
+  const isRegression = elements.uploadTaskSelector.value === "regression";
+  const imageColumn = isRegression ? null : elements.manifestImageColumn.value || null;
   const excluded = new Set([labelColumn, idColumn, imageColumn].filter(Boolean));
   const manifest = {
-    task: "classification",
+    task: isRegression ? "regression" : "classification",
     label_column: labelColumn,
     id_column: idColumn,
     image_column: imageColumn,
     feature_columns: allColumns.filter((column) => !excluded.has(column)),
     trusted_model_files: true,
   };
-  const height = Number(elements.manifestImageHeight.value);
-  const width = Number(elements.manifestImageWidth.value);
+  const height = isRegression ? 0 : Number(elements.manifestImageHeight.value);
+  const width = isRegression ? 0 : Number(elements.manifestImageWidth.value);
   if (height || width) {
     if (!height || !width) throw new Error("Enter both image height and image width.");
     manifest.image_shape = [height, width];
@@ -360,6 +380,19 @@ function selectedManifestFile() {
     "generated-manifest.json",
     { type: "application/json" },
   );
+}
+
+function updateUploadTask() {
+  const isRegression = elements.uploadTaskSelector.value === "regression";
+  for (const element of document.querySelectorAll(".classification-only")) {
+    element.hidden = isRegression;
+  }
+  elements.uploadResults.hidden = true;
+  elements.regressionResults.hidden = true;
+  elements.uploadValidation.hidden = true;
+  elements.uploadMessage.textContent = isRegression
+    ? "Upload two regressors and a numeric labelled CSV."
+    : "Upload two to five classifiers and a labelled CSV.";
 }
 
 function updateModelSelectors() {
@@ -863,6 +896,79 @@ function renderUploadComparison(report) {
   elements.uploadResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function renderRegressionSamples() {
+  if (!state.regressionComparison) return;
+  const selected = elements.regressionOutcomeFilter.value;
+  const matching = state.regressionComparison.samples.filter(
+    (sample) => selected === "all" || sample.outcome === selected,
+  );
+  elements.regressionSampleResults.replaceChildren();
+  for (const sample of matching.slice(0, 500)) {
+    const row = document.createElement("tr");
+    row.className = `${sample.outcome}-row`;
+    const values = [
+      sample.sample_id,
+      formatNumber(sample.actual),
+      formatNumber(sample.v1_prediction),
+      formatNumber(sample.v1_absolute_error),
+      formatNumber(sample.v2_prediction),
+      formatNumber(sample.v2_absolute_error),
+      `${sample.absolute_error_change > 0 ? "+" : ""}${formatNumber(sample.absolute_error_change)}`,
+      sample.outcome,
+    ];
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    elements.regressionSampleResults.append(row);
+  }
+  elements.regressionTableNote.textContent = matching.length > 500
+    ? `Showing the first 500 of ${matching.length} matching samples.`
+    : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`;
+}
+
+function renderRegressionComparison(report) {
+  if (!report || report.task !== "regression" || !report.summary || !Array.isArray(report.samples)) {
+    throw new Error("The server returned an invalid regression comparison.");
+  }
+  state.regressionComparison = report;
+  const summary = report.summary;
+  elements.regressionV1Mae.textContent = formatNumber(summary.v1.mae);
+  elements.regressionV2Mae.textContent = formatNumber(summary.v2.mae);
+  elements.regressionV1Rmse.textContent = formatNumber(summary.v1.rmse);
+  elements.regressionV2Rmse.textContent = formatNumber(summary.v2.rmse);
+  elements.regressionV1R2.textContent = formatNumber(summary.v1.r2);
+  elements.regressionV2R2.textContent = formatNumber(summary.v2.r2);
+  elements.regressionScopeNote.textContent = report.dataset.note
+    || `${summary.total_samples} labelled samples; negative MAE change favors V2.`;
+  const outcomes = [
+    ["improved", "Improved", summary.improved_count],
+    ["worsened", "Worsened", summary.worsened_count],
+    ["unchanged", "Unchanged", summary.unchanged_count],
+    ["mae", "MAE change", `${summary.mae_change > 0 ? "+" : ""}${formatNumber(summary.mae_change)}`],
+  ];
+  elements.regressionOutcomeGrid.replaceChildren();
+  for (const [key, label, value] of outcomes) {
+    const card = document.createElement("article");
+    card.className = `transition-card ${key}`;
+    const name = document.createElement("span");
+    name.textContent = label;
+    const result = document.createElement("strong");
+    result.textContent = value;
+    card.append(name, result);
+    elements.regressionOutcomeGrid.append(card);
+  }
+  elements.regressionEvidenceNote.textContent = summary.paired_significant
+    ? `Paired error directions differ at p=${formatNumber(summary.paired_sign_test_p)}.`
+    : `Paired sign test p=${formatNumber(summary.paired_sign_test_p)}; treat the direction change as exploratory.`;
+  elements.regressionOutcomeFilter.value = "all";
+  elements.uploadResults.hidden = true;
+  elements.regressionResults.hidden = false;
+  renderRegressionSamples();
+  elements.regressionResults.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function datasetName(value) {
   return value === "wine_binary" ? "Wine (binary)" : "Breast Cancer Wisconsin";
 }
@@ -1281,6 +1387,8 @@ for (const input of [
   input.addEventListener("change", updateModelSelectors);
 }
 elements.datasetUpload.addEventListener("change", updateManifestBuilder);
+elements.uploadTaskSelector.addEventListener("change", updateUploadTask);
+elements.regressionOutcomeFilter.addEventListener("change", renderRegressionSamples);
 elements.closeExplanationDialog.addEventListener("click", () => {
   elements.explanationDialog.close();
 });
@@ -1290,9 +1398,10 @@ elements.explanationDialog.addEventListener("click", (event) => {
 
 elements.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const models = uploadedModels();
-  const baselineIndex = Number(elements.baselineModelSelector.value);
-  const candidateIndex = Number(elements.candidateModelSelector.value);
+  const isRegression = elements.uploadTaskSelector.value === "regression";
+  const models = isRegression ? uploadedModels().slice(0, 2) : uploadedModels();
+  const baselineIndex = isRegression ? 0 : Number(elements.baselineModelSelector.value);
+  const candidateIndex = isRegression ? 1 : Number(elements.candidateModelSelector.value);
   if (models.length < 2 || baselineIndex === candidateIndex) {
     elements.uploadMessage.className = "upload-comparison-message error";
     elements.uploadMessage.textContent = "Select two different uploaded models.";
@@ -1324,8 +1433,22 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";
   elements.uploadMessage.className = "upload-comparison-message working";
-  elements.uploadMessage.textContent = "Checking model compatibility before running the comparison.";
+  elements.uploadMessage.textContent = isRegression
+    ? "Running the regression comparison locally."
+    : "Checking model compatibility before running the comparison.";
   try {
+    if (isRegression) {
+      const response = await fetch("/api/regression/compare", {
+        method: "POST",
+        body: comparisonForm,
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+      renderRegressionComparison(payload);
+      elements.uploadMessage.className = "upload-comparison-message success";
+      elements.uploadMessage.textContent = "Regression comparison complete. No uploaded file was saved.";
+      return;
+    }
     const validationResponse = await fetch("/api/classification/validate", {
       method: "POST",
       body: collectionForm(),
@@ -1358,6 +1481,8 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     elements.uploadSubmit.textContent = "Run local comparison";
   }
 });
+
+updateUploadTask();
 
 elements.upload.addEventListener("change", async (event) => {
   const [file] = event.target.files;

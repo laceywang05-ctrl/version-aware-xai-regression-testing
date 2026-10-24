@@ -155,8 +155,9 @@ The local server now provides the first regression-upload foundation at
 `POST /api/regression/compare`. It accepts two trusted `.joblib` regressors, a
 numeric labelled CSV, and a manifest whose `task` is `regression`. The response
 contains MAE, RMSE, R², paired error-direction evidence, and per-sample absolute
-error changes. A dedicated regression interface is planned as the next UI
-stage; classification remains the primary polished workflow.
+error changes. Select **Regression** in the dashboard upload form to use a
+dedicated metric summary and filterable per-sample error table. Classification
+remains the more feature-complete workflow.
 
 ## End-to-end workflow
 

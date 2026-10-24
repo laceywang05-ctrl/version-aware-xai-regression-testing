@@ -233,10 +233,10 @@
         <section class="content-section upload-intro" aria-labelledby="upload-heading">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Classification MVP</p>
+              <p class="eyebrow">Classification and regression</p>
               <h2 id="upload-heading">Compare your Model V1 and Model V2</h2>
             </div>
-            <p>Run both trusted classifiers on the same labelled samples and inspect exactly which predictions improved or regressed.</p>
+            <p>Run trusted model versions on the same labelled samples and inspect exactly which predictions or numeric errors changed.</p>
           </div>
           <div class="local-warning">
             <strong>Local prototype:</strong> only load <code>.joblib</code> files that you trust. Files are processed in memory by the local server and are not saved.
@@ -252,14 +252,22 @@
             <p>Both models must accept the same feature columns. The CSV must include the known label for every sample.</p>
           </div>
           <form id="classification-upload-form" class="comparison-upload-form">
+            <label class="file-field task-field">
+              <span>Prediction task</span>
+              <small>Select the model output type</small>
+              <select id="upload-task-selector">
+                <option value="classification">Classification</option>
+                <option value="regression">Regression</option>
+              </select>
+            </label>
             <label class="file-field">
               <span>Model file 1</span>
-              <small>Trusted classifier</small>
+              <small>Trusted estimator</small>
               <input id="model-v1-upload" name="model_v1" type="file" accept=".joblib" required />
             </label>
             <label class="file-field">
               <span>Model file 2</span>
-              <small>Trusted classifier</small>
+              <small>Trusted estimator</small>
               <input id="model-v2-upload" name="model_v2" type="file" accept=".joblib" required />
             </label>
             <label class="file-field">
@@ -278,19 +286,19 @@
               <div class="manifest-builder-grid">
                 <label>Label column <select id="manifest-label-column"><option value="">Choose CSV first</option></select></label>
                 <label>Sample ID <select id="manifest-id-column"><option value="">None</option></select></label>
-                <label>Image filename <select id="manifest-image-column"><option value="">None</option></select></label>
-                <label>Image height <input id="manifest-image-height" type="number" min="1" placeholder="e.g. 28" /></label>
-                <label>Image width <input id="manifest-image-width" type="number" min="1" placeholder="e.g. 28" /></label>
+                <label class="classification-only">Image filename <select id="manifest-image-column"><option value="">None</option></select></label>
+                <label class="classification-only">Image height <input id="manifest-image-height" type="number" min="1" placeholder="e.g. 28" /></label>
+                <label class="classification-only">Image width <input id="manifest-image-width" type="number" min="1" placeholder="e.g. 28" /></label>
               </div>
               <label class="trust-check"><input id="manifest-trust-models" type="checkbox" /> I confirm that these model files come from a trusted source.</label>
               <p class="table-note">All remaining CSV columns become model features in their existing order.</p>
             </details>
-            <label class="file-field optional-image-field">
+            <label class="file-field optional-image-field classification-only">
               <span>Additional models <em>optional</em></span>
               <small>Select up to three more trusted .joblib classifiers</small>
               <input id="additional-models-upload" type="file" accept=".joblib" multiple />
             </label>
-            <div class="model-pair-picker">
+            <div class="model-pair-picker classification-only">
               <label>Baseline model
                 <select id="baseline-model-selector"></select>
               </label>
@@ -300,7 +308,7 @@
               </label>
               <p id="model-collection-message">Upload two to five models, then select the pair to compare.</p>
             </div>
-            <label class="file-field optional-image-field">
+            <label class="file-field optional-image-field classification-only">
               <span>Sample images <em>optional</em></span>
               <small>ZIP of PNG, JPEG, WebP or GIF files referenced by the CSV</small>
               <input id="images-upload" name="images" type="file" accept=".zip,application/zip" />
@@ -474,6 +482,51 @@
               <h2 id="upload-boundary-heading">Current scope</h2>
               <ul id="upload-limitations" class="limitation-list"></ul>
             </div>
+          </section>
+        </div>
+
+        <div id="regression-results" hidden>
+          <section class="status-panel regression-status" aria-labelledby="regression-results-heading">
+            <div>
+              <p class="eyebrow">Uploaded regression comparison</p>
+              <h2 id="regression-results-heading">Numeric prediction result</h2>
+              <p id="regression-scope-note" class="status-explanation"></p>
+            </div>
+            <div class="summary-grid regression-summary">
+              <article><span>V1 MAE</span><strong id="regression-v1-mae">—</strong></article>
+              <article><span>V2 MAE</span><strong id="regression-v2-mae">—</strong></article>
+              <article><span>V1 RMSE</span><strong id="regression-v1-rmse">—</strong></article>
+              <article><span>V2 RMSE</span><strong id="regression-v2-rmse">—</strong></article>
+              <article><span>V1 R²</span><strong id="regression-v1-r2">—</strong></article>
+              <article><span>V2 R²</span><strong id="regression-v2-r2">—</strong></article>
+            </div>
+          </section>
+          <section class="content-section" aria-labelledby="regression-transition-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Paired error changes</p><h2 id="regression-transition-heading">Which samples improved?</h2></div>
+              <p id="regression-evidence-note"></p>
+            </div>
+            <div id="regression-outcome-grid" class="transition-grid"></div>
+          </section>
+          <section class="content-section" aria-labelledby="regression-samples-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Concrete numeric examples</p><h2 id="regression-samples-heading">Sample-by-sample errors</h2></div>
+              <label class="dataset-picker">Show
+                <select id="regression-outcome-filter">
+                  <option value="all">All samples</option>
+                  <option value="improved">Improved</option>
+                  <option value="worsened">Worsened</option>
+                  <option value="unchanged">Unchanged</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table regression-sample-table">
+                <thead><tr><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 absolute error</th><th>V2 prediction</th><th>V2 absolute error</th><th>Error change</th><th>Outcome</th></tr></thead>
+                <tbody id="regression-sample-results"></tbody>
+              </table>
+            </div>
+            <p id="regression-table-note" class="table-note"></p>
           </section>
         </div>
       </div>
