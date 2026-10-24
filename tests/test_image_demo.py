@@ -57,6 +57,13 @@ class ImageDemoTests(unittest.TestCase):
             self.assertEqual(
                 comparison["explanations"]["v2"]["method"], "tree_shap"
             )
+            self.assertEqual(
+                comparison["summary"]["explanation_compared_count"],
+                result["sample_count"],
+            )
+            self.assertIsInstance(
+                comparison["samples"][0]["explanation_similarity"], float
+            )
             summary = json.loads((output / "README.json").read_text())
             self.assertIn("DecisionTreeClassifier", summary["model_v1"])
 

@@ -249,6 +249,11 @@ set of high-confidence regressions where V1 was correct and V2 became wrong.
 This is a transparent inspection threshold, not a statistically calibrated
 release boundary.
 
+When both versions produce explanation maps, the dashboard calculates their
+cosine similarity and flags values below 0.80. A dedicated filter isolates
+hidden explanation drift: the predicted class stayed the same even though the
+feature-contribution pattern changed substantially.
+
 When the held-out breast-cancer and wine benchmark summaries are present, the
 same command also exposes a **Benchmark validation** view. It compares four
 model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence

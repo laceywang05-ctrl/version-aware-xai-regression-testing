@@ -21,6 +21,7 @@ MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
 MAX_EXPLANATION_ROWS = 500
 HIGH_CONFIDENCE_THRESHOLD = 0.80
+EXPLANATION_SIMILARITY_THRESHOLD = 0.80
 IMAGE_MEDIA_TYPES = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -354,6 +355,26 @@ def _model_explanations(
     return fallback_maps, fallback_metadata
 
 
+def _explanation_similarity(
+    first: list[list[float]] | None,
+    second: list[list[float]] | None,
+) -> float | None:
+    """Return cosine similarity for two same-shaped explanation maps."""
+    if first is None or second is None:
+        return None
+    left = np.asarray(first, dtype=float).ravel()
+    right = np.asarray(second, dtype=float).ravel()
+    if left.shape != right.shape or not np.isfinite(left).all() or not np.isfinite(right).all():
+        return None
+    left_norm = float(np.linalg.norm(left))
+    right_norm = float(np.linalg.norm(right))
+    if left_norm == 0 and right_norm == 0:
+        return 1.0
+    if left_norm == 0 or right_norm == 0:
+        return 0.0
+    return float(np.clip(np.dot(left, right) / (left_norm * right_norm), -1.0, 1.0))
+
+
 def compare_classifiers(
     model_v1: Any,
     model_v2: Any,
@@ -445,6 +466,13 @@ def compare_classifiers(
             and confidence_v2[index] is not None
             and confidence_v2[index] >= HIGH_CONFIDENCE_THRESHOLD
         )
+        explanation_similarity = _explanation_similarity(
+            explanation_v1[index], explanation_v2[index]
+        )
+        explanation_drift = bool(
+            explanation_similarity is not None
+            and explanation_similarity < EXPLANATION_SIMILARITY_THRESHOLD
+        )
         samples.append(
             {
                 "sample_id": _json_value(identifiers[index]),
@@ -468,6 +496,12 @@ def compare_classifiers(
                 "high_confidence_regression": bool(
                     transitions[index] == "v1_correct_v2_wrong"
                     and v2_high_confidence_wrong
+                ),
+                "explanation_similarity": explanation_similarity,
+                "explanation_drift": explanation_drift,
+                "hidden_explanation_drift": bool(
+                    explanation_drift
+                    and prediction_v1[index] == prediction_v2[index]
                 ),
                 "image_name": image_name,
                 "image_data_url": image_data_url,
@@ -493,6 +527,13 @@ def compare_classifiers(
     )
     high_confidence_regression_count = sum(
         sample["high_confidence_regression"] for sample in samples
+    )
+    explanation_compared_count = sum(
+        sample["explanation_similarity"] is not None for sample in samples
+    )
+    explanation_drift_count = sum(sample["explanation_drift"] for sample in samples)
+    hidden_explanation_drift_count = sum(
+        sample["hidden_explanation_drift"] for sample in samples
     )
     class_diagnostics = []
     for class_value in pd.unique(labels):
@@ -560,6 +601,10 @@ def compare_classifiers(
             "v1_high_confidence_wrong_count": v1_high_confidence_wrong_count,
             "v2_high_confidence_wrong_count": v2_high_confidence_wrong_count,
             "high_confidence_regression_count": high_confidence_regression_count,
+            "explanation_similarity_threshold": EXPLANATION_SIMILARITY_THRESHOLD,
+            "explanation_compared_count": explanation_compared_count,
+            "explanation_drift_count": explanation_drift_count,
+            "hidden_explanation_drift_count": hidden_explanation_drift_count,
             **counts,
         },
         "class_diagnostics": class_diagnostics,

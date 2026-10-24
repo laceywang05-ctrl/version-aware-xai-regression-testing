@@ -49,6 +49,12 @@ high-confidence errors and the narrower set where the baseline was correct but
 the candidate became confidently wrong. This fixed descriptive threshold helps
 prioritize inspection; it is not a calibrated statistical acceptance rule.
 
+When both models produce explanation maps, the comparison also reports their
+cosine similarity. Values below 0.80 are flagged for inspection, including a
+separate hidden-drift filter for samples whose predicted class stayed the same.
+The maps must come from comparable feature layouts; this score describes model
+behavior and does not establish a causal explanation.
+
 After selecting two to five models, choose one as the baseline and another as
 the candidate. Only that pair is sent to the local comparison endpoint. To
 compare another pair, change the two selectors and run again; the browser keeps
