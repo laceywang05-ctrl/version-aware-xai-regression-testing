@@ -53,6 +53,9 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertAlmostEqual(result["mean_confidence"], 0.75)
         self.assertAlmostEqual(result["confidence_gap"], 0.25)
         self.assertAlmostEqual(result["expected_calibration_error"], 0.4)
+        self.assertEqual(sum(item["samples"] for item in result["calibration_bins"]), 4)
+        self.assertAlmostEqual(result["calibration_bins"][-1]["mean_confidence"], 0.9)
+        self.assertAlmostEqual(result["calibration_bins"][-1]["accuracy"], 1.0)
 
     def test_explanation_similarity_handles_identical_opposite_and_missing_maps(self):
         self.assertAlmostEqual(

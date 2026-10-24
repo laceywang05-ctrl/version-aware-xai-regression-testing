@@ -390,6 +390,42 @@ function reportModelName(key, fallback) {
   return state.uploadComparison?.models?.[key]?.filename || fallback;
 }
 
+function renderReliabilityChart(model) {
+  const chart = document.createElement("div");
+  chart.className = "reliability-chart";
+  chart.setAttribute("aria-label", `Reliability chart for ${model.filename}`);
+  if (!model.supports_confidence || !Array.isArray(model.calibration_bins) || !model.calibration_bins.length) {
+    chart.textContent = "Probability calibration is unavailable.";
+    chart.classList.add("unavailable");
+    return chart;
+  }
+  const legend = document.createElement("div");
+  legend.className = "reliability-legend";
+  legend.textContent = "Confidence / observed accuracy";
+  chart.append(legend);
+  for (const bin of model.calibration_bins) {
+    const row = document.createElement("div");
+    row.className = "reliability-row";
+    row.title = `${formatPercent(bin.lower)}–${formatPercent(bin.upper)} · ${bin.samples} sample${bin.samples === 1 ? "" : "s"}`;
+    const label = document.createElement("span");
+    label.textContent = `${Math.round(bin.upper * 100)}%`;
+    const tracks = document.createElement("div");
+    tracks.className = "reliability-tracks";
+    const confidenceBar = document.createElement("span");
+    confidenceBar.className = "confidence-bar";
+    confidenceBar.style.width = formatPercent(bin.mean_confidence);
+    const accuracyBar = document.createElement("span");
+    accuracyBar.className = "accuracy-bar";
+    accuracyBar.style.width = formatPercent(bin.accuracy);
+    tracks.append(confidenceBar, accuracyBar);
+    const count = document.createElement("span");
+    count.textContent = `n=${bin.samples}`;
+    row.append(label, tracks, count);
+    chart.append(row);
+  }
+  return chart;
+}
+
 function renderModelOverview(report) {
   if (!report || !Array.isArray(report.models) || !Array.isArray(report.pairwise_agreements)) {
     throw new Error("The server returned an invalid multi-model overview.");
@@ -418,7 +454,7 @@ function renderModelOverview(report) {
     } else {
       calibration.textContent = "Calibration unavailable: model has no probability output";
     }
-    card.append(rank, name, accuracy, count, calibration);
+    card.append(rank, name, accuracy, count, calibration, renderReliabilityChart(model));
     elements.modelOverviewGrid.append(card);
   }
   elements.modelAgreementResults.replaceChildren();

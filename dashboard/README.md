@@ -73,6 +73,12 @@ confidence more closely matches observed correctness on the uploaded labelled
 sample. These are descriptive diagnostics for that sample, not guarantees for
 future data.
 
+Each probabilistic model card includes a compact reliability chart using the
+same ten equal-width confidence bins. The blue bar is mean stated confidence,
+the green bar is observed accuracy, and the row tooltip gives the bin range and
+sample count. Large separation between the two bars identifies locally
+miscalibrated confidence ranges; sparse bins should be interpreted cautiously.
+
 A preflight panel runs first and reports compatibility for every model. Formal
 comparison proceeds only when all selected models load successfully, accept the
 manifest-selected feature columns, and return one prediction per CSV row.

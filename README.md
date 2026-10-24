@@ -254,6 +254,9 @@ The multi-model overview reports top-label expected calibration error (ECE)
 for classifiers with probability output, alongside mean confidence and the
 confidence-minus-accuracy gap. Lower ECE indicates closer agreement between
 stated confidence and observed correctness on the uploaded sample.
+Compact reliability charts expose the underlying ten bins, comparing mean
+confidence with observed accuracy and showing the number of samples in each
+populated range.
 
 When both versions produce explanation maps, the dashboard calculates their
 cosine similarity and initially flags values below 0.80. This boundary is also
