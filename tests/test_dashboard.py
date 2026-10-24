@@ -111,6 +111,8 @@ class DashboardTests(unittest.TestCase):
             "regression-outcome-grid",
             "regression-parity-chart",
             "regression-error-chart",
+            "regression-importance-results",
+            "regression-importance-note",
             "regression-outcome-filter",
             "regression-sample-results",
         ):
@@ -137,6 +139,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderRegressionComparison", script)
         self.assertIn("function renderRegressionSamples", script)
         self.assertIn("function renderRegressionCharts", script)
+        self.assertIn("function renderRegressionImportance", script)
+        self.assertIn("item.v1_importance", script)
         self.assertIn("function regressionChartSamples", script)
         self.assertIn("mae_change_ci_95", script)
         self.assertIn("The paired MAE interval crosses zero.", script)

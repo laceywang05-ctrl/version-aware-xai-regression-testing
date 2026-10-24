@@ -83,6 +83,8 @@ const elements = {
   regressionOutcomeGrid: document.querySelector("#regression-outcome-grid"),
   regressionParityChart: document.querySelector("#regression-parity-chart"),
   regressionErrorChart: document.querySelector("#regression-error-chart"),
+  regressionImportanceResults: document.querySelector("#regression-importance-results"),
+  regressionImportanceNote: document.querySelector("#regression-importance-note"),
   regressionOutcomeFilter: document.querySelector("#regression-outcome-filter"),
   regressionSampleResults: document.querySelector("#regression-sample-results"),
   regressionTableNote: document.querySelector("#regression-table-note"),
@@ -1002,6 +1004,47 @@ function renderRegressionCharts(samples) {
   }
 }
 
+function renderRegressionImportance(report) {
+  const importance = report.feature_importance;
+  if (!importance || !Array.isArray(importance.features)) {
+    elements.regressionImportanceResults.replaceChildren();
+    elements.regressionImportanceNote.textContent = "Permutation importance was not returned for this comparison.";
+    return;
+  }
+  const visible = importance.features.slice(0, 15);
+  const maximum = Math.max(1e-12, ...visible.flatMap((item) => [Math.abs(item.v1_importance), Math.abs(item.v2_importance)]));
+  elements.regressionImportanceResults.replaceChildren();
+  for (const item of visible) {
+    const row = document.createElement("article");
+    row.className = "regression-importance-row";
+    const feature = document.createElement("strong");
+    feature.textContent = item.feature;
+    const bars = document.createElement("div");
+    bars.className = "importance-bars";
+    for (const [version, value] of [["V1", item.v1_importance], ["V2", item.v2_importance]]) {
+      const line = document.createElement("div");
+      const label = document.createElement("span");
+      label.textContent = version;
+      const track = document.createElement("div");
+      track.className = "importance-track";
+      const fill = document.createElement("i");
+      fill.className = version === "V1" ? "importance-v1" : "importance-v2";
+      fill.style.width = `${Math.max(0, Math.abs(value) / maximum * 100)}%`;
+      track.append(fill);
+      const number = document.createElement("em");
+      number.textContent = formatNumber(value);
+      line.append(label, track, number);
+      bars.append(line);
+    }
+    row.append(feature, bars);
+    elements.regressionImportanceResults.append(row);
+  }
+  const scope = importance.truncated
+    ? `The first ${importance.evaluated_feature_count} features were evaluated; showing the top ${visible.length}.`
+    : `${importance.evaluated_feature_count} features were evaluated; showing the top ${visible.length}.`;
+  elements.regressionImportanceNote.textContent = `${scope} Importance is the average MAE increase over ${importance.repeats} deterministic shuffles.`;
+}
+
 function renderRegressionComparison(report) {
   if (!report || report.task !== "regression" || !report.summary || !Array.isArray(report.samples)) {
     throw new Error("The server returned an invalid regression comparison.");
@@ -1047,6 +1090,7 @@ function renderRegressionComparison(report) {
   elements.uploadResults.hidden = true;
   elements.regressionResults.hidden = false;
   renderRegressionCharts(report.samples);
+  renderRegressionImportance(report);
   renderRegressionSamples();
   elements.regressionResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
