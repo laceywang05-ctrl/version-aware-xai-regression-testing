@@ -52,6 +52,7 @@ const elements = {
   modelV1Upload: document.querySelector("#model-v1-upload"),
   modelV2Upload: document.querySelector("#model-v2-upload"),
   additionalModelsUpload: document.querySelector("#additional-models-upload"),
+  additionalModelNames: document.querySelector("#additional-model-names"),
   baselineModelSelector: document.querySelector("#baseline-model-selector"),
   candidateModelSelector: document.querySelector("#candidate-model-selector"),
   modelCollectionMessage: document.querySelector("#model-collection-message"),
@@ -406,6 +407,22 @@ function updateUploadTask() {
 
 function updateModelSelectors() {
   const files = uploadedModels();
+  const additional = Array.from(elements.additionalModelsUpload.files).slice(0, 3);
+  elements.additionalModelNames.replaceChildren();
+  if (!additional.length) {
+    const empty = document.createElement("span");
+    empty.className = "selected-file-empty";
+    empty.textContent = "No additional models selected";
+    elements.additionalModelNames.append(empty);
+  } else {
+    for (const file of additional) {
+      const name = document.createElement("span");
+      name.className = "selected-file-name";
+      name.textContent = file.name;
+      name.title = file.name;
+      elements.additionalModelNames.append(name);
+    }
+  }
   const previousBaseline = elements.baselineModelSelector.value;
   const previousCandidate = elements.candidateModelSelector.value;
   for (const selector of [elements.baselineModelSelector, elements.candidateModelSelector]) {

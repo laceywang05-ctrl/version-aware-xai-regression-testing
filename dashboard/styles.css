@@ -387,6 +387,9 @@ main { display: grid; gap: 24px; }
 .manifest-builder-grid select, .manifest-builder-grid input { min-width: 0; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
 .trust-check { display: flex; gap: 9px; align-items: center; margin-top: 16px; color: var(--navy); font-size: .72rem; font-weight: 750; }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
+.selected-file-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.selected-file-name { max-width: 100%; overflow: hidden; padding: 6px 9px; border: 1px solid #bcd8dc; border-radius: 99px; background: #edf7f7; color: var(--navy); font-size: .68rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.selected-file-empty { color: var(--muted); font-size: .68rem; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .explanation-dialog { width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 40px); padding: 26px; border: 0; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 80px rgba(18, 48, 63, .24); }

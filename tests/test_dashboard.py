@@ -106,6 +106,7 @@ class DashboardTests(unittest.TestCase):
             "download-regression-json",
             "download-regression-samples-csv",
             "download-regression-ranking-csv",
+            "additional-model-names",
             "regression-v1-mae",
             "regression-v2-mae",
             "regression-v1-rmse",
@@ -174,6 +175,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function openExplanation", script)
         self.assertIn("function uploadedModels", script)
         self.assertIn("function updateModelSelectors", script)
+        self.assertIn('name.className = "selected-file-name"', script)
         self.assertIn("function parseCsvHeader", script)
         self.assertIn("function updateManifestBuilder", script)
         self.assertIn("function selectedManifestFile", script)
