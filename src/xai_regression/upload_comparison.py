@@ -222,6 +222,7 @@ def _calibration_summary(
             "mean_confidence": None,
             "confidence_gap": None,
             "expected_calibration_error": None,
+            "calibration_bins": [],
         }
     try:
         probabilities = np.asarray(predict_proba(features), dtype=float)
@@ -231,6 +232,7 @@ def _calibration_summary(
             "mean_confidence": None,
             "confidence_gap": None,
             "expected_calibration_error": None,
+            "calibration_bins": [],
         }
     if probabilities.ndim != 2 or probabilities.shape[0] != len(features):
         raise ValueError("Model predict_proba() returned an unexpected shape.")
@@ -240,12 +242,25 @@ def _calibration_summary(
     correct = predictions == labels
     bin_indices = np.minimum((confidence * bins).astype(int), bins - 1)
     expected_calibration_error = 0.0
+    calibration_bins = []
     for bin_index in range(bins):
         mask = bin_indices == bin_index
         count = int(np.count_nonzero(mask))
         if count:
+            bin_accuracy = float(correct[mask].mean())
+            bin_confidence = float(confidence[mask].mean())
             expected_calibration_error += (count / len(confidence)) * abs(
-                float(correct[mask].mean()) - float(confidence[mask].mean())
+                bin_accuracy - bin_confidence
+            )
+            calibration_bins.append(
+                {
+                    "lower": bin_index / bins,
+                    "upper": (bin_index + 1) / bins,
+                    "samples": count,
+                    "mean_confidence": bin_confidence,
+                    "accuracy": bin_accuracy,
+                    "gap": bin_confidence - bin_accuracy,
+                }
             )
     accuracy = float(correct.mean())
     mean_confidence = float(confidence.mean())
@@ -254,6 +269,7 @@ def _calibration_summary(
         "mean_confidence": mean_confidence,
         "confidence_gap": mean_confidence - accuracy,
         "expected_calibration_error": float(expected_calibration_error),
+        "calibration_bins": calibration_bins,
     }
 
 
