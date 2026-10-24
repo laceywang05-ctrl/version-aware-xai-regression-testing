@@ -265,6 +265,12 @@ main { display: grid; gap: 24px; }
 .file-field small { color: var(--muted); }
 .file-field input { width: 100%; margin-top: 8px; color: var(--muted); font: inherit; font-size: .76rem; }
 .file-field input::file-selector-button { margin-right: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--navy); cursor: pointer; font-weight: 750; }
+.file-field select { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--navy); font: inherit; }
+.classification-only[hidden] { display: none; }
+.regression-status { border-left: 5px solid var(--green); }
+.regression-summary { grid-template-columns: repeat(3, 1fr); }
+.regression-sample-table .improved-row { background: #f4fbf8; }
+.regression-sample-table .worsened-row { background: #fff7f2; }
 .upload-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding-top: 6px; }
 .primary-action { border: 0; border-radius: 10px; padding: 12px 18px; background: var(--navy); color: white; cursor: pointer; font: inherit; font-weight: 800; }
 .primary-action:disabled { cursor: wait; opacity: .6; }
