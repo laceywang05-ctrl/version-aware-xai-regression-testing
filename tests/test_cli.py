@@ -284,6 +284,23 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         build.assert_called_once_with(cli.PROJECT_ROOT / "demo")
 
+    def test_regression_demo_resolves_output_path(self):
+        with (
+            patch(
+                "xai_regression.cli.build_regression_demo",
+                return_value={
+                    "model_count": 4,
+                    "sample_count": 20,
+                    "best_mae": 12.5,
+                    "output_dir": cli.PROJECT_ROOT / "regression-demo",
+                },
+            ) as build,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_regression_demo("regression-demo")
+        self.assertEqual(exit_code, 0)
+        build.assert_called_once_with(cli.PROJECT_ROOT / "regression-demo")
+
 
 if __name__ == "__main__":
     unittest.main()
