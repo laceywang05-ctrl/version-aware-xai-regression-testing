@@ -81,6 +81,8 @@ const elements = {
   regressionV2R2: document.querySelector("#regression-v2-r2"),
   regressionEvidenceNote: document.querySelector("#regression-evidence-note"),
   regressionOutcomeGrid: document.querySelector("#regression-outcome-grid"),
+  regressionParityChart: document.querySelector("#regression-parity-chart"),
+  regressionErrorChart: document.querySelector("#regression-error-chart"),
   regressionOutcomeFilter: document.querySelector("#regression-outcome-filter"),
   regressionSampleResults: document.querySelector("#regression-sample-results"),
   regressionTableNote: document.querySelector("#regression-table-note"),
@@ -928,6 +930,78 @@ function renderRegressionSamples() {
     : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`;
 }
 
+function svgElement(name, attributes = {}) {
+  const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, String(value));
+  return element;
+}
+
+function regressionChartSamples(samples, limit = 180) {
+  if (samples.length <= limit) return samples;
+  const step = (samples.length - 1) / (limit - 1);
+  return Array.from({ length: limit }, (_, index) => samples[Math.round(index * step)]);
+}
+
+function renderRegressionCharts(samples) {
+  const width = 560;
+  const height = 300;
+  const padding = 38;
+  const plotted = regressionChartSamples(samples);
+  const values = plotted.flatMap((sample) => [sample.actual, sample.v1_prediction, sample.v2_prediction]);
+  let minimum = Math.min(...values);
+  let maximum = Math.max(...values);
+  if (minimum === maximum) { minimum -= 1; maximum += 1; }
+  const scaleX = (value) => padding + ((value - minimum) / (maximum - minimum)) * (width - padding * 2);
+  const scaleY = (value) => height - padding - ((value - minimum) / (maximum - minimum)) * (height - padding * 2);
+
+  elements.regressionParityChart.replaceChildren();
+  elements.regressionParityChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  elements.regressionParityChart.append(
+    svgElement("line", { x1: padding, y1: height - padding, x2: width - padding, y2: padding, class: "parity-reference" }),
+  );
+  for (const sample of plotted) {
+    elements.regressionParityChart.append(
+      svgElement("circle", { cx: scaleX(sample.actual), cy: scaleY(sample.v1_prediction), r: 3.2, class: "parity-v1" }),
+      svgElement("circle", { cx: scaleX(sample.actual), cy: scaleY(sample.v2_prediction), r: 3.2, class: "parity-v2" }),
+    );
+  }
+  const parityLabels = [
+    [padding, height - 12, `Actual ${formatNumber(minimum)}`],
+    [width - padding, height - 12, `Actual ${formatNumber(maximum)}`],
+    [8, padding + 4, `Pred. ${formatNumber(maximum)}`],
+  ];
+  for (const [x, y, label] of parityLabels) {
+    const text = svgElement("text", { x, y, class: "chart-axis-label" });
+    text.textContent = label;
+    elements.regressionParityChart.append(text);
+  }
+
+  const ordered = [...samples].sort((a, b) => a.absolute_error_change - b.absolute_error_change);
+  const errorSamples = regressionChartSamples(ordered);
+  const largestChange = Math.max(1e-12, ...errorSamples.map((sample) => Math.abs(sample.absolute_error_change)));
+  const zeroY = height / 2;
+  const barWidth = (width - padding * 2) / Math.max(errorSamples.length, 1);
+  elements.regressionErrorChart.replaceChildren();
+  elements.regressionErrorChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  elements.regressionErrorChart.append(svgElement("line", { x1: padding, y1: zeroY, x2: width - padding, y2: zeroY, class: "error-zero-line" }));
+  errorSamples.forEach((sample, index) => {
+    const magnitude = Math.abs(sample.absolute_error_change) / largestChange * (height / 2 - padding);
+    const y = sample.absolute_error_change >= 0 ? zeroY - magnitude : zeroY;
+    elements.regressionErrorChart.append(svgElement("rect", {
+      x: padding + index * barWidth,
+      y,
+      width: Math.max(1, barWidth - 0.7),
+      height: Math.max(1, magnitude),
+      class: sample.outcome === "improved" ? "error-improved" : sample.outcome === "worsened" ? "error-worsened" : "error-unchanged",
+    }));
+  });
+  for (const [y, label] of [[padding + 4, `+${formatNumber(largestChange)}`], [zeroY - 6, "0"], [height - padding, `−${formatNumber(largestChange)}`]]) {
+    const text = svgElement("text", { x: 5, y, class: "chart-axis-label" });
+    text.textContent = label;
+    elements.regressionErrorChart.append(text);
+  }
+}
+
 function renderRegressionComparison(report) {
   if (!report || report.task !== "regression" || !report.summary || !Array.isArray(report.samples)) {
     throw new Error("The server returned an invalid regression comparison.");
@@ -965,6 +1039,7 @@ function renderRegressionComparison(report) {
   elements.regressionOutcomeFilter.value = "all";
   elements.uploadResults.hidden = true;
   elements.regressionResults.hidden = false;
+  renderRegressionCharts(report.samples);
   renderRegressionSamples();
   elements.regressionResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }

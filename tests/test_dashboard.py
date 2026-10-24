@@ -109,6 +109,8 @@ class DashboardTests(unittest.TestCase):
             "regression-v1-r2",
             "regression-v2-r2",
             "regression-outcome-grid",
+            "regression-parity-chart",
+            "regression-error-chart",
             "regression-outcome-filter",
             "regression-sample-results",
         ):
@@ -134,6 +136,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderUploadComparison", script)
         self.assertIn("function renderRegressionComparison", script)
         self.assertIn("function renderRegressionSamples", script)
+        self.assertIn("function renderRegressionCharts", script)
+        self.assertIn("function regressionChartSamples", script)
         self.assertIn("function updateUploadTask", script)
         self.assertIn('fetch("/api/classification/compare"', script)
         self.assertIn('fetch("/api/classification/overview"', script)

@@ -508,6 +508,24 @@
             </div>
             <div id="regression-outcome-grid" class="transition-grid"></div>
           </section>
+          <section class="content-section" aria-labelledby="regression-visual-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Visual comparison</p><h2 id="regression-visual-heading">Where did predictions change?</h2></div>
+              <p>Points closer to the diagonal are more accurate; bars below zero favor V2.</p>
+            </div>
+            <div class="regression-visual-grid">
+              <figure class="regression-chart-card">
+                <figcaption>Actual versus predicted</figcaption>
+                <svg id="regression-parity-chart" class="regression-chart" role="img" aria-label="Actual versus predicted values for model V1 and model V2"></svg>
+                <div class="chart-legend"><span class="legend-v1">V1</span><span class="legend-v2">V2</span><span class="legend-reference">Perfect prediction</span></div>
+              </figure>
+              <figure class="regression-chart-card">
+                <figcaption>Per-sample absolute-error change</figcaption>
+                <svg id="regression-error-chart" class="regression-chart" role="img" aria-label="Change in absolute error from model V1 to model V2"></svg>
+                <p class="chart-note">Negative values indicate improvement; positive values indicate regression.</p>
+              </figure>
+            </div>
+          </section>
           <section class="content-section" aria-labelledby="regression-samples-heading">
             <div class="section-heading">
               <div><p class="eyebrow">Concrete numeric examples</p><h2 id="regression-samples-heading">Sample-by-sample errors</h2></div>
