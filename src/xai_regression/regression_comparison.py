@@ -105,6 +105,46 @@ def _paired_mean_bootstrap_interval(
     return float(lower), float(upper)
 
 
+def _permutation_feature_importance(
+    model_v1: Any,
+    model_v2: Any,
+    features: pd.DataFrame,
+    actual: np.ndarray,
+    baseline_v1: float,
+    baseline_v2: float,
+    *,
+    repeats: int = 3,
+    feature_limit: int = 50,
+    seed: int = 311,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Compare deterministic MAE permutation importance for two regressors."""
+    selected = list(features.columns[:feature_limit])
+    generator = np.random.default_rng(seed)
+    rows: list[dict[str, Any]] = []
+    for column in selected:
+        v1_increases = []
+        v2_increases = []
+        for _ in range(repeats):
+            permuted = features.copy()
+            permuted[column] = generator.permutation(permuted[column].to_numpy())
+            v1_prediction = np.asarray(model_v1.predict(permuted), dtype=float)
+            v2_prediction = np.asarray(model_v2.predict(permuted), dtype=float)
+            v1_increases.append(float(np.mean(np.abs(v1_prediction - actual)) - baseline_v1))
+            v2_increases.append(float(np.mean(np.abs(v2_prediction - actual)) - baseline_v2))
+        v1_importance = float(np.mean(v1_increases))
+        v2_importance = float(np.mean(v2_increases))
+        rows.append(
+            {
+                "feature": str(column),
+                "v1_importance": v1_importance,
+                "v2_importance": v2_importance,
+                "importance_change": v2_importance - v1_importance,
+            }
+        )
+    rows.sort(key=lambda row: max(abs(row["v1_importance"]), abs(row["v2_importance"])), reverse=True)
+    return rows, len(features.columns) > feature_limit
+
+
 def compare_regressors(
     model_v1: Any,
     model_v2: Any,
@@ -149,6 +189,14 @@ def compare_regressors(
         raise ValueError("Regression predictions must contain only finite values.")
     error_v1 = np.abs(prediction_v1 - actual)
     error_v2 = np.abs(prediction_v2 - actual)
+    feature_importance, importance_truncated = _permutation_feature_importance(
+        model_v1,
+        model_v2,
+        features,
+        actual,
+        float(error_v1.mean()),
+        float(error_v2.mean()),
+    )
     tolerance = 1e-12
     improved = error_v2 < error_v1 - tolerance
     worsened = error_v2 > error_v1 + tolerance
@@ -208,12 +256,20 @@ def compare_regressors(
             "paired_sign_test_p": sign_test_p,
             "paired_significant": bool(sign_test_p < 0.05),
         },
+        "feature_importance": {
+            "metric": "mae_increase_after_permutation",
+            "repeats": 3,
+            "evaluated_feature_count": len(feature_importance),
+            "truncated": importance_truncated,
+            "features": feature_importance,
+        },
         "samples": samples,
         "limitations": [
             "This first regression stage supports two trusted local .joblib models.",
             "Uploaded files are processed in memory and are not persisted.",
             "The paired sign test uses error direction only, not error magnitude.",
             "The MAE-change interval is a paired percentile bootstrap with 5,000 resamples.",
+            "Feature importance is model-agnostic permutation importance averaged over three deterministic shuffles.",
         ],
     }
 

@@ -109,6 +109,9 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertAlmostEqual(result["summary"]["v1"]["rmse"], 0.0)
         self.assertAlmostEqual(result["summary"]["v2"]["r2"], 1.0)
         self.assertEqual(result["models"]["v1"]["filename"], "v1.joblib")
+        self.assertEqual(result["feature_importance"]["evaluated_feature_count"], 1)
+        self.assertEqual(result["feature_importance"]["features"][0]["feature"], "x")
+        self.assertGreater(result["feature_importance"]["features"][0]["v1_importance"], 0)
 
 
 if __name__ == "__main__":
