@@ -79,6 +79,8 @@ class DashboardTests(unittest.TestCase):
             "confusion-v1-heading",
             "confusion-v2-heading",
             "confusion-empty-message",
+            "download-comparison-json",
+            "download-samples-csv",
             "upload-sample-results",
             "explanation-dialog",
             "v1-heatmap",
@@ -109,6 +111,10 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('fetch("/api/classification/validate"', script)
         self.assertIn("function renderModelOverview", script)
         self.assertIn("function renderUploadValidation", script)
+        self.assertIn("function downloadComparisonJson", script)
+        self.assertIn("function downloadSamplesCsv", script)
+        self.assertIn("application/json", script)
+        self.assertIn("text/csv;charset=utf-8", script)
         self.assertIn("sample.image_data_url", script)
         self.assertIn("function renderPixelHeatmap", script)
         self.assertIn("function openExplanation", script)

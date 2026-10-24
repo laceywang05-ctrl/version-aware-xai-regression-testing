@@ -317,6 +317,10 @@ main { display: grid; gap: 24px; }
 .error-change.reduced { background: #e5f5ef; color: var(--green); }
 .error-change.increased { background: var(--orange-soft); color: #a84518; }
 .error-change.unchanged { background: #edf0f1; color: var(--muted); }
+.export-panel { background: linear-gradient(135deg, #f5fbfb, #ffffff); }
+.export-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.secondary-action { border: 1px solid var(--blue); border-radius: 10px; padding: 11px 16px; background: white; color: var(--blue); cursor: pointer; font: inherit; font-size: .75rem; font-weight: 850; }
+.secondary-action:hover { background: #eef7f8; }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }

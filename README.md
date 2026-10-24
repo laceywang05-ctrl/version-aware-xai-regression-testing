@@ -203,6 +203,11 @@ Misclassification-path diagnostics then show the concrete true-class to
 predicted-class error pairs for both versions, including whether each error
 count increased or decreased in the candidate model.
 
+Completed comparisons can be exported locally as a JSON audit artifact or a
+sample-level CSV. The JSON bundles compatibility checks, the multi-model
+overview, and the detailed selected-pair report; the CSV provides predictions,
+confidence values, and transition labels for downstream analysis.
+
 An optional image ZIP can be matched to a CSV `image_column`. When present,
 the sample-level table displays each image beside its true label, both model
 predictions, confidence values, and correctness transition. This supports the
