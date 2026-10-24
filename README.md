@@ -190,6 +190,10 @@ sample and report pairwise prediction agreement. The detailed section then
 compares the selected baseline and candidate at sample level, including image
 transitions and compatible explanation maps.
 
+Before scoring, a preflight check tests each model against the manifest-selected
+feature columns. The dashboard reports the failing filename and distinguishes
+load, prediction-shape, feature/preprocessing, and optional confidence support.
+
 An optional image ZIP can be matched to a CSV `image_column`. When present,
 the sample-level table displays each image beside its true label, both model
 predictions, confidence values, and correctness transition. This supports the

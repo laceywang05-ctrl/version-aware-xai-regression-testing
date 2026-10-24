@@ -16,6 +16,7 @@ from xai_regression.upload_comparison import (
     load_uploaded_images,
     parse_manifest,
     summarize_upload_models,
+    validate_upload_models,
 )
 
 
@@ -174,6 +175,45 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["best_model_index"], 0)
         self.assertEqual(len(result["pairwise_agreements"]), 3)
         self.assertEqual(result["pairwise_agreements"][0]["agreement"], 1.0)
+
+    def test_upload_validation_identifies_an_incompatible_model(self):
+        features = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]})
+        labels = np.asarray([0, 0, 1, 1])
+        compatible = DecisionTreeClassifier(max_depth=1, random_state=7).fit(
+            features, labels
+        )
+        incompatible = DecisionTreeClassifier(max_depth=1, random_state=7).fit(
+            pd.DataFrame({"x": features["x"], "y": features["x"]}), labels
+        )
+        payloads = []
+        for filename, model in (
+            ("compatible.joblib", compatible),
+            ("incompatible.joblib", incompatible),
+        ):
+            buffer = BytesIO()
+            joblib.dump(model, buffer)
+            payloads.append((filename, buffer.getvalue()))
+        manifest = json.dumps(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        ).encode("utf-8")
+
+        result = validate_upload_models(
+            models=payloads,
+            dataset=(
+                "samples.csv",
+                features.assign(target=labels).to_csv(index=False).encode("utf-8"),
+            ),
+            manifest=manifest,
+        )
+
+        self.assertFalse(result["ready"])
+        self.assertTrue(result["models"][0]["compatible"])
+        self.assertFalse(result["models"][1]["compatible"])
 
     def test_uploaded_image_archive_is_attached_to_matching_samples(self):
         archive = BytesIO()

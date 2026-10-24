@@ -56,6 +56,9 @@ const elements = {
   imagesUpload: document.querySelector("#images-upload"),
   uploadSubmit: document.querySelector("#run-upload-comparison"),
   uploadMessage: document.querySelector("#upload-comparison-message"),
+  uploadValidation: document.querySelector("#upload-validation"),
+  uploadValidationSummary: document.querySelector("#upload-validation-summary"),
+  uploadValidationGrid: document.querySelector("#upload-validation-grid"),
   uploadResults: document.querySelector("#upload-results"),
   modelOverviewGrid: document.querySelector("#model-overview-grid"),
   modelAgreementResults: document.querySelector("#model-agreement-results"),
@@ -269,6 +272,34 @@ function renderModelOverview(report) {
     row.append(names, agreement);
     elements.modelAgreementResults.append(row);
   }
+}
+
+function renderUploadValidation(report) {
+  if (!report || !Array.isArray(report.models) || typeof report.ready !== "boolean") {
+    throw new Error("The server returned an invalid compatibility report.");
+  }
+  elements.uploadValidation.classList.toggle("ready", report.ready);
+  elements.uploadValidation.classList.toggle("blocked", !report.ready);
+  elements.uploadValidationSummary.textContent = report.ready
+    ? `All ${report.models.length} models accept ${report.dataset.feature_count} features and are ready.`
+    : "At least one model is incompatible. Resolve the highlighted item before comparing.";
+  elements.uploadValidationGrid.replaceChildren();
+  for (const model of report.models) {
+    const card = document.createElement("article");
+    card.className = `validation-card ${model.compatible ? "compatible" : "incompatible"}`;
+    const name = document.createElement("strong");
+    name.textContent = model.filename;
+    const status = document.createElement("span");
+    status.className = "validation-status";
+    status.textContent = model.compatible ? "Compatible" : "Needs attention";
+    const detail = document.createElement("span");
+    detail.textContent = model.compatible
+      ? `${model.model_type}${model.supports_confidence ? " · confidence available" : " · no probability confidence"}`
+      : model.message;
+    card.append(name, status, detail);
+    elements.uploadValidationGrid.append(card);
+  }
+  elements.uploadValidation.hidden = false;
 }
 
 function renderPixelHeatmap(container, values) {
@@ -866,10 +897,13 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     elements.uploadMessage.textContent = "Select two different uploaded models.";
     return;
   }
-  const overviewForm = new FormData();
-  models.forEach((model, index) => overviewForm.append(`model_${index}`, model));
-  overviewForm.append("dataset", elements.datasetUpload.files[0]);
-  overviewForm.append("manifest", elements.manifestUpload.files[0]);
+  const collectionForm = () => {
+    const form = new FormData();
+    models.forEach((model, index) => form.append(`model_${index}`, model));
+    form.append("dataset", elements.datasetUpload.files[0]);
+    form.append("manifest", elements.manifestUpload.files[0]);
+    return form;
+  };
   const comparisonForm = new FormData();
   comparisonForm.append("model_v1", models[baselineIndex]);
   comparisonForm.append("model_v2", models[candidateIndex]);
@@ -881,11 +915,19 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";
   elements.uploadMessage.className = "upload-comparison-message working";
-  elements.uploadMessage.textContent = "Running both models on the labelled samples locally.";
+  elements.uploadMessage.textContent = "Checking model compatibility before running the comparison.";
   try {
+    const validationResponse = await fetch("/api/classification/validate", {
+      method: "POST",
+      body: collectionForm(),
+    });
+    const validation = await validationResponse.json();
+    if (!validationResponse.ok) throw new Error(validation.error || `HTTP ${validationResponse.status}`);
+    renderUploadValidation(validation);
+    if (!validation.ready) throw new Error("One or more uploaded models are incompatible.");
     const overviewResponse = await fetch("/api/classification/overview", {
       method: "POST",
-      body: overviewForm,
+      body: collectionForm(),
     });
     const overview = await overviewResponse.json();
     if (!overviewResponse.ok) throw new Error(overview.error || `HTTP ${overviewResponse.status}`);

@@ -299,6 +299,16 @@ main { display: grid; gap: 24px; }
 .model-overview-card .accuracy { color: var(--navy); font-size: 1.7rem; font-weight: 850; }
 .model-overview-card small { color: var(--muted); font-size: .7rem; }
 .agreement-table { margin-top: 4px; }
+.upload-validation { border-left: 5px solid var(--cyan); }
+.upload-validation.ready { border-left-color: var(--green); }
+.upload-validation.blocked { border-left-color: var(--orange); }
+.upload-validation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.validation-card { display: grid; gap: 7px; padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #fbfcfc; }
+.validation-card.compatible { border-top: 4px solid var(--green); }
+.validation-card.incompatible { border-top: 4px solid var(--orange); background: #fff9f5; }
+.validation-card strong { overflow-wrap: anywhere; color: var(--navy); font-size: .82rem; }
+.validation-card span { color: var(--muted); font-size: .7rem; }
+.validation-card .validation-status { color: var(--navy); font-weight: 800; }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
