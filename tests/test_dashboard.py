@@ -89,6 +89,8 @@ class DashboardTests(unittest.TestCase):
             "download-comparison-json",
             "download-samples-csv",
             "confidence-risk-summary",
+            "confidence-threshold-input",
+            "explanation-threshold-input",
             "upload-sample-results",
             "explanation-dialog",
             "v1-heatmap",
@@ -138,6 +140,11 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('selected === "explanation_drift"', script)
         self.assertIn('selected === "hidden_explanation_drift"', script)
         self.assertIn("function formatSimilarity", script)
+        self.assertIn("function triageThresholds", script)
+        self.assertIn("function sampleTriage", script)
+        self.assertIn("function renderTriageSummary", script)
+        self.assertIn("function comparisonForExport", script)
+        self.assertIn("triage_settings: triageThresholds()", script)
         self.assertIn('"v2_high_confidence_wrong", "high_confidence_regression"', script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):

@@ -43,15 +43,17 @@ models must expose `predict()` and accept the same selected features. Optional
 `predict_proba()` output is shown as confidence. Uploaded files are processed
 in memory and are not persisted by the local server.
 
-The sample table also provides confidence-risk triage. A prediction is treated
-as high confidence at 80% or above. Users can filter candidate-model
-high-confidence errors and the narrower set where the baseline was correct but
-the candidate became confidently wrong. This fixed descriptive threshold helps
-prioritize inspection; it is not a calibrated statistical acceptance rule.
+The sample table also provides confidence-risk triage. The browser defaults to
+80% as the high-confidence boundary, and users can change it after a comparison
+without rerunning either model. Users can filter candidate-model high-confidence
+errors and the narrower set where the baseline was correct but the candidate
+became confidently wrong. This descriptive threshold helps prioritize
+inspection; it is not a calibrated statistical acceptance rule.
 
 When both models produce explanation maps, the comparison also reports their
-cosine similarity. Values below 0.80 are flagged for inspection, including a
-separate hidden-drift filter for samples whose predicted class stayed the same.
+cosine similarity. The drift boundary defaults to 0.80 and can be changed in
+the same triage controls. Values below the selected boundary are flagged,
+including a separate hidden-drift filter for samples whose predicted class stayed the same.
 The maps must come from comparable feature layouts; this score describes model
 behavior and does not establish a causal explanation.
 

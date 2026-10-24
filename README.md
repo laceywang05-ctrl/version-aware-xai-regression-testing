@@ -243,14 +243,16 @@ independently, so spatial patterns can be compared but color strength cannot be
 compared directly across models. These values explain fitted model outputs;
 they are not causal evidence or human-like attention.
 
-The results page also counts candidate predictions that are wrong at 80%
-confidence or above. The sample table can isolate those errors or the narrower
+The results page defaults to counting candidate predictions that are wrong at
+80% confidence or above. The user can change this inspection threshold directly
+on the results page. The sample table can isolate those errors or the narrower
 set of high-confidence regressions where V1 was correct and V2 became wrong.
 This is a transparent inspection threshold, not a statistically calibrated
 release boundary.
 
 When both versions produce explanation maps, the dashboard calculates their
-cosine similarity and flags values below 0.80. A dedicated filter isolates
+cosine similarity and initially flags values below 0.80. This boundary is also
+adjustable without rerunning inference. A dedicated filter isolates
 hidden explanation drift: the predicted class stayed the same even though the
 feature-contribution pattern changed substantially.
 

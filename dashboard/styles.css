@@ -207,6 +207,10 @@ main { display: grid; gap: 24px; }
 
 .dataset-picker { display: grid; gap: 6px; color: var(--muted); font-size: .72rem; font-weight: 750; }
 .dataset-picker select { min-width: 220px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.triage-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.triage-controls label { display: grid; gap: 6px; color: var(--muted); font-size: .72rem; font-weight: 750; }
+.triage-controls input, .triage-controls select { min-width: 128px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.triage-controls select { min-width: 220px; }
 .benchmark-context { margin: -8px 0 20px; color: var(--muted); font-size: .86rem; line-height: 1.55; }
 .benchmark-summary { grid-template-columns: repeat(4, 1fr); }
 .scenario-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }

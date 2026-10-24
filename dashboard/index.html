@@ -421,8 +421,15 @@
                 <h2 id="sample-results-heading">Sample-by-sample predictions</h2>
                 <p id="confidence-risk-summary" class="confidence-risk-summary"></p>
               </div>
-              <label class="dataset-picker">Show
-                <select id="upload-transition-filter">
+              <div class="triage-controls" aria-label="Sample triage controls">
+                <label>High confidence (%)
+                  <input id="confidence-threshold-input" type="number" min="50" max="100" step="1" value="80" />
+                </label>
+                <label>Drift similarity (%)
+                  <input id="explanation-threshold-input" type="number" min="0" max="100" step="1" value="80" />
+                </label>
+                <label>Show
+                  <select id="upload-transition-filter">
                   <option value="all">All samples</option>
                   <option value="v1_correct_v2_wrong">Correct → wrong</option>
                   <option value="v1_wrong_v2_correct">Wrong → correct</option>
@@ -432,8 +439,9 @@
                   <option value="high_confidence_regression">High-confidence regressions</option>
                   <option value="explanation_drift">Explanation drift</option>
                   <option value="hidden_explanation_drift">Same prediction, changed explanation</option>
-                </select>
-              </label>
+                  </select>
+                </label>
+              </div>
             </div>
             <div class="table-scroll">
               <table class="comparison-table sample-table">
