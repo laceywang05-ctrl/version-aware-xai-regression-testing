@@ -66,6 +66,14 @@ Each run starts with a collection overview that ranks all selected models by
 accuracy and lists pairwise prediction agreement. The remaining panels retain
 the detailed baseline-versus-candidate comparison for the selected pair.
 
+That paired comparison includes a two-sided exact McNemar test over discordant
+correctness outcomes: samples where V1 alone was correct versus samples where
+V2 alone was correct. The page reports the unadjusted p-value and treats
+`p < 0.05` as evidence of a paired difference. A larger p-value is labelled
+exploratory; it does not prove the two versions are equivalent. The result only
+describes the uploaded labelled sample and should be repeated on representative
+held-out data.
+
 For models exposing `predict_proba()`, each overview card also reports mean
 top-class confidence, the signed confidence-minus-accuracy gap, and ten-bin
 top-label expected calibration error (ECE). Lower ECE means the stated

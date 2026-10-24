@@ -273,6 +273,11 @@ main { display: grid; gap: 24px; }
 .upload-comparison-message.error { color: #a84518; }
 .upload-comparison-message.success { color: var(--green); }
 .upload-status { border-left: 5px solid var(--cyan); }
+.paired-evidence { border-left: 5px solid var(--blue); }
+.paired-evidence-grid { grid-template-columns: repeat(4, 1fr); }
+.paired-evidence-grid strong { font-size: 1.3rem; }
+.evidence-strong { color: var(--green) !important; }
+.evidence-exploratory { color: var(--orange) !important; }
 .upload-summary { grid-template-columns: repeat(2, 1fr); }
 .transition-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .transition-card { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfc; }

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from io import BytesIO
 import json
 import base64
+from math import comb
 from pathlib import PurePosixPath
 from typing import Any
 from zipfile import BadZipFile, ZipFile
@@ -441,6 +442,18 @@ def _explanation_similarity(
     return float(np.clip(np.dot(left, right) / (left_norm * right_norm), -1.0, 1.0))
 
 
+def _exact_mcnemar_p(v1_correct_v2_wrong: int, v1_wrong_v2_correct: int) -> float:
+    """Return the two-sided exact McNemar p-value for discordant pairs."""
+    if v1_correct_v2_wrong < 0 or v1_wrong_v2_correct < 0:
+        raise ValueError("McNemar counts cannot be negative.")
+    discordant = v1_correct_v2_wrong + v1_wrong_v2_correct
+    if discordant == 0:
+        return 1.0
+    smaller = min(v1_correct_v2_wrong, v1_wrong_v2_correct)
+    cumulative = sum(comb(discordant, value) for value in range(smaller + 1))
+    return min(1.0, 2.0 * cumulative / (2**discordant))
+
+
 def compare_classifiers(
     model_v1: Any,
     model_v2: Any,
@@ -584,6 +597,9 @@ def compare_classifiers(
             "both_wrong",
         )
     }
+    mcnemar_p = _exact_mcnemar_p(
+        counts["v1_correct_v2_wrong"], counts["v1_wrong_v2_correct"]
+    )
     total = len(dataset)
     v1_high_confidence_wrong_count = sum(
         sample["v1_high_confidence_wrong"] for sample in samples
@@ -660,6 +676,13 @@ def compare_classifiers(
             "v1_accuracy": float(correct_v1.mean()),
             "v2_accuracy": float(correct_v2.mean()),
             "prediction_agreement": float((prediction_v1 == prediction_v2).mean()),
+            "accuracy_change": float(correct_v2.mean() - correct_v1.mean()),
+            "discordant_correctness_count": (
+                counts["v1_correct_v2_wrong"] + counts["v1_wrong_v2_correct"]
+            ),
+            "mcnemar_exact_p": mcnemar_p,
+            "mcnemar_alpha": 0.05,
+            "mcnemar_significant": bool(mcnemar_p < 0.05),
             "prediction_changed_count": int(
                 np.count_nonzero(prediction_v1 != prediction_v2)
             ),

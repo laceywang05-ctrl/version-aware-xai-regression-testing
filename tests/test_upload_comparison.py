@@ -12,6 +12,7 @@ from sklearn.dummy import DummyClassifier
 
 from xai_regression.upload_comparison import (
     _calibration_summary,
+    _exact_mcnemar_p,
     _explanation_similarity,
     compare_classifiers,
     compare_upload_payloads,
@@ -37,6 +38,13 @@ class StubClassifier:
 
 
 class UploadComparisonTests(unittest.TestCase):
+    def test_exact_mcnemar_uses_only_discordant_correctness_pairs(self):
+        self.assertEqual(_exact_mcnemar_p(0, 0), 1.0)
+        self.assertEqual(_exact_mcnemar_p(1, 1), 1.0)
+        self.assertAlmostEqual(_exact_mcnemar_p(0, 10), 0.001953125)
+        with self.assertRaisesRegex(ValueError, "cannot be negative"):
+            _exact_mcnemar_p(-1, 2)
+
     def test_calibration_summary_reports_confidence_gap_and_ece(self):
         model = StubClassifier(
             [0, 1, 1, 0],
@@ -116,6 +124,9 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["v1_correct_v2_wrong"], 1)
         self.assertEqual(result["summary"]["v1_wrong_v2_correct"], 1)
         self.assertEqual(result["summary"]["both_wrong"], 1)
+        self.assertEqual(result["summary"]["discordant_correctness_count"], 2)
+        self.assertEqual(result["summary"]["mcnemar_exact_p"], 1.0)
+        self.assertFalse(result["summary"]["mcnemar_significant"])
         self.assertEqual(result["samples"][1]["actual"], "positive")
         self.assertAlmostEqual(result["samples"][0]["v1_confidence"], 0.9)
         self.assertEqual(result["summary"]["high_confidence_threshold"], 0.8)

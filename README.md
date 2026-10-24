@@ -258,6 +258,11 @@ Compact reliability charts expose the underlying ten bins, comparing mean
 confidence with observed accuracy and showing the number of samples in each
 populated range.
 
+For a selected baseline–candidate pair, the dashboard applies a two-sided exact
+McNemar test to their discordant correctness outcomes. It reports accuracy
+change, discordant sample count, the unadjusted p-value, and whether the result
+reaches the displayed 0.05 evidence threshold.
+
 When both versions produce explanation maps, the dashboard calculates their
 cosine similarity and initially flags values below 0.80. This boundary is also
 adjustable without rerunning inference. A dedicated filter isolates
