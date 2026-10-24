@@ -83,6 +83,28 @@ def _regression_metrics(actual: np.ndarray, predicted: np.ndarray) -> dict[str, 
     return {"mae": mae, "rmse": rmse, "r2": r2}
 
 
+def _paired_mean_bootstrap_interval(
+    differences: np.ndarray,
+    *,
+    confidence: float = 0.95,
+    resamples: int = 5000,
+    seed: int = 311,
+) -> tuple[float, float]:
+    """Return a deterministic percentile interval for the paired mean change."""
+    if differences.size == 0:
+        raise ValueError("Bootstrap differences cannot be empty.")
+    generator = np.random.default_rng(seed)
+    means = np.empty(resamples, dtype=float)
+    batch_size = 250
+    for start in range(0, resamples, batch_size):
+        stop = min(start + batch_size, resamples)
+        indices = generator.integers(0, differences.size, size=(stop - start, differences.size))
+        means[start:stop] = differences[indices].mean(axis=1)
+    tail = (1 - confidence) / 2
+    lower, upper = np.quantile(means, [tail, 1 - tail])
+    return float(lower), float(upper)
+
+
 def compare_regressors(
     model_v1: Any,
     model_v2: Any,
@@ -131,6 +153,8 @@ def compare_regressors(
     improved = error_v2 < error_v1 - tolerance
     worsened = error_v2 > error_v1 + tolerance
     unchanged = ~(improved | worsened)
+    error_change = error_v2 - error_v1
+    mae_change_ci_lower, mae_change_ci_upper = _paired_mean_bootstrap_interval(error_change)
     sign_test_p = _exact_mcnemar_p(
         int(np.count_nonzero(worsened)), int(np.count_nonzero(improved))
     )
@@ -150,7 +174,7 @@ def compare_regressors(
                 "v2_prediction": float(prediction_v2[index]),
                 "v1_absolute_error": float(error_v1[index]),
                 "v2_absolute_error": float(error_v2[index]),
-                "absolute_error_change": float(error_v2[index] - error_v1[index]),
+                "absolute_error_change": float(error_change[index]),
                 "outcome": outcome,
             }
         )
@@ -169,6 +193,15 @@ def compare_regressors(
             "v1": _regression_metrics(actual, prediction_v1),
             "v2": _regression_metrics(actual, prediction_v2),
             "mae_change": float(error_v2.mean() - error_v1.mean()),
+            "mae_change_ci_95": {
+                "lower": mae_change_ci_lower,
+                "upper": mae_change_ci_upper,
+                "method": "paired_percentile_bootstrap",
+                "resamples": 5000,
+            },
+            "mae_change_significant": bool(
+                mae_change_ci_upper < 0 or mae_change_ci_lower > 0
+            ),
             "improved_count": int(np.count_nonzero(improved)),
             "worsened_count": int(np.count_nonzero(worsened)),
             "unchanged_count": int(np.count_nonzero(unchanged)),
@@ -180,6 +213,7 @@ def compare_regressors(
             "This first regression stage supports two trusted local .joblib models.",
             "Uploaded files are processed in memory and are not persisted.",
             "The paired sign test uses error direction only, not error magnitude.",
+            "The MAE-change interval is a paired percentile bootstrap with 5,000 resamples.",
         ],
     }
 

@@ -1021,6 +1021,7 @@ function renderRegressionComparison(report) {
     ["worsened", "Worsened", summary.worsened_count],
     ["unchanged", "Unchanged", summary.unchanged_count],
     ["mae", "MAE change", `${summary.mae_change > 0 ? "+" : ""}${formatNumber(summary.mae_change)}`],
+    ["mae-ci", "MAE change 95% CI", `${formatNumber(summary.mae_change_ci_95.lower)} to ${formatNumber(summary.mae_change_ci_95.upper)}`],
   ];
   elements.regressionOutcomeGrid.replaceChildren();
   for (const [key, label, value] of outcomes) {
@@ -1033,9 +1034,15 @@ function renderRegressionComparison(report) {
     card.append(name, result);
     elements.regressionOutcomeGrid.append(card);
   }
-  elements.regressionEvidenceNote.textContent = summary.paired_significant
-    ? `Paired error directions differ at p=${formatNumber(summary.paired_sign_test_p)}.`
-    : `Paired sign test p=${formatNumber(summary.paired_sign_test_p)}; treat the direction change as exploratory.`;
+  const intervalConclusion = summary.mae_change_ci_95.upper < 0
+    ? "The paired MAE interval favors V2."
+    : summary.mae_change_ci_95.lower > 0
+      ? "The paired MAE interval favors V1."
+      : "The paired MAE interval crosses zero.";
+  const signConclusion = summary.paired_significant
+    ? `Error directions differ at p=${formatNumber(summary.paired_sign_test_p)}.`
+    : `Direction-only sign test p=${formatNumber(summary.paired_sign_test_p)}.`;
+  elements.regressionEvidenceNote.textContent = `${intervalConclusion} ${signConclusion}`;
   elements.regressionOutcomeFilter.value = "all";
   elements.uploadResults.hidden = true;
   elements.regressionResults.hidden = false;

@@ -57,8 +57,31 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["unchanged_count"], 0)
         self.assertAlmostEqual(result["summary"]["v1"]["mae"], 2 / 3)
         self.assertAlmostEqual(result["summary"]["v2"]["mae"], 5 / 6)
+        self.assertIn("lower", result["summary"]["mae_change_ci_95"])
+        self.assertIn("upper", result["summary"]["mae_change_ci_95"])
+        self.assertEqual(result["summary"]["mae_change_ci_95"]["resamples"], 5000)
         self.assertEqual(result["samples"][1]["outcome"], "improved")
         self.assertEqual(result["samples"][2]["outcome"], "worsened")
+
+    def test_bootstrap_interval_detects_consistent_mae_improvement(self):
+        dataset = pd.DataFrame({"x": [0, 1, 2, 3, 4], "target": [0, 1, 2, 3, 4]})
+        manifest = parse_regression_manifest(
+            {
+                "task": "regression",
+                "label_column": "target",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        )
+        result = compare_regressors(
+            StubRegressor([2, 3, 4, 5, 6]),
+            StubRegressor([0.5, 1.5, 2.5, 3.5, 4.5]),
+            dataset,
+            manifest,
+        )
+        interval = result["summary"]["mae_change_ci_95"]
+        self.assertLess(interval["upper"], 0)
+        self.assertTrue(result["summary"]["mae_change_significant"])
 
     def test_joblib_regressors_and_csv_are_compared_in_memory(self):
         features = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]})
