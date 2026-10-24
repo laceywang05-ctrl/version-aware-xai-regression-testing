@@ -612,3 +612,73 @@ def summarize_upload_models(
         "pairwise_agreements": agreements,
         "best_model_index": ranked[0]["index"],
     }
+
+
+def validate_upload_models(
+    *,
+    models: list[tuple[str, bytes]],
+    dataset: tuple[str, bytes],
+    manifest: bytes,
+) -> dict[str, Any]:
+    """Return a per-model compatibility check without persisting uploads."""
+    if not 2 <= len(models) <= 5:
+        raise ValueError("Upload between two and five models for validation.")
+    contract = parse_manifest(manifest)
+    frame = load_uploaded_dataset(dataset[1], dataset[0])
+    if contract.label_column not in frame:
+        raise ValueError(f"Dataset is missing label column: {contract.label_column}.")
+    excluded = {contract.label_column}
+    if contract.id_column is not None:
+        excluded.add(contract.id_column)
+    if contract.image_column is not None:
+        excluded.add(contract.image_column)
+    feature_columns = (
+        list(contract.feature_columns)
+        if contract.feature_columns is not None
+        else [column for column in frame.columns if column not in excluded]
+    )
+    missing = [column for column in feature_columns if column not in frame]
+    if missing:
+        raise ValueError("Dataset is missing feature columns: " + ", ".join(missing))
+    if not feature_columns:
+        raise ValueError("No model feature columns were selected.")
+    features = frame.loc[:, feature_columns]
+    checks = []
+    for index, (filename, payload) in enumerate(models):
+        check: dict[str, Any] = {
+            "index": index,
+            "filename": filename,
+            "compatible": False,
+            "supports_confidence": False,
+        }
+        try:
+            model = load_uploaded_model(payload, filename)
+            prediction = np.asarray(model.predict(features))
+            if prediction.shape != (len(frame),):
+                raise ValueError("predict() did not return one value per dataset row.")
+            check.update(
+                {
+                    "compatible": True,
+                    "model_type": type(model).__name__,
+                    "supports_confidence": callable(getattr(model, "predict_proba", None)),
+                    "message": "Ready for comparison.",
+                }
+            )
+        except ValueError as error:
+            check["message"] = str(error)
+        except Exception:
+            check["message"] = (
+                "Prediction failed. Check feature order, preprocessing, and installed dependencies."
+            )
+        checks.append(check)
+    return {
+        "schema_version": 1,
+        "ready": all(check["compatible"] for check in checks),
+        "dataset": {
+            "filename": dataset[0],
+            "rows": len(frame),
+            "feature_count": len(feature_columns),
+            "label_column": contract.label_column,
+        },
+        "models": checks,
+    }

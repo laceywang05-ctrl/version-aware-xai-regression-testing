@@ -52,6 +52,10 @@ Each run starts with a collection overview that ranks all selected models by
 accuracy and lists pairwise prediction agreement. The remaining panels retain
 the detailed baseline-versus-candidate comparison for the selected pair.
 
+A preflight panel runs first and reports compatibility for every model. Formal
+comparison proceeds only when all selected models load successfully, accept the
+manifest-selected feature columns, and return one prediction per CSV row.
+
 For image display, set `image_column` in the manifest and use that CSV column
 to reference the exact relative filename inside the ZIP, for example
 `digits/sample-1.png`. The comparison table shows a thumbnail for every

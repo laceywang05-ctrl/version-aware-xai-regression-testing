@@ -68,6 +68,8 @@ class DashboardTests(unittest.TestCase):
             "manifest-upload",
             "images-upload",
             "upload-results",
+            "upload-validation",
+            "upload-validation-grid",
             "model-overview-grid",
             "model-agreement-results",
             "upload-sample-results",
@@ -97,7 +99,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderUploadComparison", script)
         self.assertIn('fetch("/api/classification/compare"', script)
         self.assertIn('fetch("/api/classification/overview"', script)
+        self.assertIn('fetch("/api/classification/validate"', script)
         self.assertIn("function renderModelOverview", script)
+        self.assertIn("function renderUploadValidation", script)
         self.assertIn("sample.image_data_url", script)
         self.assertIn("function renderPixelHeatmap", script)
         self.assertIn("function openExplanation", script)
