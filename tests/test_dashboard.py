@@ -66,6 +66,13 @@ class DashboardTests(unittest.TestCase):
             "model-collection-message",
             "dataset-upload",
             "manifest-upload",
+            "manifest-builder",
+            "manifest-label-column",
+            "manifest-id-column",
+            "manifest-image-column",
+            "manifest-image-height",
+            "manifest-image-width",
+            "manifest-trust-models",
             "images-upload",
             "upload-results",
             "upload-validation",
@@ -120,6 +127,10 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function openExplanation", script)
         self.assertIn("function uploadedModels", script)
         self.assertIn("function updateModelSelectors", script)
+        self.assertIn("function parseCsvHeader", script)
+        self.assertIn("function updateManifestBuilder", script)
+        self.assertIn("function selectedManifestFile", script)
+        self.assertIn('"generated-manifest.json"', script)
         self.assertIn("slice(0, 3)", script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):

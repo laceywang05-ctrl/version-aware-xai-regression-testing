@@ -54,6 +54,14 @@ const elements = {
   modelCollectionMessage: document.querySelector("#model-collection-message"),
   datasetUpload: document.querySelector("#dataset-upload"),
   manifestUpload: document.querySelector("#manifest-upload"),
+  manifestBuilder: document.querySelector("#manifest-builder"),
+  manifestBuilderMessage: document.querySelector("#manifest-builder-message"),
+  manifestLabelColumn: document.querySelector("#manifest-label-column"),
+  manifestIdColumn: document.querySelector("#manifest-id-column"),
+  manifestImageColumn: document.querySelector("#manifest-image-column"),
+  manifestImageHeight: document.querySelector("#manifest-image-height"),
+  manifestImageWidth: document.querySelector("#manifest-image-width"),
+  manifestTrustModels: document.querySelector("#manifest-trust-models"),
   imagesUpload: document.querySelector("#images-upload"),
   uploadSubmit: document.querySelector("#run-upload-comparison"),
   uploadMessage: document.querySelector("#upload-comparison-message"),
@@ -214,6 +222,106 @@ function uploadedModels() {
   if (elements.modelV2Upload.files[0]) files.push(elements.modelV2Upload.files[0]);
   files.push(...Array.from(elements.additionalModelsUpload.files).slice(0, 3));
   return files;
+}
+
+function parseCsvHeader(text) {
+  const columns = [];
+  let value = "";
+  let quoted = false;
+  let headerEnded = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === '"') {
+      if (quoted && text[index + 1] === '"') {
+        value += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === "," && !quoted) {
+      columns.push(value.trim());
+      value = "";
+    } else if ((character === "\n" || character === "\r") && !quoted) {
+      columns.push(value.trim());
+      headerEnded = true;
+      break;
+    } else {
+      value += character;
+    }
+  }
+  if (!headerEnded && value) columns.push(value.trim());
+  return columns.filter(Boolean);
+}
+
+function fillColumnSelector(selector, columns, optional, preferredNames = []) {
+  selector.replaceChildren();
+  if (optional) {
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "None";
+    selector.append(none);
+  }
+  for (const column of columns) {
+    const option = document.createElement("option");
+    option.value = column;
+    option.textContent = column;
+    selector.append(option);
+  }
+  const preferred = columns.find((column) => preferredNames.includes(column.toLowerCase()));
+  if (preferred) selector.value = preferred;
+}
+
+async function updateManifestBuilder() {
+  const file = elements.datasetUpload.files[0];
+  if (!file) return;
+  const columns = parseCsvHeader(await file.slice(0, 65536).text());
+  if (columns.length < 2) {
+    elements.manifestBuilderMessage.textContent = "Could not detect at least two CSV columns.";
+    return;
+  }
+  fillColumnSelector(elements.manifestLabelColumn, columns, false);
+  elements.manifestLabelColumn.value = columns.find(
+    (column) => ["target", "label", "class", "y"].includes(column.toLowerCase()),
+  ) || columns[columns.length - 1];
+  fillColumnSelector(elements.manifestIdColumn, columns, true, ["id", "sample_id"]);
+  fillColumnSelector(elements.manifestImageColumn, columns, true, ["image", "image_path", "filename"]);
+  elements.manifestBuilderMessage.textContent = `${columns.length} columns detected. Confirm the roles below or upload a JSON manifest.`;
+  elements.manifestBuilder.open = true;
+}
+
+function selectedManifestFile() {
+  if (elements.manifestUpload.files[0]) return elements.manifestUpload.files[0];
+  const labelColumn = elements.manifestLabelColumn.value;
+  if (!labelColumn) throw new Error("Choose the CSV label column or upload a manifest.");
+  if (!elements.manifestTrustModels.checked) {
+    throw new Error("Confirm that the uploaded joblib model files are trusted.");
+  }
+  const allColumns = Array.from(elements.manifestLabelColumn.options).map((option) => option.value);
+  const idColumn = elements.manifestIdColumn.value || null;
+  const imageColumn = elements.manifestImageColumn.value || null;
+  const excluded = new Set([labelColumn, idColumn, imageColumn].filter(Boolean));
+  const manifest = {
+    task: "classification",
+    label_column: labelColumn,
+    id_column: idColumn,
+    image_column: imageColumn,
+    feature_columns: allColumns.filter((column) => !excluded.has(column)),
+    trusted_model_files: true,
+  };
+  const height = Number(elements.manifestImageHeight.value);
+  const width = Number(elements.manifestImageWidth.value);
+  if (height || width) {
+    if (!height || !width) throw new Error("Enter both image height and image width.");
+    manifest.image_shape = [height, width];
+  }
+  if (imageColumn && !elements.imagesUpload.files[0]) {
+    throw new Error("Upload the image ZIP or set the image filename column to None.");
+  }
+  return new File(
+    [JSON.stringify(manifest, null, 2)],
+    "generated-manifest.json",
+    { type: "application/json" },
+  );
 }
 
 function updateModelSelectors() {
@@ -1013,6 +1121,7 @@ for (const input of [
 ]) {
   input.addEventListener("change", updateModelSelectors);
 }
+elements.datasetUpload.addEventListener("change", updateManifestBuilder);
 elements.closeExplanationDialog.addEventListener("click", () => {
   elements.explanationDialog.close();
 });
@@ -1030,18 +1139,26 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     elements.uploadMessage.textContent = "Select two different uploaded models.";
     return;
   }
+  let manifestFile;
+  try {
+    manifestFile = selectedManifestFile();
+  } catch (error) {
+    elements.uploadMessage.className = "upload-comparison-message error";
+    elements.uploadMessage.textContent = error.message;
+    return;
+  }
   const collectionForm = () => {
     const form = new FormData();
     models.forEach((model, index) => form.append(`model_${index}`, model));
     form.append("dataset", elements.datasetUpload.files[0]);
-    form.append("manifest", elements.manifestUpload.files[0]);
+    form.append("manifest", manifestFile);
     return form;
   };
   const comparisonForm = new FormData();
   comparisonForm.append("model_v1", models[baselineIndex]);
   comparisonForm.append("model_v2", models[candidateIndex]);
   comparisonForm.append("dataset", elements.datasetUpload.files[0]);
-  comparisonForm.append("manifest", elements.manifestUpload.files[0]);
+  comparisonForm.append("manifest", manifestFile);
   if (elements.imagesUpload.files[0]) {
     comparisonForm.append("images", elements.imagesUpload.files[0]);
   }

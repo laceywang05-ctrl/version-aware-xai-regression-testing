@@ -208,6 +208,11 @@ sample-level CSV. The JSON bundles compatibility checks, the multi-model
 overview, and the detailed selected-pair report; the CSV provides predictions,
 confidence values, and transition labels for downstream analysis.
 
+The manifest can either be uploaded as JSON or generated in the dashboard.
+After a CSV is selected, the browser detects its header and lets the user choose
+the label, optional sample-ID and image columns, plus an optional image shape;
+all remaining columns become ordered model features.
+
 An optional image ZIP can be matched to a CSV `image_column`. When present,
 the sample-level table displays each image beside its true label, both model
 predictions, confidence values, and correctness transition. This supports the
