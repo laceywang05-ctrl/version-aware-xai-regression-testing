@@ -69,6 +69,12 @@ multi-model overview, and detailed pair result together. **Download sample
 CSV** saves the per-sample labels, predictions, confidence values, and
 transition category. Both downloads are generated locally in the browser.
 
+Uploading a JSON manifest is optional. The built-in manifest builder reads the
+selected CSV header locally and provides selectors for the label, sample ID,
+image filename, and image dimensions. It excludes those metadata columns and
+uses the remaining columns as ordered model inputs. Users must still explicitly
+confirm that joblib files come from a trusted source.
+
 For image display, set `image_column` in the manifest and use that CSV column
 to reference the exact relative filename inside the ZIP, for example
 `digits/sample-1.png`. The comparison table shows a thumbnail for every

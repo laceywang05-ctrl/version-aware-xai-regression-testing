@@ -321,6 +321,13 @@ main { display: grid; gap: 24px; }
 .export-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .secondary-action { border: 1px solid var(--blue); border-radius: 10px; padding: 11px 16px; background: white; color: var(--blue); cursor: pointer; font: inherit; font-size: .75rem; font-weight: 850; }
 .secondary-action:hover { background: #eef7f8; }
+.manifest-builder { grid-column: 1 / -1; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #f8fbfb; }
+.manifest-builder summary { cursor: pointer; color: var(--navy); font-size: .78rem; font-weight: 850; }
+.manifest-builder > p { color: var(--muted); font-size: .7rem; }
+.manifest-builder-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.manifest-builder-grid label { display: grid; gap: 7px; color: var(--navy); font-size: .7rem; font-weight: 800; }
+.manifest-builder-grid select, .manifest-builder-grid input { min-width: 0; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
+.trust-check { display: flex; gap: 9px; align-items: center; margin-top: 16px; color: var(--navy); font-size: .72rem; font-weight: 750; }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
@@ -357,6 +364,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .robustness-dataset-grid { grid-template-columns: 1fr; }
   .comparison-upload-form { grid-template-columns: 1fr; }
   .model-pair-picker { grid-template-columns: 1fr; align-items: stretch; }
+  .manifest-builder-grid { grid-template-columns: 1fr; }
   .model-pair-picker > span { display: none; }
   .transition-grid { grid-template-columns: repeat(2, 1fr); }
   .explanation-visuals { grid-template-columns: 1fr; }

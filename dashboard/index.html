@@ -268,10 +268,23 @@
               <input id="dataset-upload" name="dataset" type="file" accept=".csv,text/csv" required />
             </label>
             <label class="file-field">
-              <span>Manifest</span>
-              <small>Task, label and feature metadata</small>
-              <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" required />
+              <span>Manifest <em>optional</em></span>
+              <small>Upload JSON or build it below</small>
+              <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" />
             </label>
+            <details id="manifest-builder" class="manifest-builder">
+              <summary>Build manifest from CSV columns</summary>
+              <p id="manifest-builder-message">Choose a labelled CSV first.</p>
+              <div class="manifest-builder-grid">
+                <label>Label column <select id="manifest-label-column"><option value="">Choose CSV first</option></select></label>
+                <label>Sample ID <select id="manifest-id-column"><option value="">None</option></select></label>
+                <label>Image filename <select id="manifest-image-column"><option value="">None</option></select></label>
+                <label>Image height <input id="manifest-image-height" type="number" min="1" placeholder="e.g. 28" /></label>
+                <label>Image width <input id="manifest-image-width" type="number" min="1" placeholder="e.g. 28" /></label>
+              </div>
+              <label class="trust-check"><input id="manifest-trust-models" type="checkbox" /> I confirm that these model files come from a trusted source.</label>
+              <p class="table-note">All remaining CSV columns become model features in their existing order.</p>
+            </details>
             <label class="file-field optional-image-field">
               <span>Additional models <em>optional</em></span>
               <small>Select up to three more trusted .joblib classifiers</small>
