@@ -354,6 +354,22 @@
             <div id="upload-transition-grid" class="transition-grid"></div>
           </section>
 
+          <section class="content-section" aria-labelledby="class-diagnostics-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Class-level diagnosis</p>
+                <h2 id="class-diagnostics-heading">Where performance changed</h2>
+              </div>
+              <p>Positive changes favor the candidate; negative changes identify classes that may have regressed.</p>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table class-diagnostics-table">
+                <thead><tr><th>Actual class</th><th>Samples</th><th id="class-v1-heading">V1 accuracy</th><th id="class-v2-heading">V2 accuracy</th><th>Change</th></tr></thead>
+                <tbody id="class-diagnostics-results"></tbody>
+              </table>
+            </div>
+          </section>
+
           <section class="content-section" aria-labelledby="sample-results-heading">
             <div class="section-heading">
               <div>

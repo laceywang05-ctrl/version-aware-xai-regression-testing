@@ -87,6 +87,10 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["both_wrong"], 1)
         self.assertEqual(result["samples"][1]["actual"], "positive")
         self.assertAlmostEqual(result["samples"][0]["v1_confidence"], 0.9)
+        self.assertEqual(result["class_diagnostics"][0]["class_label"], "negative")
+        self.assertAlmostEqual(result["class_diagnostics"][0]["accuracy_change"], 0.5)
+        self.assertEqual(result["class_diagnostics"][1]["class_label"], "positive")
+        self.assertAlmostEqual(result["class_diagnostics"][1]["accuracy_change"], -0.5)
 
     def test_missing_label_column_is_rejected(self):
         manifest = parse_manifest(

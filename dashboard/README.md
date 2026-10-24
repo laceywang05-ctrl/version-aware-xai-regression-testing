@@ -56,6 +56,10 @@ A preflight panel runs first and reports compatibility for every model. Formal
 comparison proceeds only when all selected models load successfully, accept the
 manifest-selected feature columns, and return one prediction per CSV row.
 
+For the selected pair, the class-diagnostics table groups results by true label
+and reports each model's accuracy plus the signed candidate-minus-baseline
+change. Positive rows are improvements; negative rows are regressions.
+
 For image display, set `image_column` in the manifest and use that CSV column
 to reference the exact relative filename inside the ZIP, for example
 `digits/sample-1.png`. The comparison table shows a thumbnail for every

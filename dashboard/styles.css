@@ -309,6 +309,10 @@ main { display: grid; gap: 24px; }
 .validation-card strong { overflow-wrap: anywhere; color: var(--navy); font-size: .82rem; }
 .validation-card span { color: var(--muted); font-size: .7rem; }
 .validation-card .validation-status { color: var(--navy); font-weight: 800; }
+.class-change { display: inline-flex; min-width: 74px; justify-content: center; padding: 5px 9px; border-radius: 99px; font-size: .7rem; font-weight: 850; }
+.class-change.improved { background: #e5f5ef; color: var(--green); }
+.class-change.regressed { background: var(--orange-soft); color: #a84518; }
+.class-change.unchanged { background: #edf0f1; color: var(--muted); }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }

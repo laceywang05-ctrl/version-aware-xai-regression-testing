@@ -468,6 +468,23 @@ def compare_classifiers(
         )
     }
     total = len(dataset)
+    class_diagnostics = []
+    for class_value in pd.unique(labels):
+        class_mask = labels == class_value
+        class_total = int(np.count_nonzero(class_mask))
+        v1_class_accuracy = float(correct_v1[class_mask].mean())
+        v2_class_accuracy = float(correct_v2[class_mask].mean())
+        class_diagnostics.append(
+            {
+                "class_label": _label(class_value, manifest.class_names),
+                "samples": class_total,
+                "v1_correct": int(np.count_nonzero(correct_v1[class_mask])),
+                "v2_correct": int(np.count_nonzero(correct_v2[class_mask])),
+                "v1_accuracy": v1_class_accuracy,
+                "v2_accuracy": v2_class_accuracy,
+                "accuracy_change": v2_class_accuracy - v1_class_accuracy,
+            }
+        )
     return {
         "schema_version": 1,
         "task": "classification",
@@ -489,6 +506,7 @@ def compare_classifiers(
             ),
             **counts,
         },
+        "class_diagnostics": class_diagnostics,
         "samples": samples,
         "limitations": [
             "Only trusted local .joblib classifiers are supported in this stage.",
