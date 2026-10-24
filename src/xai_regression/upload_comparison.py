@@ -210,10 +210,14 @@ def _tree_shap_explanations(
     features: pd.DataFrame,
     predictions: np.ndarray,
     image_shape: tuple[int, int] | None,
-) -> tuple[list[list[list[float]] | None], str]:
+) -> tuple[list[list[list[float]] | None], dict[str, str]]:
     """Return normalized Tree SHAP maps for each model prediction when possible."""
     if image_shape is None:
-        return [None] * len(features), "Add image_shape to request pixel explanations."
+        return [None] * len(features), {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "note": "Add image_shape to request pixel explanations.",
+        }
     if image_shape[0] * image_shape[1] != features.shape[1]:
         raise ValueError(
             "image_shape must contain exactly one cell per selected feature."
@@ -253,12 +257,100 @@ def _tree_shap_explanations(
             normalized = row / maximum if maximum > 0 else np.zeros_like(row)
             maps.append(normalized.reshape(image_shape).round(5).tolist())
         maps.extend([None] * (len(features) - len(maps)))
-        return maps, (
-            "Tree SHAP contribution to each model's predicted class; "
-            f"limited to the first {MAX_EXPLANATION_ROWS} rows."
-        )
+        return maps, {
+            "method": "tree_shap",
+            "label": "Tree SHAP",
+            "note": (
+                "Tree SHAP contribution to the predicted class; "
+                f"limited to the first {MAX_EXPLANATION_ROWS} rows."
+            ),
+        }
     except Exception as error:
-        return [None] * len(features), f"Tree SHAP unavailable: {error}"
+        return [None] * len(features), {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "note": f"Tree SHAP unavailable: {error}",
+        }
+
+
+def _occlusion_explanations(
+    model: Any,
+    features: pd.DataFrame,
+    predictions: np.ndarray,
+    image_shape: tuple[int, int] | None,
+) -> tuple[list[list[list[float]] | None], dict[str, str]]:
+    """Explain predicted-class probability by zeroing one pixel at a time."""
+    unavailable = {
+        "method": "unavailable",
+        "label": "Unavailable",
+        "note": "Pixel occlusion requires predict_proba(), classes_, and image_shape.",
+    }
+    if image_shape is None:
+        return [None] * len(features), unavailable
+    predict_proba = getattr(model, "predict_proba", None)
+    classes = list(getattr(model, "classes_", []))
+    if not callable(predict_proba) or not classes:
+        return [None] * len(features), unavailable
+    try:
+        explained = features.iloc[:MAX_EXPLANATION_ROWS]
+        explained_predictions = predictions[:MAX_EXPLANATION_ROWS]
+        feature_count = explained.shape[1]
+        repeated = np.repeat(explained.to_numpy(), feature_count, axis=0)
+        feature_indices = np.tile(np.arange(feature_count), len(explained))
+        repeated[np.arange(len(repeated)), feature_indices] = 0.0
+        occluded = pd.DataFrame(repeated, columns=explained.columns)
+        original_probabilities = np.asarray(predict_proba(explained))
+        occluded_probabilities = np.asarray(predict_proba(occluded))
+        maps: list[list[list[float]] | None] = []
+        for row_index, prediction in enumerate(explained_predictions):
+            class_index = classes.index(prediction)
+            start = row_index * feature_count
+            stop = start + feature_count
+            contribution = (
+                original_probabilities[row_index, class_index]
+                - occluded_probabilities[start:stop, class_index]
+            )
+            maximum = float(np.max(np.abs(contribution)))
+            normalized = (
+                contribution / maximum
+                if maximum > 0
+                else np.zeros_like(contribution)
+            )
+            maps.append(normalized.reshape(image_shape).round(5).tolist())
+        maps.extend([None] * (len(features) - len(maps)))
+        return maps, {
+            "method": "pixel_occlusion",
+            "label": "Pixel occlusion",
+            "note": (
+                "Predicted-class probability change after replacing one pixel "
+                "feature with zero."
+            ),
+        }
+    except Exception as error:
+        return [None] * len(features), {
+            **unavailable,
+            "note": f"Pixel occlusion unavailable: {error}",
+        }
+
+
+def _model_explanations(
+    model: Any,
+    features: pd.DataFrame,
+    predictions: np.ndarray,
+    image_shape: tuple[int, int] | None,
+) -> tuple[list[list[list[float]] | None], dict[str, str]]:
+    """Choose the most suitable installed explanation adapter."""
+    maps, metadata = _tree_shap_explanations(
+        model, features, predictions, image_shape
+    )
+    if metadata["method"] == "tree_shap":
+        return maps, metadata
+    fallback_maps, fallback_metadata = _occlusion_explanations(
+        model, features, predictions, image_shape
+    )
+    if fallback_metadata["method"] != "unavailable":
+        fallback_metadata["note"] += f" Tree SHAP fallback reason: {metadata['note']}"
+    return fallback_maps, fallback_metadata
 
 
 def compare_classifiers(
@@ -311,10 +403,10 @@ def compare_classifiers(
         raise ValueError("Model predictions must contain one value per dataset row.")
     confidence_v1 = _confidences(model_v1, features)
     confidence_v2 = _confidences(model_v2, features)
-    explanation_v1, explanation_note_v1 = _tree_shap_explanations(
+    explanation_v1, explanation_metadata_v1 = _model_explanations(
         model_v1, features, prediction_v1, manifest.image_shape
     )
-    explanation_v2, explanation_note_v2 = _tree_shap_explanations(
+    explanation_v2, explanation_metadata_v2 = _model_explanations(
         model_v2, features, prediction_v2, manifest.image_shape
     )
     correct_v1 = prediction_v1 == labels
@@ -401,13 +493,12 @@ def compare_classifiers(
         "limitations": [
             "Only trusted local .joblib classifiers are supported in this stage.",
             "Uploaded files are processed in memory and are not persisted.",
-            "Tree SHAP pixel maps are shown only when the model and image shape are compatible.",
+            "Tree SHAP is preferred for compatible trees; other probabilistic classifiers use pixel occlusion.",
         ],
         "explanations": {
-            "method": "tree_shap",
             "image_shape": list(manifest.image_shape) if manifest.image_shape else None,
-            "v1_note": explanation_note_v1,
-            "v2_note": explanation_note_v2,
+            "v1": explanation_metadata_v1,
+            "v2": explanation_metadata_v2,
             "interpretation": (
                 "Red pixels support the displayed predicted class and blue pixels "
                 "oppose it. Each map is normalized separately, so compare spatial "

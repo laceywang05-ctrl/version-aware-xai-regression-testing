@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
 
 from xai_regression.upload_comparison import (
     compare_classifiers,
@@ -181,6 +182,36 @@ class UploadComparisonTests(unittest.TestCase):
                 manifest,
                 {},
             )
+
+    def test_non_tree_classifier_uses_pixel_occlusion_fallback(self):
+        dataset = pd.DataFrame(
+            {
+                "p0": [0.0, 0.0, 1.0, 1.0, 0.2, 0.8],
+                "p1": [0.0, 1.0, 0.0, 1.0, 0.1, 0.9],
+                "p2": [0.1, 0.2, 0.8, 0.9, 0.3, 0.7],
+                "p3": [0.2, 0.1, 0.9, 0.8, 0.4, 0.6],
+                "target": [0, 0, 1, 1, 0, 1],
+            }
+        )
+        features = dataset[["p0", "p1", "p2", "p3"]]
+        model = LogisticRegression(random_state=3).fit(features, dataset["target"])
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": ["p0", "p1", "p2", "p3"],
+                "image_shape": [2, 2],
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(model, model, dataset, manifest)
+
+        self.assertEqual(
+            result["explanations"]["v1"]["method"], "pixel_occlusion"
+        )
+        self.assertEqual(len(result["samples"][0]["v1_explanation"]), 2)
+        self.assertEqual(len(result["samples"][0]["v1_explanation"][0]), 2)
 
 
 if __name__ == "__main__":
