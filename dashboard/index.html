@@ -430,12 +430,14 @@
                   <option value="both_wrong">Both wrong</option>
                   <option value="v2_high_confidence_wrong">V2 high-confidence errors</option>
                   <option value="high_confidence_regression">High-confidence regressions</option>
+                  <option value="explanation_drift">Explanation drift</option>
+                  <option value="hidden_explanation_drift">Same prediction, changed explanation</option>
                 </select>
               </label>
             </div>
             <div class="table-scroll">
               <table class="comparison-table sample-table">
-                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th id="v1-prediction-heading">V1 prediction</th><th id="v1-confidence-heading">V1 confidence</th><th id="v2-prediction-heading">V2 prediction</th><th id="v2-confidence-heading">V2 confidence</th><th>Transition</th><th>Explanation</th></tr></thead>
+                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th id="v1-prediction-heading">V1 prediction</th><th id="v1-confidence-heading">V1 confidence</th><th id="v2-prediction-heading">V2 prediction</th><th id="v2-confidence-heading">V2 confidence</th><th>Explanation similarity</th><th>Transition</th><th>Explanation</th></tr></thead>
                 <tbody id="upload-sample-results"></tbody>
               </table>
             </div>

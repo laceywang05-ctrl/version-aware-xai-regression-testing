@@ -11,6 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.dummy import DummyClassifier
 
 from xai_regression.upload_comparison import (
+    _explanation_similarity,
     compare_classifiers,
     compare_upload_payloads,
     load_uploaded_images,
@@ -35,6 +36,15 @@ class StubClassifier:
 
 
 class UploadComparisonTests(unittest.TestCase):
+    def test_explanation_similarity_handles_identical_opposite_and_missing_maps(self):
+        self.assertAlmostEqual(
+            _explanation_similarity([[1.0, -1.0]], [[1.0, -1.0]]), 1.0
+        )
+        self.assertAlmostEqual(
+            _explanation_similarity([[1.0, -1.0]], [[-1.0, 1.0]]), -1.0
+        )
+        self.assertIsNone(_explanation_similarity([[1.0]], None))
+
     def test_manifest_requires_classification_and_trust_acknowledgement(self):
         with self.assertRaisesRegex(ValueError, "classification only"):
             parse_manifest(

@@ -217,6 +217,10 @@ function formatConfidence(value) {
   return value === null || value === undefined ? "Not available" : formatPercent(value);
 }
 
+function formatSimilarity(value) {
+  return value === null || value === undefined ? "Not available" : Number(value).toFixed(3);
+}
+
 function uploadedModels() {
   const files = [];
   if (elements.modelV1Upload.files[0]) files.push(elements.modelV1Upload.files[0]);
@@ -465,6 +469,7 @@ function downloadSamplesCsv() {
     "v1_model", "v2_model", "sample_id", "actual", "v1_prediction", "v1_confidence",
     "v2_prediction", "v2_confidence", "transition", "prediction_changed",
     "v1_high_confidence_wrong", "v2_high_confidence_wrong", "high_confidence_regression",
+    "explanation_similarity", "explanation_drift", "hidden_explanation_drift",
   ];
   const rows = state.uploadComparison.samples.map((sample) => {
     const record = {
@@ -512,6 +517,7 @@ function openExplanation(sample) {
     `V1: ${sample.v1_prediction} (${formatConfidence(sample.v1_confidence)})`,
     `V2: ${sample.v2_prediction} (${formatConfidence(sample.v2_confidence)})`,
     transitionLabels[sample.transition] || sample.transition,
+    `Explanation similarity: ${formatSimilarity(sample.explanation_similarity)}`,
   ];
   for (const fact of facts) {
     const item = document.createElement("span");
@@ -541,6 +547,8 @@ function renderUploadSamples() {
     if (selected === "all") return true;
     if (selected === "v2_high_confidence_wrong") return sample.v2_high_confidence_wrong === true;
     if (selected === "high_confidence_regression") return sample.high_confidence_regression === true;
+    if (selected === "explanation_drift") return sample.explanation_drift === true;
+    if (selected === "hidden_explanation_drift") return sample.hidden_explanation_drift === true;
     return sample.transition === selected;
   });
   const displayed = matching.slice(0, 500);
@@ -550,6 +558,7 @@ function renderUploadSamples() {
     if (sample.transition === "v1_correct_v2_wrong") row.className = "regression-row";
     if (sample.transition === "v1_wrong_v2_correct") row.className = "improvement-row";
     if (sample.v2_high_confidence_wrong) row.classList.add("high-confidence-risk-row");
+    if (sample.hidden_explanation_drift) row.classList.add("explanation-drift-row");
     const imageCell = document.createElement("td");
     if (sample.image_data_url) {
       const link = document.createElement("a");
@@ -574,6 +583,7 @@ function renderUploadSamples() {
       formatConfidence(sample.v1_confidence),
       sample.v2_prediction,
       formatConfidence(sample.v2_confidence),
+      formatSimilarity(sample.explanation_similarity),
     ];
     for (const value of values) {
       const cell = document.createElement("td");
@@ -634,9 +644,12 @@ function renderUploadComparison(report) {
   const threshold = formatPercent(summary.high_confidence_threshold ?? 0.8);
   const candidateRiskCount = summary.v2_high_confidence_wrong_count ?? 0;
   const regressionRiskCount = summary.high_confidence_regression_count ?? 0;
+  const explanationCount = summary.explanation_compared_count ?? 0;
+  const hiddenDriftCount = summary.hidden_explanation_drift_count ?? 0;
   elements.confidenceRiskSummary.textContent =
     `${v2Name} made ${candidateRiskCount} wrong prediction${candidateRiskCount === 1 ? "" : "s"} `
-    + `at or above ${threshold} confidence; ${regressionRiskCount} were regressions from a correct ${v1Name} result.`;
+    + `at or above ${threshold} confidence; ${regressionRiskCount} were regressions from a correct ${v1Name} result. `
+    + `${explanationCount} samples had comparable explanation maps; ${hiddenDriftCount} kept the same prediction but changed explanation substantially.`;
 
   const transitions = [
     ["both_correct", "Both correct"],

@@ -286,6 +286,8 @@ main { display: grid; gap: 24px; }
 .confidence-risk-summary { max-width: 760px; margin: 0.55rem 0 0; color: var(--muted); }
 .sample-table .high-confidence-risk-row { box-shadow: inset 4px 0 0 #d65a20; }
 .sample-table .high-confidence-risk-row td { background: rgba(255, 239, 228, 0.72); }
+.sample-table .explanation-drift-row { box-shadow: inset 4px 0 0 #7557b7; }
+.sample-table .explanation-drift-row td { background: rgba(242, 237, 252, 0.72); }
 .sample-thumbnail { display: block; width: 68px; height: 68px; border: 1px solid var(--line); border-radius: 10px; background: white; object-fit: contain; }
 .sample-table td { vertical-align: middle; }
 .optional-image-field { grid-column: 1 / -1; }

@@ -135,6 +135,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("slice(0, 3)", script)
         self.assertIn('selected === "v2_high_confidence_wrong"', script)
         self.assertIn('selected === "high_confidence_regression"', script)
+        self.assertIn('selected === "explanation_drift"', script)
+        self.assertIn('selected === "hidden_explanation_drift"', script)
+        self.assertIn("function formatSimilarity", script)
         self.assertIn('"v2_high_confidence_wrong", "high_confidence_regression"', script)
 
     def test_hidden_dashboard_views_are_not_displayed(self):
