@@ -91,6 +91,12 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertAlmostEqual(result["class_diagnostics"][0]["accuracy_change"], 0.5)
         self.assertEqual(result["class_diagnostics"][1]["class_label"], "positive")
         self.assertAlmostEqual(result["class_diagnostics"][1]["accuracy_change"], -0.5)
+        confusion = {
+            (item["actual_class"], item["predicted_class"]): item
+            for item in result["confusion_diagnostics"]
+        }
+        self.assertEqual(confusion[("negative", "positive")]["error_change"], -1)
+        self.assertEqual(confusion[("positive", "negative")]["error_change"], 1)
 
     def test_missing_label_column_is_rejected(self):
         manifest = parse_manifest(

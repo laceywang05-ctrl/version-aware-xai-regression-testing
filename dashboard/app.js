@@ -77,6 +77,10 @@ const elements = {
   classDiagnosticsResults: document.querySelector("#class-diagnostics-results"),
   classV1Heading: document.querySelector("#class-v1-heading"),
   classV2Heading: document.querySelector("#class-v2-heading"),
+  confusionDiagnosticsResults: document.querySelector("#confusion-diagnostics-results"),
+  confusionV1Heading: document.querySelector("#confusion-v1-heading"),
+  confusionV2Heading: document.querySelector("#confusion-v2-heading"),
+  confusionEmptyMessage: document.querySelector("#confusion-empty-message"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
@@ -427,6 +431,7 @@ function renderUploadComparison(report) {
   if (
     !report || report.task !== "classification" || !report.summary
     || !Array.isArray(report.samples) || !Array.isArray(report.class_diagnostics)
+    || !Array.isArray(report.confusion_diagnostics)
   ) {
     throw new Error("The server returned an invalid classification comparison.");
   }
@@ -446,6 +451,8 @@ function renderUploadComparison(report) {
   elements.v2ConfidenceHeading.textContent = `${v2Name} confidence`;
   elements.classV1Heading.textContent = `${v1Name} accuracy`;
   elements.classV2Heading.textContent = `${v2Name} accuracy`;
+  elements.confusionV1Heading.textContent = `${v1Name} errors`;
+  elements.confusionV2Heading.textContent = `${v2Name} errors`;
   elements.uploadScopeNote.textContent = report.dataset?.note
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
 
@@ -493,6 +500,32 @@ function renderUploadComparison(report) {
     changeCell.append(change);
     row.append(changeCell);
     elements.classDiagnosticsResults.append(row);
+  }
+
+  elements.confusionDiagnosticsResults.replaceChildren();
+  elements.confusionEmptyMessage.hidden = report.confusion_diagnostics.length > 0;
+  for (const item of report.confusion_diagnostics) {
+    const row = document.createElement("tr");
+    for (const value of [
+      item.actual_class,
+      item.predicted_class,
+      item.v1_count,
+      item.v2_count,
+    ]) {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    const changeCell = document.createElement("td");
+    const change = document.createElement("span");
+    const direction = item.error_change < 0
+      ? "reduced"
+      : item.error_change > 0 ? "increased" : "unchanged";
+    change.className = `error-change ${direction}`;
+    change.textContent = `${item.error_change > 0 ? "+" : ""}${item.error_change}`;
+    changeCell.append(change);
+    row.append(changeCell);
+    elements.confusionDiagnosticsResults.append(row);
   }
 
   elements.uploadLimitations.replaceChildren();

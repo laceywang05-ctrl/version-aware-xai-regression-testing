@@ -370,6 +370,23 @@
             </div>
           </section>
 
+          <section class="content-section" aria-labelledby="confusion-diagnostics-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Misclassification paths</p>
+                <h2 id="confusion-diagnostics-heading">Which classes were confused</h2>
+              </div>
+              <p>A negative error change means the candidate made fewer mistakes for that actual-to-predicted class pair.</p>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table confusion-diagnostics-table">
+                <thead><tr><th>Actual class</th><th>Predicted as</th><th id="confusion-v1-heading">V1 errors</th><th id="confusion-v2-heading">V2 errors</th><th>Error change</th></tr></thead>
+                <tbody id="confusion-diagnostics-results"></tbody>
+              </table>
+            </div>
+            <p id="confusion-empty-message" class="table-note" hidden>Neither selected model made a classification error on these samples.</p>
+          </section>
+
           <section class="content-section" aria-labelledby="sample-results-heading">
             <div class="section-heading">
               <div>
