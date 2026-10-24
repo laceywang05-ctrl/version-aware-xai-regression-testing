@@ -77,6 +77,11 @@ const elements = {
   uploadV1Label: document.querySelector("#upload-v1-label"),
   uploadV2Label: document.querySelector("#upload-v2-label"),
   uploadAgreement: document.querySelector("#upload-agreement"),
+  pairedAccuracyChange: document.querySelector("#paired-accuracy-change"),
+  pairedDiscordantCount: document.querySelector("#paired-discordant-count"),
+  pairedPValue: document.querySelector("#paired-p-value"),
+  pairedEvidenceStatus: document.querySelector("#paired-evidence-status"),
+  pairedEvidenceNote: document.querySelector("#paired-evidence-note"),
   v1PredictionHeading: document.querySelector("#v1-prediction-heading"),
   v1ConfidenceHeading: document.querySelector("#v1-confidence-heading"),
   v2PredictionHeading: document.querySelector("#v2-prediction-heading"),
@@ -745,6 +750,19 @@ function renderUploadComparison(report) {
   elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
   elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
   elements.uploadAgreement.textContent = formatPercent(summary.prediction_agreement);
+  elements.pairedAccuracyChange.textContent = `${summary.accuracy_change > 0 ? "+" : ""}${formatPercent(summary.accuracy_change)}`;
+  elements.pairedDiscordantCount.textContent = summary.discordant_correctness_count;
+  elements.pairedPValue.textContent = summary.mcnemar_exact_p < 0.001
+    ? Number(summary.mcnemar_exact_p).toExponential(2)
+    : Number(summary.mcnemar_exact_p).toFixed(3);
+  const pairedDirection = summary.accuracy_change > 0 ? "improvement" : summary.accuracy_change < 0 ? "regression" : "difference";
+  elements.pairedEvidenceStatus.textContent = summary.mcnemar_significant
+    ? `Evidence of ${pairedDirection}`
+    : "Exploratory";
+  elements.pairedEvidenceStatus.className = summary.mcnemar_significant ? "evidence-strong" : "evidence-exploratory";
+  elements.pairedEvidenceNote.textContent = summary.mcnemar_significant
+    ? `The paired difference is significant at α=${summary.mcnemar_alpha}. This describes the uploaded labelled sample.`
+    : `The paired difference did not reach α=${summary.mcnemar_alpha}. Treat the observed change as exploratory.`;
   elements.uploadV1Label.textContent = `${v1Name} accuracy`;
   elements.uploadV2Label.textContent = `${v2Name} accuracy`;
   elements.v1PredictionHeading.textContent = `${v1Name} prediction`;

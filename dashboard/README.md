@@ -26,6 +26,12 @@ PYTHONPATH=src python -m xai_regression serve
 The local server exposes only the selected report at a fixed read-only route.
 It binds to `127.0.0.1` by default and does not upload report data externally.
 
+The server also exposes an initial `POST /api/regression/compare` endpoint for
+two trusted `.joblib` regressors. It returns MAE, RMSE, R², paired improvement
+and worsening counts, an exact paired sign-test result, and per-sample absolute
+error changes. This is the backend foundation for the upcoming regression UI;
+the current upload page remains classification-focused.
+
 ## Compare uploaded classification models
 
 Open **Compare uploaded models** when the dashboard is running through
@@ -65,6 +71,14 @@ the same dataset, manifest, and optional image ZIP selected.
 Each run starts with a collection overview that ranks all selected models by
 accuracy and lists pairwise prediction agreement. The remaining panels retain
 the detailed baseline-versus-candidate comparison for the selected pair.
+
+That paired comparison includes a two-sided exact McNemar test over discordant
+correctness outcomes: samples where V1 alone was correct versus samples where
+V2 alone was correct. The page reports the unadjusted p-value and treats
+`p < 0.05` as evidence of a paired difference. A larger p-value is labelled
+exploratory; it does not prove the two versions are equivalent. The result only
+describes the uploaded labelled sample and should be repeated on representative
+held-out data.
 
 For models exposing `predict_proba()`, each overview card also reports mean
 top-class confidence, the signed confidence-minus-accuracy gap, and ten-bin

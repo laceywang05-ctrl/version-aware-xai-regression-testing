@@ -151,6 +151,13 @@ Open `http://localhost:8000` and optionally load a newly generated unified
 `summary.json`. The browser processes the selected file locally; it is not
 uploaded to an external service.
 
+The local server now provides the first regression-upload foundation at
+`POST /api/regression/compare`. It accepts two trusted `.joblib` regressors, a
+numeric labelled CSV, and a manifest whose `task` is `regression`. The response
+contains MAE, RMSE, R², paired error-direction evidence, and per-sample absolute
+error changes. A dedicated regression interface is planned as the next UI
+stage; classification remains the primary polished workflow.
+
 ## End-to-end workflow
 
 Run the SHAP validation, LIME cross-version comparison and unified report in
@@ -257,6 +264,11 @@ stated confidence and observed correctness on the uploaded sample.
 Compact reliability charts expose the underlying ten bins, comparing mean
 confidence with observed accuracy and showing the number of samples in each
 populated range.
+
+For a selected baseline–candidate pair, the dashboard applies a two-sided exact
+McNemar test to their discordant correctness outcomes. It reports accuracy
+change, discordant sample count, the unadjusted p-value, and whether the result
+reaches the displayed 0.05 evidence threshold.
 
 When both versions produce explanation maps, the dashboard calculates their
 cosine similarity and initially flags values below 0.80. This boundary is also
