@@ -108,6 +108,12 @@ class DashboardTests(unittest.TestCase):
             "download-regression-ranking-csv",
             "additional-model-names",
             "regression-v1-mae",
+            "regression-v1-name",
+            "regression-v2-name",
+            "regression-legend-v1",
+            "regression-legend-v2",
+            "regression-v1-prediction-heading",
+            "regression-v2-prediction-heading",
             "regression-v2-mae",
             "regression-v1-rmse",
             "regression-v2-rmse",
@@ -142,6 +148,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderRobustness", script)
         self.assertIn("function renderUploadComparison", script)
         self.assertIn("function renderRegressionComparison", script)
+        self.assertIn('elements.regressionLegendV1.textContent = `V1 · ${v1Name}`', script)
         self.assertIn("function renderRegressionModelOverview", script)
         self.assertIn("function renderRegressionSamples", script)
         self.assertIn("function renderRegressionCharts", script)
