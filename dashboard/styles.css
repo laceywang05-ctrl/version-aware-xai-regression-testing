@@ -268,6 +268,11 @@ main { display: grid; gap: 24px; }
 .file-field select { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--navy); font: inherit; }
 .classification-only[hidden] { display: none; }
 .regression-status { border-left: 5px solid var(--green); }
+.result-model-pair { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 4px; }
+.result-model-pair > span { display: inline-flex; max-width: 100%; gap: 7px; align-items: center; padding: 8px 11px; border: 1px solid #bad8d7; border-radius: 99px; background: #f2faf8; }
+.result-model-pair b { color: var(--green); font-size: .68rem; }
+.result-model-pair strong { overflow: hidden; color: var(--navy); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.result-model-pair i { color: var(--blue); font-style: normal; font-weight: 900; }
 .regression-summary { grid-template-columns: repeat(3, 1fr); }
 .regression-sample-table .improved-row { background: #f4fbf8; }
 .regression-sample-table .worsened-row { background: #fff7f2; }
@@ -387,6 +392,9 @@ main { display: grid; gap: 24px; }
 .manifest-builder-grid select, .manifest-builder-grid input { min-width: 0; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
 .trust-check { display: flex; gap: 9px; align-items: center; margin-top: 16px; color: var(--navy); font-size: .72rem; font-weight: 750; }
 .file-field em { margin-left: 5px; color: var(--muted); font-size: .68rem; font-style: normal; font-weight: 650; }
+.selected-file-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.selected-file-name { max-width: 100%; overflow: hidden; padding: 6px 9px; border: 1px solid #bcd8dc; border-radius: 99px; background: #edf7f7; color: var(--navy); font-size: .68rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.selected-file-empty { color: var(--muted); font-size: .68rem; }
 .explanation-button { border: 1px solid var(--blue); border-radius: 8px; padding: 7px 10px; background: white; color: var(--blue); cursor: pointer; white-space: nowrap; font: inherit; font-size: .7rem; font-weight: 800; }
 .explanation-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .explanation-dialog { width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 40px); padding: 26px; border: 0; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 80px rgba(18, 48, 63, .24); }

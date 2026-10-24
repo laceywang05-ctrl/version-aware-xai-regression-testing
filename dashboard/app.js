@@ -52,6 +52,7 @@ const elements = {
   modelV1Upload: document.querySelector("#model-v1-upload"),
   modelV2Upload: document.querySelector("#model-v2-upload"),
   additionalModelsUpload: document.querySelector("#additional-models-upload"),
+  additionalModelNames: document.querySelector("#additional-model-names"),
   baselineModelSelector: document.querySelector("#baseline-model-selector"),
   candidateModelSelector: document.querySelector("#candidate-model-selector"),
   modelCollectionMessage: document.querySelector("#model-collection-message"),
@@ -78,6 +79,14 @@ const elements = {
   downloadRegressionRankingCsv: document.querySelector("#download-regression-ranking-csv"),
   regressionModelOverviewGrid: document.querySelector("#regression-model-overview-grid"),
   regressionScopeNote: document.querySelector("#regression-scope-note"),
+  regressionV1Name: document.querySelector("#regression-v1-name"),
+  regressionV2Name: document.querySelector("#regression-v2-name"),
+  regressionLegendV1: document.querySelector("#regression-legend-v1"),
+  regressionLegendV2: document.querySelector("#regression-legend-v2"),
+  regressionV1PredictionHeading: document.querySelector("#regression-v1-prediction-heading"),
+  regressionV1ErrorHeading: document.querySelector("#regression-v1-error-heading"),
+  regressionV2PredictionHeading: document.querySelector("#regression-v2-prediction-heading"),
+  regressionV2ErrorHeading: document.querySelector("#regression-v2-error-heading"),
   regressionV1Mae: document.querySelector("#regression-v1-mae"),
   regressionV2Mae: document.querySelector("#regression-v2-mae"),
   regressionV1Rmse: document.querySelector("#regression-v1-rmse"),
@@ -406,6 +415,22 @@ function updateUploadTask() {
 
 function updateModelSelectors() {
   const files = uploadedModels();
+  const additional = Array.from(elements.additionalModelsUpload.files).slice(0, 3);
+  elements.additionalModelNames.replaceChildren();
+  if (!additional.length) {
+    const empty = document.createElement("span");
+    empty.className = "selected-file-empty";
+    empty.textContent = "No additional models selected";
+    elements.additionalModelNames.append(empty);
+  } else {
+    for (const file of additional) {
+      const name = document.createElement("span");
+      name.className = "selected-file-name";
+      name.textContent = file.name;
+      name.title = file.name;
+      elements.additionalModelNames.append(name);
+    }
+  }
   const previousBaseline = elements.baselineModelSelector.value;
   const previousCandidate = elements.candidateModelSelector.value;
   for (const selector of [elements.baselineModelSelector, elements.candidateModelSelector]) {
@@ -1129,6 +1154,16 @@ function renderRegressionComparison(report) {
   }
   state.regressionComparison = report;
   const summary = report.summary;
+  const v1Name = report.models?.v1?.filename || "Model V1";
+  const v2Name = report.models?.v2?.filename || "Model V2";
+  elements.regressionV1Name.textContent = v1Name;
+  elements.regressionV2Name.textContent = v2Name;
+  elements.regressionLegendV1.textContent = `V1 · ${v1Name}`;
+  elements.regressionLegendV2.textContent = `V2 · ${v2Name}`;
+  elements.regressionV1PredictionHeading.textContent = `V1 prediction · ${v1Name}`;
+  elements.regressionV1ErrorHeading.textContent = "V1 absolute error";
+  elements.regressionV2PredictionHeading.textContent = `V2 prediction · ${v2Name}`;
+  elements.regressionV2ErrorHeading.textContent = "V2 absolute error";
   elements.regressionV1Mae.textContent = formatNumber(summary.v1.mae);
   elements.regressionV2Mae.textContent = formatNumber(summary.v2.mae);
   elements.regressionV1Rmse.textContent = formatNumber(summary.v1.rmse);
