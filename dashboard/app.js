@@ -218,8 +218,12 @@ function openExplanation(sample) {
   elements.explanationOriginal.hidden = !sample.image_data_url;
   renderPixelHeatmap(elements.v1Heatmap, sample.v1_explanation);
   renderPixelHeatmap(elements.v2Heatmap, sample.v2_explanation);
-  elements.v1HeatmapCaption.textContent = `Model V1 contribution toward “${sample.v1_prediction}”`;
-  elements.v2HeatmapCaption.textContent = `Model V2 contribution toward “${sample.v2_prediction}”`;
+  const v1Method = state.uploadComparison.explanations?.v1?.label || "Explanation";
+  const v2Method = state.uploadComparison.explanations?.v2?.label || "Explanation";
+  elements.v1HeatmapCaption.textContent = `Model V1 · ${v1Method} toward “${sample.v1_prediction}”`;
+  elements.v2HeatmapCaption.textContent = `Model V2 · ${v2Method} toward “${sample.v2_prediction}”`;
+  elements.v1Heatmap.title = state.uploadComparison.explanations?.v1?.note || "";
+  elements.v2Heatmap.title = state.uploadComparison.explanations?.v2?.note || "";
   elements.explanationBoundary.textContent = state.uploadComparison.explanations?.interpretation
     || "The map describes feature contributions, not causal effects.";
   elements.explanationDialog.showModal();

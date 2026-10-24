@@ -203,14 +203,15 @@ models** to demonstrate concrete image-level improvements and regressions.
 This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
 offline; true MNIST and CIFAR-10 remain the next dataset integrations.
 
-When the manifest supplies `image_shape` and both uploaded estimators are
-Tree-SHAP compatible, each sample row also opens a contribution comparison.
-The detail view places the original image beside normalized V1 and V2 pixel
-maps for their respective predicted classes. Red supports the displayed class
-and blue opposes it. Each map is normalized independently, so spatial patterns
-can be compared but color strength cannot be compared directly across models.
-These values explain the fitted models' outputs; they are not causal evidence
-and should not be interpreted as human-like attention.
+When the manifest supplies `image_shape`, each sample row can open a
+contribution comparison. Compatible tree estimators use Tree SHAP. Other
+classifiers exposing `predict_proba()` and `classes_` automatically use pixel
+occlusion, which measures the predicted-class probability change after setting
+one pixel feature to zero. The detail view names the method used by each model.
+Red supports the displayed class and blue opposes it. Each map is normalized
+independently, so spatial patterns can be compared but color strength cannot be
+compared directly across models. These values explain fitted model outputs;
+they are not causal evidence or human-like attention.
 
 When the held-out breast-cancer and wine benchmark summaries are present, the
 same command also exposes a **Benchmark validation** view. It compares four

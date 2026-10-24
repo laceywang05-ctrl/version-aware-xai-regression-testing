@@ -77,13 +77,14 @@ The bundle uses scikit-learn's offline 8×8 handwritten-digit dataset. Its
 sample selection emphasizes both V2 improvements and the smaller number of V2
 regressions, making the prediction-level page useful for a live demonstration.
 
-The generated manifest includes `"image_shape": [8, 8]`. For compatible tree
-models this enables a **Compare maps** action on every sample. The dialog shows
-normalized Tree SHAP contributions toward each version's own predicted class:
-red cells support that prediction, while blue cells oppose it. Comparing two
-maps can suggest which pixel evidence changed between versions. Each map is
-normalized independently, so color strength is not directly comparable. The
-view does not establish that a highlighted pixel caused the prediction.
+The generated manifest includes `"image_shape": [8, 8]`, enabling a **Compare
+maps** action on every sample. Compatible tree models use Tree SHAP. Other
+classifiers with `predict_proba()` and `classes_` use a pixel-occlusion fallback.
+The dialog names the method used for each model and shows contributions toward
+each version's own predicted class: red supports that prediction and blue
+opposes it. Each map is normalized independently, so color strength is not
+directly comparable. The view does not establish that a highlighted pixel
+caused the prediction.
 
 When the generated cross-dataset summary is available, the same command adds a
 **Cross-dataset overview** containing the completed SHAP/LIME evidence matrix
