@@ -103,6 +103,9 @@ class DashboardTests(unittest.TestCase):
             "v2-heatmap",
             "regression-results",
             "regression-model-overview-grid",
+            "download-regression-json",
+            "download-regression-samples-csv",
+            "download-regression-ranking-csv",
             "regression-v1-mae",
             "regression-v2-mae",
             "regression-v1-rmse",
@@ -161,6 +164,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderUploadValidation", script)
         self.assertIn("function downloadComparisonJson", script)
         self.assertIn("function downloadSamplesCsv", script)
+        self.assertIn("function downloadRegressionJson", script)
+        self.assertIn("function downloadRegressionSamplesCsv", script)
+        self.assertIn("function downloadRegressionRankingCsv", script)
         self.assertIn("application/json", script)
         self.assertIn("text/csv;charset=utf-8", script)
         self.assertIn("sample.image_data_url", script)

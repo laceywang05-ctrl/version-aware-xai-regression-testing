@@ -9,6 +9,7 @@ const state = {
   modelOverview: null,
   uploadValidation: null,
   regressionComparison: null,
+  regressionOverview: null,
 };
 
 const elements = {
@@ -72,6 +73,9 @@ const elements = {
   uploadValidationGrid: document.querySelector("#upload-validation-grid"),
   uploadResults: document.querySelector("#upload-results"),
   regressionResults: document.querySelector("#regression-results"),
+  downloadRegressionJson: document.querySelector("#download-regression-json"),
+  downloadRegressionSamplesCsv: document.querySelector("#download-regression-samples-csv"),
+  downloadRegressionRankingCsv: document.querySelector("#download-regression-ranking-csv"),
   regressionModelOverviewGrid: document.querySelector("#regression-model-overview-grid"),
   regressionScopeNote: document.querySelector("#regression-scope-note"),
   regressionV1Mae: document.querySelector("#regression-v1-mae"),
@@ -516,6 +520,7 @@ function renderRegressionModelOverview(report) {
   if (!report || report.task !== "regression" || !Array.isArray(report.models)) {
     throw new Error("The server returned an invalid regression model overview.");
   }
+  state.regressionOverview = report;
   elements.regressionModelOverviewGrid.replaceChildren();
   const models = [...report.models].sort((left, right) => left.rank - right.rank);
   for (const model of models) {
@@ -643,6 +648,54 @@ function downloadSamplesCsv() {
   });
   downloadLocalFile(
     `xai-samples-${exportTimestamp()}.csv`,
+    `${columns.join(",")}\n${rows.join("\n")}\n`,
+    "text/csv;charset=utf-8",
+  );
+}
+
+function downloadRegressionJson() {
+  if (!state.regressionComparison || !state.regressionOverview) return;
+  downloadLocalFile(
+    `xai-regression-comparison-${exportTimestamp()}.json`,
+    JSON.stringify({
+      exported_at: new Date().toISOString(),
+      overview: state.regressionOverview,
+      comparison: state.regressionComparison,
+    }, null, 2),
+    "application/json",
+  );
+}
+
+function downloadRegressionSamplesCsv() {
+  if (!state.regressionComparison) return;
+  const columns = [
+    "v1_model", "v2_model", "sample_id", "actual", "v1_prediction",
+    "v1_absolute_error", "v2_prediction", "v2_absolute_error",
+    "absolute_error_change", "outcome",
+  ];
+  const rows = state.regressionComparison.samples.map((sample) => {
+    const record = {
+      ...sample,
+      v1_model: state.regressionComparison.models?.v1?.filename || "Model V1",
+      v2_model: state.regressionComparison.models?.v2?.filename || "Model V2",
+    };
+    return columns.map((column) => csvCell(record[column])).join(",");
+  });
+  downloadLocalFile(
+    `xai-regression-samples-${exportTimestamp()}.csv`,
+    `${columns.join(",")}\n${rows.join("\n")}\n`,
+    "text/csv;charset=utf-8",
+  );
+}
+
+function downloadRegressionRankingCsv() {
+  if (!state.regressionOverview) return;
+  const columns = ["rank", "filename", "mae", "rmse", "r2"];
+  const rows = [...state.regressionOverview.models]
+    .sort((left, right) => left.rank - right.rank)
+    .map((model) => columns.map((column) => csvCell(model[column])).join(","));
+  downloadLocalFile(
+    `xai-regression-ranking-${exportTimestamp()}.csv`,
     `${columns.join(",")}\n${rows.join("\n")}\n`,
     "text/csv;charset=utf-8",
   );
@@ -1530,6 +1583,9 @@ for (const input of [elements.confidenceThresholdInput, elements.explanationThre
 }
 elements.downloadComparisonJson.addEventListener("click", downloadComparisonJson);
 elements.downloadSamplesCsv.addEventListener("click", downloadSamplesCsv);
+elements.downloadRegressionJson.addEventListener("click", downloadRegressionJson);
+elements.downloadRegressionSamplesCsv.addEventListener("click", downloadRegressionSamplesCsv);
+elements.downloadRegressionRankingCsv.addEventListener("click", downloadRegressionRankingCsv);
 for (const input of [
   elements.modelV1Upload,
   elements.modelV2Upload,
