@@ -74,6 +74,9 @@ const elements = {
   v2ConfidenceHeading: document.querySelector("#v2-confidence-heading"),
   uploadScopeNote: document.querySelector("#upload-scope-note"),
   uploadTransitionGrid: document.querySelector("#upload-transition-grid"),
+  classDiagnosticsResults: document.querySelector("#class-diagnostics-results"),
+  classV1Heading: document.querySelector("#class-v1-heading"),
+  classV2Heading: document.querySelector("#class-v2-heading"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
@@ -421,7 +424,10 @@ function renderUploadSamples() {
 }
 
 function renderUploadComparison(report) {
-  if (!report || report.task !== "classification" || !report.summary || !Array.isArray(report.samples)) {
+  if (
+    !report || report.task !== "classification" || !report.summary
+    || !Array.isArray(report.samples) || !Array.isArray(report.class_diagnostics)
+  ) {
     throw new Error("The server returned an invalid classification comparison.");
   }
   state.uploadComparison = report;
@@ -438,6 +444,8 @@ function renderUploadComparison(report) {
   elements.v1ConfidenceHeading.textContent = `${v1Name} confidence`;
   elements.v2PredictionHeading.textContent = `${v2Name} prediction`;
   elements.v2ConfidenceHeading.textContent = `${v2Name} confidence`;
+  elements.classV1Heading.textContent = `${v1Name} accuracy`;
+  elements.classV2Heading.textContent = `${v2Name} accuracy`;
   elements.uploadScopeNote.textContent = report.dataset?.note
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
 
@@ -457,6 +465,34 @@ function renderUploadComparison(report) {
     value.textContent = summary[key];
     card.append(name, value);
     elements.uploadTransitionGrid.append(card);
+  }
+
+  elements.classDiagnosticsResults.replaceChildren();
+  const classDiagnostics = [...(report.class_diagnostics || [])].sort(
+    (left, right) => right.accuracy_change - left.accuracy_change,
+  );
+  for (const item of classDiagnostics) {
+    const row = document.createElement("tr");
+    for (const value of [
+      item.class_label,
+      item.samples,
+      formatPercent(item.v1_accuracy),
+      formatPercent(item.v2_accuracy),
+    ]) {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    const changeCell = document.createElement("td");
+    const change = document.createElement("span");
+    const direction = item.accuracy_change > 0
+      ? "improved"
+      : item.accuracy_change < 0 ? "regressed" : "unchanged";
+    change.className = `class-change ${direction}`;
+    change.textContent = `${item.accuracy_change > 0 ? "+" : ""}${formatPercent(item.accuracy_change)}`;
+    changeCell.append(change);
+    row.append(changeCell);
+    elements.classDiagnosticsResults.append(row);
   }
 
   elements.uploadLimitations.replaceChildren();
