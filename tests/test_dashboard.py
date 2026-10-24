@@ -138,6 +138,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderRegressionSamples", script)
         self.assertIn("function renderRegressionCharts", script)
         self.assertIn("function regressionChartSamples", script)
+        self.assertIn("mae_change_ci_95", script)
+        self.assertIn("The paired MAE interval crosses zero.", script)
         self.assertIn("function updateUploadTask", script)
         self.assertIn('fetch("/api/classification/compare"', script)
         self.assertIn('fetch("/api/classification/overview"', script)
