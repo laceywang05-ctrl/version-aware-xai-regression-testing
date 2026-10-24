@@ -20,6 +20,7 @@ MAX_IMAGE_COUNT = 1_000
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
 MAX_EXPLANATION_ROWS = 500
+HIGH_CONFIDENCE_THRESHOLD = 0.80
 IMAGE_MEDIA_TYPES = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -434,6 +435,16 @@ def compare_classifiers(
             image_data_url = images.get(image_name) if images is not None else None
             if image_data_url is None:
                 raise ValueError(f"Image referenced by CSV was not found: {image_name}.")
+        v1_high_confidence_wrong = bool(
+            not correct_v1[index]
+            and confidence_v1[index] is not None
+            and confidence_v1[index] >= HIGH_CONFIDENCE_THRESHOLD
+        )
+        v2_high_confidence_wrong = bool(
+            not correct_v2[index]
+            and confidence_v2[index] is not None
+            and confidence_v2[index] >= HIGH_CONFIDENCE_THRESHOLD
+        )
         samples.append(
             {
                 "sample_id": _json_value(identifiers[index]),
@@ -452,6 +463,12 @@ def compare_classifiers(
                     prediction_v1[index] != prediction_v2[index]
                 ),
                 "transition": str(transitions[index]),
+                "v1_high_confidence_wrong": v1_high_confidence_wrong,
+                "v2_high_confidence_wrong": v2_high_confidence_wrong,
+                "high_confidence_regression": bool(
+                    transitions[index] == "v1_correct_v2_wrong"
+                    and v2_high_confidence_wrong
+                ),
                 "image_name": image_name,
                 "image_data_url": image_data_url,
                 "v1_explanation": explanation_v1[index],
@@ -468,6 +485,15 @@ def compare_classifiers(
         )
     }
     total = len(dataset)
+    v1_high_confidence_wrong_count = sum(
+        sample["v1_high_confidence_wrong"] for sample in samples
+    )
+    v2_high_confidence_wrong_count = sum(
+        sample["v2_high_confidence_wrong"] for sample in samples
+    )
+    high_confidence_regression_count = sum(
+        sample["high_confidence_regression"] for sample in samples
+    )
     class_diagnostics = []
     for class_value in pd.unique(labels):
         class_mask = labels == class_value
@@ -530,6 +556,10 @@ def compare_classifiers(
             "prediction_changed_count": int(
                 np.count_nonzero(prediction_v1 != prediction_v2)
             ),
+            "high_confidence_threshold": HIGH_CONFIDENCE_THRESHOLD,
+            "v1_high_confidence_wrong_count": v1_high_confidence_wrong_count,
+            "v2_high_confidence_wrong_count": v2_high_confidence_wrong_count,
+            "high_confidence_regression_count": high_confidence_regression_count,
             **counts,
         },
         "class_diagnostics": class_diagnostics,

@@ -419,6 +419,7 @@
               <div>
                 <p class="eyebrow">Concrete examples</p>
                 <h2 id="sample-results-heading">Sample-by-sample predictions</h2>
+                <p id="confidence-risk-summary" class="confidence-risk-summary"></p>
               </div>
               <label class="dataset-picker">Show
                 <select id="upload-transition-filter">
@@ -427,6 +428,8 @@
                   <option value="v1_wrong_v2_correct">Wrong → correct</option>
                   <option value="both_correct">Both correct</option>
                   <option value="both_wrong">Both wrong</option>
+                  <option value="v2_high_confidence_wrong">V2 high-confidence errors</option>
+                  <option value="high_confidence_regression">High-confidence regressions</option>
                 </select>
               </label>
             </div>

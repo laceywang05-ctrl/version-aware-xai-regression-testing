@@ -93,6 +93,7 @@ const elements = {
   downloadComparisonJson: document.querySelector("#download-comparison-json"),
   downloadSamplesCsv: document.querySelector("#download-samples-csv"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
+  confidenceRiskSummary: document.querySelector("#confidence-risk-summary"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
   uploadLimitations: document.querySelector("#upload-limitations"),
@@ -463,6 +464,7 @@ function downloadSamplesCsv() {
   const columns = [
     "v1_model", "v2_model", "sample_id", "actual", "v1_prediction", "v1_confidence",
     "v2_prediction", "v2_confidence", "transition", "prediction_changed",
+    "v1_high_confidence_wrong", "v2_high_confidence_wrong", "high_confidence_regression",
   ];
   const rows = state.uploadComparison.samples.map((sample) => {
     const record = {
@@ -535,15 +537,19 @@ function renderUploadSamples() {
   const report = state.uploadComparison;
   if (!report) return;
   const selected = elements.uploadTransitionFilter.value;
-  const matching = report.samples.filter(
-    (sample) => selected === "all" || sample.transition === selected,
-  );
+  const matching = report.samples.filter((sample) => {
+    if (selected === "all") return true;
+    if (selected === "v2_high_confidence_wrong") return sample.v2_high_confidence_wrong === true;
+    if (selected === "high_confidence_regression") return sample.high_confidence_regression === true;
+    return sample.transition === selected;
+  });
   const displayed = matching.slice(0, 500);
   elements.uploadSampleResults.replaceChildren();
   for (const sample of displayed) {
     const row = document.createElement("tr");
     if (sample.transition === "v1_correct_v2_wrong") row.className = "regression-row";
     if (sample.transition === "v1_wrong_v2_correct") row.className = "improvement-row";
+    if (sample.v2_high_confidence_wrong) row.classList.add("high-confidence-risk-row");
     const imageCell = document.createElement("td");
     if (sample.image_data_url) {
       const link = document.createElement("a");
@@ -625,6 +631,12 @@ function renderUploadComparison(report) {
   elements.confusionV2Heading.textContent = `${v2Name} errors`;
   elements.uploadScopeNote.textContent = report.dataset?.note
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
+  const threshold = formatPercent(summary.high_confidence_threshold ?? 0.8);
+  const candidateRiskCount = summary.v2_high_confidence_wrong_count ?? 0;
+  const regressionRiskCount = summary.high_confidence_regression_count ?? 0;
+  elements.confidenceRiskSummary.textContent =
+    `${v2Name} made ${candidateRiskCount} wrong prediction${candidateRiskCount === 1 ? "" : "s"} `
+    + `at or above ${threshold} confidence; ${regressionRiskCount} were regressions from a correct ${v1Name} result.`;
 
   const transitions = [
     ["both_correct", "Both correct"],

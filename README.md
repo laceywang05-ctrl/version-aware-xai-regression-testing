@@ -243,6 +243,12 @@ independently, so spatial patterns can be compared but color strength cannot be
 compared directly across models. These values explain fitted model outputs;
 they are not causal evidence or human-like attention.
 
+The results page also counts candidate predictions that are wrong at 80%
+confidence or above. The sample table can isolate those errors or the narrower
+set of high-confidence regressions where V1 was correct and V2 became wrong.
+This is a transparent inspection threshold, not a statistically calibrated
+release boundary.
+
 When the held-out breast-cancer and wine benchmark summaries are present, the
 same command also exposes a **Benchmark validation** view. It compares four
 model-version scenarios across 30 held-out seeds, shows Wilson 95% confidence
