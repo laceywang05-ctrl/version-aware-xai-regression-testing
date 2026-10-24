@@ -410,7 +410,15 @@ function renderModelOverview(report) {
     accuracy.textContent = formatPercent(model.accuracy);
     const count = document.createElement("small");
     count.textContent = `${model.correct_count} of ${report.dataset.rows} samples correct`;
-    card.append(rank, name, accuracy, count);
+    const calibration = document.createElement("div");
+    calibration.className = "calibration-summary";
+    if (model.supports_confidence) {
+      const gapDirection = model.confidence_gap > 0 ? "overconfident" : model.confidence_gap < 0 ? "underconfident" : "aligned";
+      calibration.textContent = `Mean confidence ${formatPercent(model.mean_confidence)} · ECE ${formatPercent(model.expected_calibration_error)} · ${gapDirection} by ${formatPercent(Math.abs(model.confidence_gap))}`;
+    } else {
+      calibration.textContent = "Calibration unavailable: model has no probability output";
+    }
+    card.append(rank, name, accuracy, count, calibration);
     elements.modelOverviewGrid.append(card);
   }
   elements.modelAgreementResults.replaceChildren();

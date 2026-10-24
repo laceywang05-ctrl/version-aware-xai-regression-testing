@@ -66,6 +66,13 @@ Each run starts with a collection overview that ranks all selected models by
 accuracy and lists pairwise prediction agreement. The remaining panels retain
 the detailed baseline-versus-candidate comparison for the selected pair.
 
+For models exposing `predict_proba()`, each overview card also reports mean
+top-class confidence, the signed confidence-minus-accuracy gap, and ten-bin
+top-label expected calibration error (ECE). Lower ECE means the stated
+confidence more closely matches observed correctness on the uploaded labelled
+sample. These are descriptive diagnostics for that sample, not guarantees for
+future data.
+
 A preflight panel runs first and reports compatibility for every model. Formal
 comparison proceeds only when all selected models load successfully, accept the
 manifest-selected feature columns, and return one prediction per CSV row.

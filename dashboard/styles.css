@@ -307,6 +307,7 @@ main { display: grid; gap: 24px; }
 .model-overview-card strong { overflow-wrap: anywhere; color: var(--navy); font-size: .85rem; }
 .model-overview-card .accuracy { color: var(--navy); font-size: 1.7rem; font-weight: 850; }
 .model-overview-card small { color: var(--muted); font-size: .7rem; }
+.model-overview-card .calibration-summary { padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: .69rem; line-height: 1.5; }
 .agreement-table { margin-top: 4px; }
 .upload-validation { border-left: 5px solid var(--cyan); }
 .upload-validation.ready { border-left-color: var(--green); }

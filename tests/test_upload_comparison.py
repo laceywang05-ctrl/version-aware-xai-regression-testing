@@ -11,6 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.dummy import DummyClassifier
 
 from xai_regression.upload_comparison import (
+    _calibration_summary,
     _explanation_similarity,
     compare_classifiers,
     compare_upload_payloads,
@@ -36,6 +37,23 @@ class StubClassifier:
 
 
 class UploadComparisonTests(unittest.TestCase):
+    def test_calibration_summary_reports_confidence_gap_and_ece(self):
+        model = StubClassifier(
+            [0, 1, 1, 0],
+            [[0.9, 0.1], [0.2, 0.8], [0.3, 0.7], [0.6, 0.4]],
+        )
+        predictions = np.asarray([0, 1, 1, 0])
+        labels = np.asarray([0, 1, 0, 1])
+
+        result = _calibration_summary(
+            model, pd.DataFrame({"x": range(4)}), predictions, labels
+        )
+
+        self.assertTrue(result["supports_confidence"])
+        self.assertAlmostEqual(result["mean_confidence"], 0.75)
+        self.assertAlmostEqual(result["confidence_gap"], 0.25)
+        self.assertAlmostEqual(result["expected_calibration_error"], 0.4)
+
     def test_explanation_similarity_handles_identical_opposite_and_missing_maps(self):
         self.assertAlmostEqual(
             _explanation_similarity([[1.0, -1.0]], [[1.0, -1.0]]), 1.0
@@ -217,6 +235,8 @@ class UploadComparisonTests(unittest.TestCase):
 
         self.assertEqual(len(result["models"]), 3)
         self.assertEqual(result["models"][0]["accuracy"], 1.0)
+        self.assertTrue(result["models"][0]["supports_confidence"])
+        self.assertAlmostEqual(result["models"][0]["expected_calibration_error"], 0.0)
         self.assertEqual(result["models"][2]["accuracy"], 0.5)
         self.assertEqual(result["best_model_index"], 0)
         self.assertEqual(len(result["pairwise_agreements"]), 3)

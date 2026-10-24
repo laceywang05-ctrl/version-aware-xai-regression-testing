@@ -207,6 +207,56 @@ def _confidences(model: Any, features: pd.DataFrame) -> list[float | None]:
     return [float(value) for value in probabilities.max(axis=1)]
 
 
+def _calibration_summary(
+    model: Any,
+    features: pd.DataFrame,
+    predictions: np.ndarray,
+    labels: np.ndarray,
+    bins: int = 10,
+) -> dict[str, Any]:
+    """Summarize top-label confidence calibration with equal-width bins."""
+    predict_proba = getattr(model, "predict_proba", None)
+    if not callable(predict_proba):
+        return {
+            "supports_confidence": False,
+            "mean_confidence": None,
+            "confidence_gap": None,
+            "expected_calibration_error": None,
+        }
+    try:
+        probabilities = np.asarray(predict_proba(features), dtype=float)
+    except Exception:
+        return {
+            "supports_confidence": False,
+            "mean_confidence": None,
+            "confidence_gap": None,
+            "expected_calibration_error": None,
+        }
+    if probabilities.ndim != 2 or probabilities.shape[0] != len(features):
+        raise ValueError("Model predict_proba() returned an unexpected shape.")
+    confidence = probabilities.max(axis=1)
+    if not np.isfinite(confidence).all() or np.any((confidence < 0) | (confidence > 1)):
+        raise ValueError("Model predict_proba() returned invalid probabilities.")
+    correct = predictions == labels
+    bin_indices = np.minimum((confidence * bins).astype(int), bins - 1)
+    expected_calibration_error = 0.0
+    for bin_index in range(bins):
+        mask = bin_indices == bin_index
+        count = int(np.count_nonzero(mask))
+        if count:
+            expected_calibration_error += (count / len(confidence)) * abs(
+                float(correct[mask].mean()) - float(confidence[mask].mean())
+            )
+    accuracy = float(correct.mean())
+    mean_confidence = float(confidence.mean())
+    return {
+        "supports_confidence": True,
+        "mean_confidence": mean_confidence,
+        "confidence_gap": mean_confidence - accuracy,
+        "expected_calibration_error": float(expected_calibration_error),
+    }
+
+
 def _tree_shap_explanations(
     model: Any,
     features: pd.DataFrame,
@@ -699,12 +749,16 @@ def summarize_upload_models(
                 f"Model {filename} must return one prediction per dataset row."
             )
         predictions.append(prediction)
+        calibration = _calibration_summary(
+            model, features, prediction, labels
+        )
         summaries.append(
             {
                 "index": index,
                 "filename": filename,
                 "accuracy": float((prediction == labels).mean()),
                 "correct_count": int(np.count_nonzero(prediction == labels)),
+                **calibration,
             }
         )
     ranked = sorted(summaries, key=lambda item: (-item["accuracy"], item["index"]))

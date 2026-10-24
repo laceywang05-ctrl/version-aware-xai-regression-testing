@@ -120,6 +120,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('fetch("/api/classification/overview"', script)
         self.assertIn('fetch("/api/classification/validate"', script)
         self.assertIn("function renderModelOverview", script)
+        self.assertIn('calibration.className = "calibration-summary"', script)
+        self.assertIn("expected_calibration_error", script)
         self.assertIn("function renderUploadValidation", script)
         self.assertIn("function downloadComparisonJson", script)
         self.assertIn("function downloadSamplesCsv", script)

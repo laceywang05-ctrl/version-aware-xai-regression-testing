@@ -250,6 +250,11 @@ set of high-confidence regressions where V1 was correct and V2 became wrong.
 This is a transparent inspection threshold, not a statistically calibrated
 release boundary.
 
+The multi-model overview reports top-label expected calibration error (ECE)
+for classifiers with probability output, alongside mean confidence and the
+confidence-minus-accuracy gap. Lower ECE indicates closer agreement between
+stated confidence and observed correctness on the uploaded sample.
+
 When both versions produce explanation maps, the dashboard calculates their
 cosine similarity and initially flags values below 0.80. This boundary is also
 adjustable without rerunning inference. A dedicated filter isolates
