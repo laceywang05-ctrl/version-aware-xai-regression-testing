@@ -265,7 +265,7 @@ def compare_regressors(
         },
         "samples": samples,
         "limitations": [
-            "This first regression stage supports two trusted local .joblib models.",
+            "The detailed regression view compares one selected pair from two to five trusted local .joblib models.",
             "Uploaded files are processed in memory and are not persisted.",
             "The paired sign test uses error direction only, not error magnitude.",
             "The MAE-change interval is a paired percentile bootstrap with 5,000 resamples.",
@@ -292,3 +292,50 @@ def compare_regression_upload_payloads(
         "v2": {"filename": model_v2[0]},
     }
     return result
+
+
+def summarize_regression_upload_models(
+    *, models: list[tuple[str, bytes]], dataset: tuple[str, bytes], manifest: bytes
+) -> dict[str, Any]:
+    """Rank two to five uploaded regressors on one labelled dataset."""
+    if not 2 <= len(models) <= 5:
+        raise ValueError("Upload between two and five regression models for the overview.")
+    contract = parse_regression_manifest(manifest)
+    frame = load_uploaded_dataset(dataset[1], dataset[0])
+    if contract.label_column not in frame:
+        raise ValueError(f"Dataset is missing label column: {contract.label_column}.")
+    excluded = {contract.label_column}
+    if contract.id_column is not None:
+        excluded.add(contract.id_column)
+    feature_columns = list(contract.feature_columns) if contract.feature_columns is not None else [
+        column for column in frame.columns if column not in excluded
+    ]
+    missing = [column for column in feature_columns if column not in frame]
+    if missing:
+        raise ValueError("Dataset is missing feature columns: " + ", ".join(missing))
+    try:
+        actual = frame[contract.label_column].to_numpy(dtype=float)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Regression labels must be numeric.") from error
+    features = frame.loc[:, feature_columns]
+    summaries = []
+    for index, (filename, payload) in enumerate(models):
+        model = load_uploaded_model(payload, filename)
+        try:
+            predicted = np.asarray(model.predict(features), dtype=float)
+        except Exception as error:
+            raise ValueError(
+                f"Model {filename} could not predict this dataset. Check feature order and preprocessing."
+            ) from error
+        if predicted.shape != actual.shape:
+            raise ValueError(f"Model {filename} must return one prediction per dataset row.")
+        summaries.append({"index": index, "filename": filename, **_regression_metrics(actual, predicted)})
+    ranked = sorted(summaries, key=lambda item: (item["mae"], item["index"]))
+    for rank, item in enumerate(ranked, start=1):
+        summaries[item["index"]]["rank"] = rank
+    return {
+        "task": "regression",
+        "dataset": {"rows": len(frame), "feature_count": len(feature_columns)},
+        "models": summaries,
+        "best_model_index": ranked[0]["index"],
+    }

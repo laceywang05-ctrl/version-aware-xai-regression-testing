@@ -72,6 +72,7 @@ const elements = {
   uploadValidationGrid: document.querySelector("#upload-validation-grid"),
   uploadResults: document.querySelector("#upload-results"),
   regressionResults: document.querySelector("#regression-results"),
+  regressionModelOverviewGrid: document.querySelector("#regression-model-overview-grid"),
   regressionScopeNote: document.querySelector("#regression-scope-note"),
   regressionV1Mae: document.querySelector("#regression-v1-mae"),
   regressionV2Mae: document.querySelector("#regression-v2-mae"),
@@ -508,6 +509,30 @@ function renderModelOverview(report) {
     agreement.textContent = formatPercent(pair.agreement);
     row.append(names, agreement);
     elements.modelAgreementResults.append(row);
+  }
+}
+
+function renderRegressionModelOverview(report) {
+  if (!report || report.task !== "regression" || !Array.isArray(report.models)) {
+    throw new Error("The server returned an invalid regression model overview.");
+  }
+  elements.regressionModelOverviewGrid.replaceChildren();
+  const models = [...report.models].sort((left, right) => left.rank - right.rank);
+  for (const model of models) {
+    const card = document.createElement("article");
+    card.className = `model-overview-card${model.index === report.best_model_index ? " best" : ""}`;
+    const rank = document.createElement("span");
+    rank.className = "rank";
+    rank.textContent = model.index === report.best_model_index ? `Rank ${model.rank} · Lowest MAE` : `Rank ${model.rank}`;
+    const name = document.createElement("strong");
+    name.textContent = model.filename;
+    const mae = document.createElement("span");
+    mae.className = "accuracy";
+    mae.textContent = `MAE ${formatNumber(model.mae)}`;
+    const metrics = document.createElement("small");
+    metrics.textContent = `RMSE ${formatNumber(model.rmse)} · R² ${formatNumber(model.r2)}`;
+    card.append(rank, name, mae, metrics);
+    elements.regressionModelOverviewGrid.append(card);
   }
 }
 
@@ -1525,9 +1550,9 @@ elements.explanationDialog.addEventListener("click", (event) => {
 elements.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const isRegression = elements.uploadTaskSelector.value === "regression";
-  const models = isRegression ? uploadedModels().slice(0, 2) : uploadedModels();
-  const baselineIndex = isRegression ? 0 : Number(elements.baselineModelSelector.value);
-  const candidateIndex = isRegression ? 1 : Number(elements.candidateModelSelector.value);
+  const models = uploadedModels();
+  const baselineIndex = Number(elements.baselineModelSelector.value);
+  const candidateIndex = Number(elements.candidateModelSelector.value);
   if (models.length < 2 || baselineIndex === candidateIndex) {
     elements.uploadMessage.className = "upload-comparison-message error";
     elements.uploadMessage.textContent = "Select two different uploaded models.";
@@ -1564,6 +1589,13 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     : "Checking model compatibility before running the comparison.";
   try {
     if (isRegression) {
+      const overviewResponse = await fetch("/api/regression/overview", {
+        method: "POST",
+        body: collectionForm(),
+      });
+      const overview = await overviewResponse.json();
+      if (!overviewResponse.ok) throw new Error(overview.error || `HTTP ${overviewResponse.status}`);
+      renderRegressionModelOverview(overview);
       const response = await fetch("/api/regression/compare", {
         method: "POST",
         body: comparisonForm,

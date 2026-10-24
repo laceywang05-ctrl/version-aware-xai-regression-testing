@@ -102,6 +102,7 @@ class DashboardTests(unittest.TestCase):
             "v1-heatmap",
             "v2-heatmap",
             "regression-results",
+            "regression-model-overview-grid",
             "regression-v1-mae",
             "regression-v2-mae",
             "regression-v1-rmse",
@@ -137,6 +138,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function renderRobustness", script)
         self.assertIn("function renderUploadComparison", script)
         self.assertIn("function renderRegressionComparison", script)
+        self.assertIn("function renderRegressionModelOverview", script)
         self.assertIn("function renderRegressionSamples", script)
         self.assertIn("function renderRegressionCharts", script)
         self.assertIn("function renderRegressionImportance", script)
@@ -149,6 +151,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('fetch("/api/classification/overview"', script)
         self.assertIn('fetch("/api/classification/validate"', script)
         self.assertIn('fetch("/api/regression/compare"', script)
+        self.assertIn('fetch("/api/regression/overview"', script)
         self.assertIn("function renderModelOverview", script)
         self.assertIn('calibration.className = "calibration-summary"', script)
         self.assertIn("expected_calibration_error", script)
