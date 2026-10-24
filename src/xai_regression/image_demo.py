@@ -109,6 +109,11 @@ def build_digits_image_demo(output_dir: str | Path) -> dict[str, Path | int | fl
         "label_column": "target",
         "id_column": "sample_id",
         "image_column": "image_filename",
+        "image_shape": [8, 8],
+        "dataset_note": (
+            "Curated 60-sample demonstration subset enriched for changed and "
+            "incorrect predictions; summary accuracy is not the full test-set accuracy."
+        ),
         "feature_columns": list(FEATURE_COLUMNS),
         "class_names": {str(value): str(value) for value in range(10)},
         "trusted_model_files": True,

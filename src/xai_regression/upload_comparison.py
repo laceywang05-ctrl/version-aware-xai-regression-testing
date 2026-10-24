@@ -19,6 +19,7 @@ MAX_DATASET_ROWS = 5_000
 MAX_IMAGE_COUNT = 1_000
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
+MAX_EXPLANATION_ROWS = 500
 IMAGE_MEDIA_TYPES = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -36,6 +37,8 @@ class UploadManifest:
     label_column: str
     id_column: str | None
     image_column: str | None
+    image_shape: tuple[int, int] | None
+    dataset_note: str | None
     feature_columns: tuple[str, ...] | None
     class_names: dict[str, str]
     trusted_model_files: bool
@@ -69,6 +72,16 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
     image_column = raw.get("image_column")
     if image_column is not None:
         image_column = str(image_column).strip() or None
+    shape = raw.get("image_shape")
+    image_shape = None
+    if shape is not None:
+        if (
+            not isinstance(shape, list)
+            or len(shape) != 2
+            or any(not isinstance(value, int) or value < 1 for value in shape)
+        ):
+            raise ValueError("image_shape must contain two positive integers.")
+        image_shape = (shape[0], shape[1])
     features = raw.get("feature_columns")
     if features is not None:
         if not isinstance(features, list) or not features:
@@ -91,6 +104,8 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
         label_column=label_column,
         id_column=id_column,
         image_column=image_column,
+        image_shape=image_shape,
+        dataset_note=(str(raw["dataset_note"]).strip() or None) if raw.get("dataset_note") else None,
         feature_columns=feature_columns,
         class_names={str(key): str(value) for key, value in names.items()},
         trusted_model_files=trusted,
@@ -190,6 +205,62 @@ def _confidences(model: Any, features: pd.DataFrame) -> list[float | None]:
     return [float(value) for value in probabilities.max(axis=1)]
 
 
+def _tree_shap_explanations(
+    model: Any,
+    features: pd.DataFrame,
+    predictions: np.ndarray,
+    image_shape: tuple[int, int] | None,
+) -> tuple[list[list[list[float]] | None], str]:
+    """Return normalized Tree SHAP maps for each model prediction when possible."""
+    if image_shape is None:
+        return [None] * len(features), "Add image_shape to request pixel explanations."
+    if image_shape[0] * image_shape[1] != features.shape[1]:
+        raise ValueError(
+            "image_shape must contain exactly one cell per selected feature."
+        )
+    try:
+        import shap
+
+        explained_features = features.iloc[:MAX_EXPLANATION_ROWS]
+        explained_predictions = predictions[:MAX_EXPLANATION_ROWS]
+        raw_values = np.asarray(
+            shap.TreeExplainer(model).shap_values(explained_features)
+        )
+        if raw_values.ndim == 2:
+            selected = raw_values
+        elif raw_values.ndim == 3:
+            classes = list(getattr(model, "classes_", []))
+            if not classes:
+                raise ValueError("Model does not expose classes_ for SHAP selection.")
+            class_indices = np.asarray(
+                [classes.index(value) for value in explained_predictions]
+            )
+            if raw_values.shape[1] == features.shape[1]:
+                selected = raw_values[
+                    np.arange(len(explained_features)), :, class_indices
+                ]
+            elif raw_values.shape[2] == features.shape[1]:
+                selected = raw_values[
+                    np.arange(len(explained_features)), class_indices, :
+                ]
+            else:
+                raise ValueError("Unexpected Tree SHAP output shape.")
+        else:
+            raise ValueError("Unexpected Tree SHAP output dimensions.")
+        maps: list[list[list[float]] | None] = []
+        for row in selected:
+            maximum = float(np.max(np.abs(row)))
+            normalized = row / maximum if maximum > 0 else np.zeros_like(row)
+            maps.append(normalized.reshape(image_shape).round(5).tolist())
+        maps.extend([None] * (len(features) - len(maps)))
+        return maps, (
+            "Tree SHAP contribution to each model's predicted class; "
+            f"limited to the first {MAX_EXPLANATION_ROWS} rows."
+        )
+    except Exception as error:
+        return [None] * len(features), f"Tree SHAP unavailable: {error}"
+
+
 def compare_classifiers(
     model_v1: Any,
     model_v2: Any,
@@ -240,6 +311,12 @@ def compare_classifiers(
         raise ValueError("Model predictions must contain one value per dataset row.")
     confidence_v1 = _confidences(model_v1, features)
     confidence_v2 = _confidences(model_v2, features)
+    explanation_v1, explanation_note_v1 = _tree_shap_explanations(
+        model_v1, features, prediction_v1, manifest.image_shape
+    )
+    explanation_v2, explanation_note_v2 = _tree_shap_explanations(
+        model_v2, features, prediction_v2, manifest.image_shape
+    )
     correct_v1 = prediction_v1 == labels
     correct_v2 = prediction_v2 == labels
     identifiers = (
@@ -285,6 +362,8 @@ def compare_classifiers(
                 "transition": str(transitions[index]),
                 "image_name": image_name,
                 "image_data_url": image_data_url,
+                "v1_explanation": explanation_v1[index],
+                "v2_explanation": explanation_v2[index],
             }
         )
     counts = {
@@ -306,6 +385,7 @@ def compare_classifiers(
             "feature_count": len(feature_columns),
             "label_column": manifest.label_column,
             "id_column": manifest.id_column,
+            "note": manifest.dataset_note,
         },
         "summary": {
             "total_samples": total,
@@ -321,8 +401,20 @@ def compare_classifiers(
         "limitations": [
             "Only trusted local .joblib classifiers are supported in this stage.",
             "Uploaded files are processed in memory and are not persisted.",
-            "Explanation generation will be added through model-compatible adapters.",
+            "Tree SHAP pixel maps are shown only when the model and image shape are compatible.",
         ],
+        "explanations": {
+            "method": "tree_shap",
+            "image_shape": list(manifest.image_shape) if manifest.image_shape else None,
+            "v1_note": explanation_note_v1,
+            "v2_note": explanation_note_v2,
+            "interpretation": (
+                "Red pixels support the displayed predicted class and blue pixels "
+                "oppose it. Each map is normalized separately, so compare spatial "
+                "patterns rather than color magnitude. Contributions are associations, "
+                "not causal effects."
+            ),
+        },
     }
 
 

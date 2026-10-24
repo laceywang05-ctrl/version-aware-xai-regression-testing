@@ -290,7 +290,7 @@
             <div>
               <p class="eyebrow">Uploaded comparison</p>
               <h2 id="upload-results-heading">Prediction-level result</h2>
-              <p class="status-explanation">Accuracy summarizes the versions; the table below shows the concrete sample-level changes behind it.</p>
+              <p id="upload-scope-note" class="status-explanation">Accuracy summarizes the versions; the table below shows the concrete sample-level changes behind it.</p>
             </div>
             <div class="summary-grid upload-summary" aria-label="Uploaded model summary">
               <article><span>Samples</span><strong id="upload-total">—</strong></article>
@@ -329,7 +329,7 @@
             </div>
             <div class="table-scroll">
               <table class="comparison-table sample-table">
-                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 confidence</th><th>V2 prediction</th><th>V2 confidence</th><th>Transition</th></tr></thead>
+                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th>V1 prediction</th><th>V1 confidence</th><th>V2 prediction</th><th>V2 confidence</th><th>Transition</th><th>Explanation</th></tr></thead>
                 <tbody id="upload-sample-results"></tbody>
               </table>
             </div>
@@ -345,6 +345,33 @@
           </section>
         </div>
       </div>
+
+      <dialog id="explanation-dialog" class="explanation-dialog">
+        <div class="explanation-dialog-head">
+          <div>
+            <p class="eyebrow">Sample explanation</p>
+            <h2 id="explanation-dialog-title">Model contribution comparison</h2>
+          </div>
+          <button id="close-explanation-dialog" class="dialog-close" type="button" aria-label="Close explanation">×</button>
+        </div>
+        <div class="explanation-meta" id="explanation-meta"></div>
+        <div class="explanation-visuals">
+          <figure>
+            <img id="explanation-original" class="explanation-original" alt="Selected sample" />
+            <figcaption>Original image</figcaption>
+          </figure>
+          <figure>
+            <div id="v1-heatmap" class="pixel-heatmap" aria-label="Model V1 pixel contribution map"></div>
+            <figcaption id="v1-heatmap-caption">Model V1</figcaption>
+          </figure>
+          <figure>
+            <div id="v2-heatmap" class="pixel-heatmap" aria-label="Model V2 pixel contribution map"></div>
+            <figcaption id="v2-heatmap-caption">Model V2</figcaption>
+          </figure>
+        </div>
+        <div class="heatmap-legend"><span class="negative"></span> Opposes predicted class <span class="neutral"></span> Little influence <span class="positive"></span> Supports predicted class</div>
+        <p id="explanation-boundary" class="explanation-boundary"></p>
+      </dialog>
 
     </main>
 
