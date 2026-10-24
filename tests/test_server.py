@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from xai_regression.server import (
+    REGRESSION_COMPARE_ROUTE,
     parse_multipart_form,
     serve_dashboard,
     validate_benchmark_files,
@@ -15,6 +16,9 @@ from xai_regression.server import (
 
 
 class DashboardServerTests(unittest.TestCase):
+    def test_regression_compare_route_is_registered(self):
+        self.assertEqual(REGRESSION_COMPARE_ROUTE, "/api/regression/compare")
+
     def test_multipart_upload_fields_are_parsed_in_memory(self):
         boundary = "xai-boundary"
         payload = (

@@ -26,6 +26,12 @@ PYTHONPATH=src python -m xai_regression serve
 The local server exposes only the selected report at a fixed read-only route.
 It binds to `127.0.0.1` by default and does not upload report data externally.
 
+The server also exposes an initial `POST /api/regression/compare` endpoint for
+two trusted `.joblib` regressors. It returns MAE, RMSE, R², paired improvement
+and worsening counts, an exact paired sign-test result, and per-sample absolute
+error changes. This is the backend foundation for the upcoming regression UI;
+the current upload page remains classification-focused.
+
 ## Compare uploaded classification models
 
 Open **Compare uploaded models** when the dashboard is running through

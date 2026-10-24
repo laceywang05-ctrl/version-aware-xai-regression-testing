@@ -151,6 +151,13 @@ Open `http://localhost:8000` and optionally load a newly generated unified
 `summary.json`. The browser processes the selected file locally; it is not
 uploaded to an external service.
 
+The local server now provides the first regression-upload foundation at
+`POST /api/regression/compare`. It accepts two trusted `.joblib` regressors, a
+numeric labelled CSV, and a manifest whose `task` is `regression`. The response
+contains MAE, RMSE, R², paired error-direction evidence, and per-sample absolute
+error changes. A dedicated regression interface is planned as the next UI
+stage; classification remains the primary polished workflow.
+
 ## End-to-end workflow
 
 Run the SHAP validation, LIME cross-version comparison and unified report in
