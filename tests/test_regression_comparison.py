@@ -12,6 +12,7 @@ from xai_regression.regression_comparison import (
     compare_regressors,
     parse_regression_manifest,
     summarize_regression_upload_models,
+    validate_regression_upload_models,
 )
 
 
@@ -21,6 +22,11 @@ class StubRegressor:
 
     def predict(self, features):
         return self.predictions
+
+
+class BadShapeRegressor:
+    def predict(self, features):
+        return np.asarray([1.0])
 
 
 class RegressionComparisonTests(unittest.TestCase):
@@ -122,6 +128,38 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertEqual(len(overview["models"]), 2)
         self.assertEqual(overview["models"][0]["rank"], 1)
         self.assertEqual(overview["best_model_index"], 0)
+
+    def test_upload_validation_reports_each_regressor(self):
+        features = pd.DataFrame({"x": [0.0, 1.0, 2.0]})
+        labels = np.asarray([1.0, 2.0, 3.0])
+        good_model = LinearRegression().fit(features, labels)
+        good_payload = BytesIO()
+        bad_payload = BytesIO()
+        joblib.dump(good_model, good_payload)
+        joblib.dump(BadShapeRegressor(), bad_payload)
+        manifest = json.dumps(
+            {
+                "task": "regression",
+                "label_column": "target",
+                "feature_columns": ["x"],
+                "trusted_model_files": True,
+            }
+        ).encode()
+
+        result = validate_regression_upload_models(
+            models=[
+                ("good.joblib", good_payload.getvalue()),
+                ("bad.joblib", bad_payload.getvalue()),
+            ],
+            dataset=("samples.csv", features.assign(target=labels).to_csv(index=False).encode()),
+            manifest=manifest,
+        )
+
+        self.assertFalse(result["ready"])
+        self.assertTrue(result["models"][0]["compatible"])
+        self.assertEqual(result["models"][0]["model_type"], "LinearRegression")
+        self.assertFalse(result["models"][1]["compatible"])
+        self.assertIn("one numeric prediction", result["models"][1]["message"])
 
 
 if __name__ == "__main__":

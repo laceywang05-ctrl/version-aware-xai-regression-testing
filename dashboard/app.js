@@ -574,7 +574,9 @@ function renderUploadValidation(report) {
   elements.uploadValidation.classList.toggle("ready", report.ready);
   elements.uploadValidation.classList.toggle("blocked", !report.ready);
   elements.uploadValidationSummary.textContent = report.ready
-    ? `All ${report.models.length} models accept ${report.dataset.feature_count} features and are ready.`
+    ? report.task === "regression"
+      ? `All ${report.models.length} regression models accept ${report.dataset.feature_count} features and return finite numeric predictions.`
+      : `All ${report.models.length} models accept ${report.dataset.feature_count} features and are ready.`
     : "At least one model is incompatible. Resolve the highlighted item before comparing.";
   elements.uploadValidationGrid.replaceChildren();
   for (const model of report.models) {
@@ -587,7 +589,9 @@ function renderUploadValidation(report) {
     status.textContent = model.compatible ? "Compatible" : "Needs attention";
     const detail = document.createElement("span");
     detail.textContent = model.compatible
-      ? `${model.model_type}${model.supports_confidence ? " · confidence available" : " · no probability confidence"}`
+      ? report.task === "regression"
+        ? `${model.model_type} · numeric prediction ready`
+        : `${model.model_type}${model.supports_confidence ? " · confidence available" : " · no probability confidence"}`
       : model.message;
     card.append(name, status, detail);
     elements.uploadValidationGrid.append(card);
@@ -1676,10 +1680,18 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   elements.uploadSubmit.textContent = "Comparing…";
   elements.uploadMessage.className = "upload-comparison-message working";
   elements.uploadMessage.textContent = isRegression
-    ? "Running the regression comparison locally."
+    ? "Checking regression model compatibility before running the comparison."
     : "Checking model compatibility before running the comparison.";
   try {
     if (isRegression) {
+      const validationResponse = await fetch("/api/regression/validate", {
+        method: "POST",
+        body: collectionForm(),
+      });
+      const validation = await validationResponse.json();
+      if (!validationResponse.ok) throw new Error(validation.error || `HTTP ${validationResponse.status}`);
+      renderUploadValidation(validation);
+      if (!validation.ready) throw new Error("One or more uploaded regression models are incompatible.");
       const overviewResponse = await fetch("/api/regression/overview", {
         method: "POST",
         body: collectionForm(),

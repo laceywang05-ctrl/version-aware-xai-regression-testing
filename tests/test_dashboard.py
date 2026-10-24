@@ -163,6 +163,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('fetch("/api/classification/validate"', script)
         self.assertIn('fetch("/api/regression/compare"', script)
         self.assertIn('fetch("/api/regression/overview"', script)
+        self.assertIn('fetch("/api/regression/validate"', script)
+        self.assertIn("return finite numeric predictions", script)
         self.assertIn("function renderModelOverview", script)
         self.assertIn('calibration.className = "calibration-summary"', script)
         self.assertIn("expected_calibration_error", script)

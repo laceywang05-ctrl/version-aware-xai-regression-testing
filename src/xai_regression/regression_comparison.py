@@ -339,3 +339,78 @@ def summarize_regression_upload_models(
         "models": summaries,
         "best_model_index": ranked[0]["index"],
     }
+
+
+def validate_regression_upload_models(
+    *, models: list[tuple[str, bytes]], dataset: tuple[str, bytes], manifest: bytes
+) -> dict[str, Any]:
+    """Check each uploaded regressor against the shared numeric dataset."""
+    if not 2 <= len(models) <= 5:
+        raise ValueError("Upload between two and five regression models for validation.")
+    contract = parse_regression_manifest(manifest)
+    frame = load_uploaded_dataset(dataset[1], dataset[0])
+    if contract.label_column not in frame:
+        raise ValueError(f"Dataset is missing label column: {contract.label_column}.")
+    if contract.id_column is not None and contract.id_column not in frame:
+        raise ValueError(f"Dataset is missing id column: {contract.id_column}.")
+    excluded = {contract.label_column}
+    if contract.id_column is not None:
+        excluded.add(contract.id_column)
+    feature_columns = (
+        list(contract.feature_columns)
+        if contract.feature_columns is not None
+        else [column for column in frame.columns if column not in excluded]
+    )
+    missing = [column for column in feature_columns if column not in frame]
+    if missing:
+        raise ValueError("Dataset is missing feature columns: " + ", ".join(missing))
+    if not feature_columns:
+        raise ValueError("No model feature columns were selected.")
+    try:
+        actual = frame[contract.label_column].to_numpy(dtype=float)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Regression labels must be numeric.") from error
+    if not np.isfinite(actual).all():
+        raise ValueError("Regression labels must contain only finite values.")
+    features = frame.loc[:, feature_columns]
+    reports = []
+    for index, (filename, payload) in enumerate(models):
+        model_type = None
+        try:
+            model = load_uploaded_model(payload, filename)
+            model_type = type(model).__name__
+            try:
+                predicted = np.asarray(model.predict(features), dtype=float)
+            except Exception as error:
+                raise ValueError(
+                    "Could not produce numeric predictions. Check feature order and preprocessing."
+                ) from error
+            if predicted.shape != actual.shape:
+                raise ValueError("Must return one numeric prediction per dataset row.")
+            if not np.isfinite(predicted).all():
+                raise ValueError("Predictions must contain only finite numeric values.")
+            reports.append(
+                {
+                    "index": index,
+                    "filename": filename,
+                    "compatible": True,
+                    "model_type": model_type,
+                    "message": "Ready for numeric prediction.",
+                }
+            )
+        except ValueError as error:
+            reports.append(
+                {
+                    "index": index,
+                    "filename": filename,
+                    "compatible": False,
+                    "model_type": model_type,
+                    "message": str(error),
+                }
+            )
+    return {
+        "task": "regression",
+        "ready": all(report["compatible"] for report in reports),
+        "dataset": {"rows": len(frame), "feature_count": len(feature_columns)},
+        "models": reports,
+    }
