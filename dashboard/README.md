@@ -64,6 +64,11 @@ The following misclassification-path table explains where those errors went,
 for example `8 → 3`, and compares the number of occurrences in the baseline and
 candidate. A negative error-count change indicates fewer candidate mistakes.
 
+After a successful run, **Download JSON report** saves the compatibility,
+multi-model overview, and detailed pair result together. **Download sample
+CSV** saves the per-sample labels, predictions, confidence values, and
+transition category. Both downloads are generated locally in the browser.
+
 For image display, set `image_column` in the manifest and use that CSV column
 to reference the exact relative filename inside the ZIP, for example
 `digits/sample-1.png`. The comparison table shows a thumbnail for every

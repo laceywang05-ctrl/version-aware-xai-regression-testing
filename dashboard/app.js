@@ -7,6 +7,7 @@ const state = {
   robustness: null,
   uploadComparison: null,
   modelOverview: null,
+  uploadValidation: null,
 };
 
 const elements = {
@@ -81,6 +82,8 @@ const elements = {
   confusionV1Heading: document.querySelector("#confusion-v1-heading"),
   confusionV2Heading: document.querySelector("#confusion-v2-heading"),
   confusionEmptyMessage: document.querySelector("#confusion-empty-message"),
+  downloadComparisonJson: document.querySelector("#download-comparison-json"),
+  downloadSamplesCsv: document.querySelector("#download-samples-csv"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
@@ -285,6 +288,7 @@ function renderUploadValidation(report) {
   if (!report || !Array.isArray(report.models) || typeof report.ready !== "boolean") {
     throw new Error("The server returned an invalid compatibility report.");
   }
+  state.uploadValidation = report;
   elements.uploadValidation.classList.toggle("ready", report.ready);
   elements.uploadValidation.classList.toggle("blocked", !report.ready);
   elements.uploadValidationSummary.textContent = report.ready
@@ -307,6 +311,64 @@ function renderUploadValidation(report) {
     elements.uploadValidationGrid.append(card);
   }
   elements.uploadValidation.hidden = false;
+}
+
+function downloadLocalFile(filename, content, mediaType) {
+  const blob = new Blob([content], { type: mediaType });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function exportTimestamp() {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function downloadComparisonJson() {
+  if (!state.uploadComparison || !state.modelOverview) return;
+  const artifact = {
+    exported_at: new Date().toISOString(),
+    validation: state.uploadValidation,
+    overview: state.modelOverview,
+    comparison: state.uploadComparison,
+  };
+  downloadLocalFile(
+    `xai-comparison-${exportTimestamp()}.json`,
+    JSON.stringify(artifact, null, 2),
+    "application/json",
+  );
+}
+
+function csvCell(value) {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function downloadSamplesCsv() {
+  if (!state.uploadComparison) return;
+  const columns = [
+    "v1_model", "v2_model", "sample_id", "actual", "v1_prediction", "v1_confidence",
+    "v2_prediction", "v2_confidence", "transition", "prediction_changed",
+  ];
+  const rows = state.uploadComparison.samples.map((sample) => {
+    const record = {
+      ...sample,
+      v1_model: reportModelName("v1", "Model V1"),
+      v2_model: reportModelName("v2", "Model V2"),
+    };
+    return columns.map((column) => csvCell(record[column])).join(",");
+  });
+  downloadLocalFile(
+    `xai-samples-${exportTimestamp()}.csv`,
+    `${columns.join(",")}\n${rows.join("\n")}\n`,
+    "text/csv;charset=utf-8",
+  );
 }
 
 function renderPixelHeatmap(container, values) {
@@ -942,6 +1004,8 @@ elements.benchmarkSelector.addEventListener("change", (event) => {
 });
 
 elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
+elements.downloadComparisonJson.addEventListener("click", downloadComparisonJson);
+elements.downloadSamplesCsv.addEventListener("click", downloadSamplesCsv);
 for (const input of [
   elements.modelV1Upload,
   elements.modelV2Upload,
