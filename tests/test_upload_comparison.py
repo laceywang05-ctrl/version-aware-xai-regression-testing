@@ -135,6 +135,11 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertAlmostEqual(result["class_diagnostics"][0]["accuracy_change"], 0.5)
         self.assertEqual(result["class_diagnostics"][1]["class_label"], "positive")
         self.assertAlmostEqual(result["class_diagnostics"][1]["accuracy_change"], -0.5)
+        self.assertAlmostEqual(result["summary"]["v1_macro_f1"], 0.5)
+        self.assertAlmostEqual(result["summary"]["v2_macro_f1"], 1 / 3)
+        self.assertAlmostEqual(result["class_diagnostics"][0]["v1_precision"], 0.5)
+        self.assertAlmostEqual(result["class_diagnostics"][0]["v1_recall"], 0.5)
+        self.assertAlmostEqual(result["class_diagnostics"][0]["v1_f1"], 0.5)
         confusion = {
             (item["actual_class"], item["predicted_class"]): item
             for item in result["confusion_diagnostics"]

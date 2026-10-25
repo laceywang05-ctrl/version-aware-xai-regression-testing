@@ -119,6 +119,10 @@ const elements = {
   uploadTotal: document.querySelector("#upload-total"),
   uploadV1Accuracy: document.querySelector("#upload-v1-accuracy"),
   uploadV2Accuracy: document.querySelector("#upload-v2-accuracy"),
+  uploadV1F1: document.querySelector("#upload-v1-f1"),
+  uploadV2F1: document.querySelector("#upload-v2-f1"),
+  uploadV1F1Label: document.querySelector("#upload-v1-f1-label"),
+  uploadV2F1Label: document.querySelector("#upload-v2-f1-label"),
   uploadV1Label: document.querySelector("#upload-v1-label"),
   uploadV2Label: document.querySelector("#upload-v2-label"),
   uploadAgreement: document.querySelector("#upload-agreement"),
@@ -784,6 +788,8 @@ function downloadComparisonSummary() {
     `- Labelled samples: ${summary.total_samples}`,
     `- V1 accuracy: ${formatPercent(summary.v1_accuracy)}`,
     `- V2 accuracy: ${formatPercent(summary.v2_accuracy)}`,
+    `- V1 macro F1: ${formatPercent(summary.v1_macro_f1)}`,
+    `- V2 macro F1: ${formatPercent(summary.v2_macro_f1)}`,
     `- Accuracy change: ${summary.accuracy_change > 0 ? "+" : ""}${formatPercent(summary.accuracy_change)}`,
     `- Prediction agreement: ${formatPercent(summary.prediction_agreement)}`,
     "",
@@ -1108,6 +1114,8 @@ function renderUploadComparison(report) {
   elements.uploadTotal.textContent = summary.total_samples;
   elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
   elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
+  elements.uploadV1F1.textContent = formatPercent(summary.v1_macro_f1);
+  elements.uploadV2F1.textContent = formatPercent(summary.v2_macro_f1);
   elements.uploadAgreement.textContent = formatPercent(summary.prediction_agreement);
   elements.pairedAccuracyChange.textContent = `${summary.accuracy_change > 0 ? "+" : ""}${formatPercent(summary.accuracy_change)}`;
   elements.pairedDiscordantCount.textContent = summary.discordant_correctness_count;
@@ -1125,6 +1133,8 @@ function renderUploadComparison(report) {
   renderCandidateVerdict("classification", summary, v1Name, v2Name);
   elements.uploadV1Label.textContent = `${v1Name} accuracy`;
   elements.uploadV2Label.textContent = `${v2Name} accuracy`;
+  elements.uploadV1F1Label.textContent = `${v1Name} macro F1`;
+  elements.uploadV2F1Label.textContent = `${v2Name} macro F1`;
   elements.v1PredictionHeading.textContent = `${v1Name} prediction`;
   elements.v1ConfidenceHeading.textContent = `${v1Name} confidence`;
   elements.v2PredictionHeading.textContent = `${v2Name} prediction`;
@@ -1161,7 +1171,7 @@ function renderUploadComparison(report) {
 
   elements.classDiagnosticsResults.replaceChildren();
   const classDiagnostics = [...(report.class_diagnostics || [])].sort(
-    (left, right) => right.accuracy_change - left.accuracy_change,
+    (left, right) => right.f1_change - left.f1_change,
   );
   for (const item of classDiagnostics) {
     const row = document.createElement("tr");
@@ -1169,7 +1179,13 @@ function renderUploadComparison(report) {
       item.class_label,
       item.samples,
       formatPercent(item.v1_accuracy),
+      formatPercent(item.v1_precision),
+      formatPercent(item.v1_recall),
+      formatPercent(item.v1_f1),
       formatPercent(item.v2_accuracy),
+      formatPercent(item.v2_precision),
+      formatPercent(item.v2_recall),
+      formatPercent(item.v2_f1),
     ]) {
       const cell = document.createElement("td");
       cell.textContent = String(value);
@@ -1177,11 +1193,11 @@ function renderUploadComparison(report) {
     }
     const changeCell = document.createElement("td");
     const change = document.createElement("span");
-    const direction = item.accuracy_change > 0
+    const direction = item.f1_change > 0
       ? "improved"
-      : item.accuracy_change < 0 ? "regressed" : "unchanged";
+      : item.f1_change < 0 ? "regressed" : "unchanged";
     change.className = `class-change ${direction}`;
-    change.textContent = `${item.accuracy_change > 0 ? "+" : ""}${formatPercent(item.accuracy_change)}`;
+    change.textContent = `${item.f1_change > 0 ? "+" : ""}${formatPercent(item.f1_change)}`;
     changeCell.append(change);
     row.append(changeCell);
     elements.classDiagnosticsResults.append(row);

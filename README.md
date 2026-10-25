@@ -211,6 +211,11 @@ and candidate accuracy, and the signed accuracy change for every true class.
 This makes class-specific improvements and regressions visible for multiclass
 image datasets such as handwritten digits and CIFAR-style labels.
 
+The comparison also reports macro F1 for both selected models and per-class
+precision, recall and F1. Macro F1 weights each class equally, making changes
+on smaller classes visible even when overall accuracy is dominated by a larger
+class.
+
 Misclassification-path diagnostics then show the concrete true-class to
 predicted-class error pairs for both versions, including whether each error
 count increased or decreased in the candidate model.

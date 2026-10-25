@@ -14,6 +14,7 @@ from zipfile import BadZipFile, ZipFile
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.metrics import f1_score
 
 
 MAX_DATASET_ROWS = 5_000
@@ -620,9 +621,25 @@ def compare_classifiers(
     class_diagnostics = []
     for class_value in pd.unique(labels):
         class_mask = labels == class_value
+        v1_predicted_mask = prediction_v1 == class_value
+        v2_predicted_mask = prediction_v2 == class_value
         class_total = int(np.count_nonzero(class_mask))
+        v1_true_positive = int(np.count_nonzero(class_mask & v1_predicted_mask))
+        v2_true_positive = int(np.count_nonzero(class_mask & v2_predicted_mask))
         v1_class_accuracy = float(correct_v1[class_mask].mean())
         v2_class_accuracy = float(correct_v2[class_mask].mean())
+        v1_precision = v1_true_positive / max(1, int(np.count_nonzero(v1_predicted_mask)))
+        v2_precision = v2_true_positive / max(1, int(np.count_nonzero(v2_predicted_mask)))
+        v1_f1 = (
+            2 * v1_precision * v1_class_accuracy / (v1_precision + v1_class_accuracy)
+            if v1_precision + v1_class_accuracy > 0
+            else 0.0
+        )
+        v2_f1 = (
+            2 * v2_precision * v2_class_accuracy / (v2_precision + v2_class_accuracy)
+            if v2_precision + v2_class_accuracy > 0
+            else 0.0
+        )
         class_diagnostics.append(
             {
                 "class_label": _label(class_value, manifest.class_names),
@@ -632,6 +649,13 @@ def compare_classifiers(
                 "v1_accuracy": v1_class_accuracy,
                 "v2_accuracy": v2_class_accuracy,
                 "accuracy_change": v2_class_accuracy - v1_class_accuracy,
+                "v1_precision": v1_precision,
+                "v1_recall": v1_class_accuracy,
+                "v1_f1": v1_f1,
+                "v2_precision": v2_precision,
+                "v2_recall": v2_class_accuracy,
+                "v2_f1": v2_f1,
+                "f1_change": v2_f1 - v1_f1,
             }
         )
     confusion_counts: dict[tuple[str, str], list[int]] = {}
@@ -693,6 +717,8 @@ def compare_classifiers(
             "total_samples": total,
             "v1_accuracy": float(correct_v1.mean()),
             "v2_accuracy": float(correct_v2.mean()),
+            "v1_macro_f1": float(f1_score(labels, prediction_v1, average="macro", zero_division=0)),
+            "v2_macro_f1": float(f1_score(labels, prediction_v2, average="macro", zero_division=0)),
             "prediction_agreement": float((prediction_v1 == prediction_v2).mean()),
             "accuracy_change": float(correct_v2.mean() - correct_v1.mean()),
             "discordant_correctness_count": (
