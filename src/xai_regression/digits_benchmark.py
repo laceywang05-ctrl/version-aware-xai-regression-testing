@@ -433,6 +433,10 @@ def run_digits_explanation_stability(
                         np.count_nonzero(similarities < similarity_threshold)
                     ),
                     "same_prediction_count": len(same_prediction),
+                    "same_prediction_similarities": [
+                        float(sample["explanation_similarity"])
+                        for sample in same_prediction
+                    ],
                     "hidden_drift_count": len(hidden_drift),
                     "prediction_agreement": comparison["summary"][
                         "prediction_agreement"
@@ -535,6 +539,67 @@ def run_digits_explanation_split_robustness(
             "Hidden drift requires matching predictions and cosine similarity "
             "below the inspection threshold. Splits are sensitivity checks, "
             "not independent population samples."
+        ),
+    }
+    destination.mkdir(parents=True, exist_ok=True)
+    report_path = destination / "summary.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return {"output_dir": destination, "report_path": report_path, **report}
+
+
+def run_digits_explanation_threshold_sensitivity(
+    output_dir: str | Path,
+    *,
+    thresholds: tuple[float, ...] = (0.70, 0.75, 0.80, 0.85, 0.90),
+    split_seeds: tuple[int, ...] = (11, 23, 37, 49, 61),
+    sample_limit: int = 80,
+) -> dict:
+    """Measure how hidden-drift flags change across inspection thresholds."""
+    if len(thresholds) < 2:
+        raise ValueError("Threshold sensitivity requires at least two thresholds.")
+    if any(not 0.0 <= threshold <= 1.0 for threshold in thresholds):
+        raise ValueError("Explanation thresholds must be between 0 and 1.")
+    if tuple(sorted(set(thresholds))) != thresholds:
+        raise ValueError("Explanation thresholds must be unique and increasing.")
+
+    destination = Path(output_dir)
+    base = run_digits_explanation_split_robustness(
+        destination / "split_runs",
+        split_seeds=split_seeds,
+        sample_limit=sample_limit,
+        similarity_threshold=0.80,
+    )
+    same_prediction_similarities = [
+        similarity
+        for run in base["runs"]
+        for pair in run["pairs"]
+        for similarity in pair["same_prediction_similarities"]
+    ]
+    total = len(same_prediction_similarities)
+    sensitivity = []
+    for threshold in thresholds:
+        flags = sum(
+            similarity < threshold for similarity in same_prediction_similarities
+        )
+        sensitivity.append(
+            {
+                "threshold": threshold,
+                "hidden_drift_flags": flags,
+                "same_prediction_comparisons": total,
+                "flag_rate": flags / total if total else 0.0,
+            }
+        )
+
+    report = {
+        "dataset": base["dataset"],
+        "split_seeds": list(split_seeds),
+        "sample_limit_per_split": sample_limit,
+        "model_pairs": 3,
+        "sensitivity": sensitivity,
+        "interpretation": (
+            "Counts show review workload under alternative pragmatic thresholds; "
+            "they do not estimate false-positive or false-negative rates without "
+            "expert-labelled explanation changes."
         ),
     }
     destination.mkdir(parents=True, exist_ok=True)

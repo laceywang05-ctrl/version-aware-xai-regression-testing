@@ -600,3 +600,16 @@ This sensitivity analysis aggregates 1,200 pairwise sample comparisons and
 reports whether hidden explanation drift depends on the data partition. Results
 are documented in
 [`docs/DIGITS_EXPLANATION_SPLIT_ROBUSTNESS_RESULT.md`](docs/DIGITS_EXPLANATION_SPLIT_ROBUSTNESS_RESULT.md).
+
+Measure the hidden-drift review workload at similarity thresholds from 0.70 to
+0.90:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression \
+  digits-explanation-threshold-sensitivity
+```
+
+This analysis treats the threshold as a review-workload choice rather than a
+calibrated failure boundary. Results are documented in
+[`docs/DIGITS_EXPLANATION_THRESHOLD_SENSITIVITY_RESULT.md`](docs/DIGITS_EXPLANATION_THRESHOLD_SENSITIVITY_RESULT.md).
