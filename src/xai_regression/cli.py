@@ -549,8 +549,10 @@ def run_image_demo(output_dir: str | Path) -> int:
     print("Handwritten-digit upload demo", flush=True)
     print("-----------------------------", flush=True)
     print(f"Samples: {result['sample_count']}", flush=True)
+    print(f"Models: {result['model_count']}", flush=True)
     print(f"Model V1 accuracy: {result['v1_accuracy']:.1%}", flush=True)
     print(f"Model V2 accuracy: {result['v2_accuracy']:.1%}", flush=True)
+    print(f"Best model accuracy: {result['best_accuracy']:.1%}", flush=True)
     print(f"Files saved to: {result['output_dir']}", flush=True)
     return 0
 
