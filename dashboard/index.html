@@ -387,6 +387,8 @@
               <article><span>Samples</span><strong id="upload-total">—</strong></article>
               <article><span id="upload-v1-label">V1 accuracy</span><strong id="upload-v1-accuracy">—</strong></article>
               <article><span id="upload-v2-label">V2 accuracy</span><strong id="upload-v2-accuracy">—</strong></article>
+              <article><span id="upload-v1-f1-label">V1 macro F1</span><strong id="upload-v1-f1">—</strong></article>
+              <article><span id="upload-v2-f1-label">V2 macro F1</span><strong id="upload-v2-f1">—</strong></article>
               <article><span>Prediction agreement</span><strong id="upload-agreement">—</strong></article>
             </div>
           </section>
@@ -439,11 +441,11 @@
                 <p class="eyebrow">Class-level diagnosis</p>
                 <h2 id="class-diagnostics-heading">Where performance changed</h2>
               </div>
-              <p>Positive changes favor the candidate; negative changes identify classes that may have regressed.</p>
+              <p>Precision measures false-positive control, recall measures captured examples, and F1 balances both. Positive F1 changes favor the candidate.</p>
             </div>
             <div class="table-scroll">
               <table class="comparison-table class-diagnostics-table">
-                <thead><tr><th>Actual class</th><th>Samples</th><th id="class-v1-heading">V1 accuracy</th><th id="class-v2-heading">V2 accuracy</th><th>Change</th></tr></thead>
+                <thead><tr><th>Actual class</th><th>Samples</th><th id="class-v1-heading">V1 accuracy</th><th>V1 precision</th><th>V1 recall</th><th>V1 F1</th><th id="class-v2-heading">V2 accuracy</th><th>V2 precision</th><th>V2 recall</th><th>V2 F1</th><th>F1 change</th></tr></thead>
                 <tbody id="class-diagnostics-results"></tbody>
               </table>
             </div>
