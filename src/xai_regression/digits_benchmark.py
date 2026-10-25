@@ -21,6 +21,7 @@ MODEL_CONFIGS = (
     {"name": "V4", "n_estimators": 80, "max_depth": 6, "random_state": 53},
 )
 DEFAULT_SPLIT_SEEDS = (11, 23, 37, 49, 61, 73, 89, 101, 127, 149)
+DEFAULT_TRAINING_SEEDS = (13, 31, 47, 59, 71, 83, 97, 109, 131, 157)
 
 
 def _mcnemar_p(first_only: int, second_only: int) -> float:
@@ -215,6 +216,122 @@ def run_digits_split_robustness(
     report = {
         "dataset": "scikit-learn handwritten digits (8x8)",
         "split_seeds": list(split_seeds),
+        "bootstrap_samples": bootstrap_samples,
+        "models": summaries,
+        "pairwise_accuracy_changes": pairwise,
+        "runs": runs,
+    }
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    report_path = destination / "summary.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return {"output_dir": destination, "report_path": report_path, **report}
+
+
+def run_digits_training_robustness(
+    output_dir: str | Path,
+    *,
+    training_seeds: tuple[int, ...] = DEFAULT_TRAINING_SEEDS,
+    bootstrap_samples: int = 2_000,
+) -> dict:
+    """Repeat the four versions on one split with varying forest randomness."""
+    if len(training_seeds) < 2:
+        raise ValueError("Training robustness requires at least two random seeds.")
+    if bootstrap_samples < 100:
+        raise ValueError("Bootstrap samples must be at least 100.")
+    digits = load_digits()
+    indices = np.arange(len(digits.data))
+    train_indices, test_indices = train_test_split(
+        indices,
+        test_size=0.30,
+        random_state=42,
+        stratify=digits.target,
+    )
+    train_features = pd.DataFrame(digits.data[train_indices])
+    test_features = pd.DataFrame(digits.data[test_indices])
+    train_labels = digits.target[train_indices]
+    test_labels = digits.target[test_indices]
+    runs = []
+    for training_seed in training_seeds:
+        metrics = []
+        for config in MODEL_CONFIGS:
+            model = RandomForestClassifier(
+                n_estimators=config["n_estimators"],
+                max_depth=config["max_depth"],
+                random_state=training_seed,
+                n_jobs=1,
+            ).fit(train_features, train_labels)
+            prediction = model.predict(test_features)
+            metrics.append(
+                {
+                    "name": config["name"],
+                    "accuracy": float(np.mean(prediction == test_labels)),
+                    "macro_f1": float(
+                        f1_score(test_labels, prediction, average="macro")
+                    ),
+                }
+            )
+        runs.append({"training_seed": training_seed, "models": metrics})
+
+    rng = np.random.default_rng(2027)
+    summaries = []
+    for model_index, config in enumerate(MODEL_CONFIGS):
+        accuracies = np.asarray(
+            [run["models"][model_index]["accuracy"] for run in runs]
+        )
+        macro_f1 = np.asarray(
+            [run["models"][model_index]["macro_f1"] for run in runs]
+        )
+        summaries.append(
+            {
+                "name": config["name"],
+                "mean_accuracy": float(accuracies.mean()),
+                "accuracy_ci_95": list(
+                    _bootstrap_mean_interval(
+                        accuracies, samples=bootstrap_samples, rng=rng
+                    )
+                ),
+                "mean_macro_f1": float(macro_f1.mean()),
+                "macro_f1_ci_95": list(
+                    _bootstrap_mean_interval(
+                        macro_f1, samples=bootstrap_samples, rng=rng
+                    )
+                ),
+                "best_accuracy": float(accuracies.max()),
+                "worst_accuracy": float(accuracies.min()),
+            }
+        )
+
+    pairwise = []
+    for left in range(len(MODEL_CONFIGS)):
+        for right in range(left + 1, len(MODEL_CONFIGS)):
+            differences = np.asarray(
+                [
+                    run["models"][right]["accuracy"]
+                    - run["models"][left]["accuracy"]
+                    for run in runs
+                ]
+            )
+            pairwise.append(
+                {
+                    "left": MODEL_CONFIGS[left]["name"],
+                    "right": MODEL_CONFIGS[right]["name"],
+                    "mean_accuracy_change": float(differences.mean()),
+                    "accuracy_change_ci_95": list(
+                        _bootstrap_mean_interval(
+                            differences, samples=bootstrap_samples, rng=rng
+                        )
+                    ),
+                    "right_wins": int(np.count_nonzero(differences > 0)),
+                    "ties": int(np.count_nonzero(differences == 0)),
+                    "left_wins": int(np.count_nonzero(differences < 0)),
+                }
+            )
+
+    report = {
+        "dataset": "scikit-learn handwritten digits (8x8)",
+        "fixed_split_seed": 42,
+        "training_seeds": list(training_seeds),
         "bootstrap_samples": bootstrap_samples,
         "models": summaries,
         "pairwise_accuracy_changes": pairwise,

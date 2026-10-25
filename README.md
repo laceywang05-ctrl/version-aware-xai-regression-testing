@@ -275,6 +275,17 @@ This reports mean accuracy and macro F1 with deterministic bootstrap intervals,
 plus paired split-level accuracy changes and win/tie/loss counts. It separates
 split sensitivity from the paired-sample evidence on one fixed test set.
 
+Hold the seed-42 data split fixed and vary random-forest training randomness
+with:
+
+```bash
+PYTHONPATH=src python -m xai_regression digits-training-robustness
+```
+
+This second robustness experiment uses 10 training seeds and reports the same
+bootstrap intervals and paired win/tie/loss summaries. Comparing both reports
+separates uncertainty from data partitioning and stochastic model fitting.
+
 To prepare MNIST, CIFAR-10, or another labelled image dataset supplied as an
 NPZ file, use generic `images` and `labels` arrays or the common Keras-style
 `x_train`/`y_train` and `x_test`/`y_test` keys, then run:

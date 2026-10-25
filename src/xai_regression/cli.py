@@ -11,6 +11,7 @@ from xai_regression.config import ConfigError, load_config
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
     run_digits_split_robustness,
+    run_digits_training_robustness,
 )
 from xai_regression.lime_workflow import (
     run_lime_cross_version,
@@ -302,6 +303,14 @@ def build_parser() -> argparse.ArgumentParser:
     digits_robustness_parser.add_argument(
         "--output-dir",
         default="artifacts/digits_split_robustness",
+    )
+    digits_training_parser = subparsers.add_parser(
+        "digits-training-robustness",
+        help="Repeat the four-version digit benchmark across training seeds.",
+    )
+    digits_training_parser.add_argument(
+        "--output-dir",
+        default="artifacts/digits_training_robustness",
     )
     serve_parser.add_argument(
         "--portfolio-report",
@@ -650,6 +659,22 @@ def run_digits_robustness(output_dir: str | Path) -> int:
     return 0
 
 
+def run_digits_training_stability(output_dir: str | Path) -> int:
+    """Run and describe the training-randomness digit benchmark."""
+    result = run_digits_training_robustness(_project_path(output_dir))
+    best = max(result["models"], key=lambda model: model["mean_accuracy"])
+    print("Handwritten-digit training robustness", flush=True)
+    print("-------------------------------------", flush=True)
+    print(f"Training seeds: {len(result['training_seeds'])}", flush=True)
+    print(f"Models per seed: {len(result['models'])}", flush=True)
+    print(
+        f"Best mean accuracy: {best['mean_accuracy']:.1%} ({best['name']})",
+        flush=True,
+    )
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -734,6 +759,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_digits_benchmark(args.output_dir)
         if args.command == "digits-split-robustness":
             return run_digits_robustness(args.output_dir)
+        if args.command == "digits-training-robustness":
+            return run_digits_training_stability(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 
