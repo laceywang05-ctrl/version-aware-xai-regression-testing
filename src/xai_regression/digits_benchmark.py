@@ -13,6 +13,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 
+from xai_regression.upload_comparison import compare_classifiers, parse_manifest
+
 
 MODEL_CONFIGS = (
     {"name": "V1", "n_estimators": 40, "max_depth": 8, "random_state": 17},
@@ -336,6 +338,117 @@ def run_digits_training_robustness(
         "models": summaries,
         "pairwise_accuracy_changes": pairwise,
         "runs": runs,
+    }
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    report_path = destination / "summary.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return {"output_dir": destination, "report_path": report_path, **report}
+
+
+def run_digits_explanation_stability(
+    output_dir: str | Path,
+    *,
+    sample_limit: int = 120,
+    similarity_threshold: float = 0.80,
+) -> dict:
+    """Compare Tree SHAP maps for three closely performing forest versions."""
+    if not 20 <= sample_limit <= 500:
+        raise ValueError("Explanation stability sample limit must be 20 to 500.")
+    if not 0.0 <= similarity_threshold <= 1.0:
+        raise ValueError("Explanation similarity threshold must be between 0 and 1.")
+    digits = load_digits()
+    columns = [f"pixel_{index}" for index in range(digits.data.shape[1])]
+    indices = np.arange(len(digits.data))
+    train_indices, test_indices = train_test_split(
+        indices,
+        test_size=0.30,
+        random_state=42,
+        stratify=digits.target,
+    )
+    train_features = pd.DataFrame(digits.data[train_indices], columns=columns)
+    test_features = pd.DataFrame(
+        digits.data[test_indices][:sample_limit], columns=columns
+    )
+    train_labels = digits.target[train_indices]
+    test_labels = digits.target[test_indices][:sample_limit]
+    dataset = test_features.copy()
+    dataset["target"] = test_labels
+    manifest = parse_manifest(
+        {
+            "task": "classification",
+            "label_column": "target",
+            "image_shape": [8, 8],
+            "feature_columns": columns,
+            "class_names": {str(value): f"digit {value}" for value in range(10)},
+            "trusted_model_files": True,
+            "dataset_note": "Fixed seed-42 held-out handwritten-digit subset.",
+        }
+    )
+    models = []
+    for config in MODEL_CONFIGS[:3]:
+        models.append(
+            RandomForestClassifier(
+                n_estimators=config["n_estimators"],
+                max_depth=config["max_depth"],
+                random_state=config["random_state"],
+                n_jobs=1,
+            ).fit(train_features, train_labels)
+        )
+
+    pairs = []
+    for left in range(len(models)):
+        for right in range(left + 1, len(models)):
+            comparison = compare_classifiers(
+                models[left], models[right], dataset, manifest
+            )
+            comparable = [
+                sample
+                for sample in comparison["samples"]
+                if sample["explanation_similarity"] is not None
+            ]
+            similarities = np.asarray(
+                [sample["explanation_similarity"] for sample in comparable]
+            )
+            same_prediction = [
+                sample for sample in comparable if not sample["prediction_changed"]
+            ]
+            hidden_drift = [
+                sample
+                for sample in same_prediction
+                if sample["explanation_similarity"] < similarity_threshold
+            ]
+            pairs.append(
+                {
+                    "left": MODEL_CONFIGS[left]["name"],
+                    "right": MODEL_CONFIGS[right]["name"],
+                    "samples_compared": len(comparable),
+                    "mean_cosine_similarity": float(similarities.mean()),
+                    "median_cosine_similarity": float(np.median(similarities)),
+                    "p10_cosine_similarity": float(np.quantile(similarities, 0.10)),
+                    "below_threshold_count": int(
+                        np.count_nonzero(similarities < similarity_threshold)
+                    ),
+                    "same_prediction_count": len(same_prediction),
+                    "hidden_drift_count": len(hidden_drift),
+                    "prediction_agreement": comparison["summary"][
+                        "prediction_agreement"
+                    ],
+                    "accuracy_change": comparison["summary"]["accuracy_change"],
+                }
+            )
+
+    report = {
+        "dataset": "scikit-learn handwritten digits (8x8)",
+        "fixed_split_seed": 42,
+        "sample_limit": sample_limit,
+        "similarity_threshold": similarity_threshold,
+        "explanation_method": "Tree SHAP for predicted-class contributions",
+        "pairs": pairs,
+        "interpretation": (
+            "Cosine similarity compares normalized contribution-map direction. "
+            "Values below the inspection threshold are flags, not calibrated failures."
+        ),
     }
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
