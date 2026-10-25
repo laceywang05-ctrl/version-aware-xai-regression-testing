@@ -326,6 +326,23 @@ When all four Keras-style split arrays are present, the command instead trains
 on `x_train`/`y_train` and evaluates only on `x_test`/`y_test`, preserving the
 dataset's official split. The generated upload bundle contains test samples.
 
+The same command also accepts the official CIFAR-10 Python archive without
+extracting it first:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression image-model-demo \
+  --input cifar-10-python.tar.gz \
+  --output-dir artifacts/cifar10_model_demo \
+  --limit 1000
+```
+
+It reads `data_batch_1` through `data_batch_5`, `test_batch`, and the class
+names in `batches.meta`. Only the requested number of training and test rows is
+kept in memory, and the archive is never extracted to the project directory.
+Use only the official trusted CIFAR-10 archive because the Python distribution
+stores its batches as pickle files.
+
 Generate a ready-to-upload four-model regression demonstration with:
 
 ```bash
