@@ -14,6 +14,7 @@ from xai_regression.lime_workflow import (
     run_lime_stability,
 )
 from xai_regression.image_demo import build_digits_image_demo
+from xai_regression.image_bundle import prepare_image_npz_bundle
 from xai_regression.regression_demo import build_regression_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
@@ -260,6 +261,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default="artifacts/demo_image_upload",
     )
+    image_bundle_parser = subparsers.add_parser(
+        "prepare-image-data",
+        help="Prepare MNIST/CIFAR-style NPZ arrays for dashboard upload.",
+    )
+    image_bundle_parser.add_argument("--input", required=True)
+    image_bundle_parser.add_argument("--output-dir", default="artifacts/prepared_image_upload")
+    image_bundle_parser.add_argument("--limit", type=int, default=500)
     regression_demo_parser = subparsers.add_parser(
         "regression-demo",
         help="Build a ready-to-upload four-model regression bundle.",
@@ -540,6 +548,20 @@ def run_image_demo(output_dir: str | Path) -> int:
     return 0
 
 
+def run_prepare_image_data(input_path: str | Path, output_dir: str | Path, limit: int) -> int:
+    """Prepare a user-provided labelled image NPZ for browser upload."""
+    result = prepare_image_npz_bundle(
+        _project_path(input_path), _project_path(output_dir), limit=limit
+    )
+    print("Image upload data prepared", flush=True)
+    print("--------------------------", flush=True)
+    print(f"Samples: {result['sample_count']}", flush=True)
+    print(f"Image shape: {result['image_shape']}", flush=True)
+    print(f"Features: {result['feature_count']}", flush=True)
+    print(f"Files saved to: {result['output_dir']}", flush=True)
+    return 0
+
+
 def run_regression_demo(output_dir: str | Path) -> int:
     """Build and describe the local multi-model regression demonstration."""
     result = build_regression_demo(_project_path(output_dir))
@@ -626,6 +648,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "image-demo":
             return run_image_demo(args.output_dir)
+        if args.command == "prepare-image-data":
+            return run_prepare_image_data(args.input, args.output_dir, args.limit)
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:

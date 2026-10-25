@@ -245,6 +245,22 @@ models** to demonstrate concrete image-level improvements and regressions.
 This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
 offline; true MNIST and CIFAR-10 remain the next dataset integrations.
 
+To prepare MNIST, CIFAR-10, or another labelled image dataset supplied as an
+NPZ file, store arrays under the keys `images` and `labels`, then run:
+
+```bash
+PYTHONPATH=src python -m xai_regression prepare-image-data \
+  --input path/to/dataset.npz \
+  --output-dir artifacts/prepared_image_upload \
+  --limit 500
+```
+
+The command accepts grayscale `(N,H,W)` or channel-last `(N,H,W,C)` arrays and
+creates `samples.csv`, `images.zip`, and `manifest.json`. Upload those files
+with two to five trusted `.joblib` classifiers trained on the same flattened
+pixel order. RGB images are displayed in the sample table; pixel heatmaps remain
+limited to grayscale inputs with an `image_shape` manifest entry.
+
 Generate a ready-to-upload four-model regression demonstration with:
 
 ```bash
