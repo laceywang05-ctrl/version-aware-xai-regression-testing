@@ -140,6 +140,10 @@ const elements = {
   confusionV1Heading: document.querySelector("#confusion-v1-heading"),
   confusionV2Heading: document.querySelector("#confusion-v2-heading"),
   confusionEmptyMessage: document.querySelector("#confusion-empty-message"),
+  confusionMatrixV1: document.querySelector("#confusion-matrix-v1"),
+  confusionMatrixV2: document.querySelector("#confusion-matrix-v2"),
+  confusionMatrixV1Title: document.querySelector("#confusion-matrix-v1-title"),
+  confusionMatrixV2Title: document.querySelector("#confusion-matrix-v2-title"),
   downloadComparisonJson: document.querySelector("#download-comparison-json"),
   downloadComparisonSummary: document.querySelector("#download-comparison-summary"),
   downloadSamplesCsv: document.querySelector("#download-samples-csv"),
@@ -1091,6 +1095,9 @@ function renderUploadComparison(report) {
     !report || report.task !== "classification" || !report.summary
     || !Array.isArray(report.samples) || !Array.isArray(report.class_diagnostics)
     || !Array.isArray(report.confusion_diagnostics)
+    || !Array.isArray(report.confusion_matrices?.labels)
+    || !Array.isArray(report.confusion_matrices?.v1)
+    || !Array.isArray(report.confusion_matrices?.v2)
   ) {
     throw new Error("The server returned an invalid classification comparison.");
   }
@@ -1126,6 +1133,8 @@ function renderUploadComparison(report) {
   elements.classV2Heading.textContent = `${v2Name} accuracy`;
   elements.confusionV1Heading.textContent = `${v1Name} errors`;
   elements.confusionV2Heading.textContent = `${v2Name} errors`;
+  elements.confusionMatrixV1Title.textContent = v1Name;
+  elements.confusionMatrixV2Title.textContent = v2Name;
   elements.uploadScopeNote.textContent = report.dataset?.note
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
   elements.confidenceThresholdInput.value = String((summary.high_confidence_threshold ?? 0.8) * 100);
@@ -1177,6 +1186,45 @@ function renderUploadComparison(report) {
     row.append(changeCell);
     elements.classDiagnosticsResults.append(row);
   }
+
+  const renderConfusionMatrix = (container, values) => {
+    const labels = report.confusion_matrices?.labels || [];
+    container.replaceChildren();
+    const table = document.createElement("table");
+    table.className = "confusion-matrix";
+    const header = document.createElement("tr");
+    const corner = document.createElement("th");
+    corner.textContent = "Actual ↓ / Predicted →";
+    header.append(corner);
+    for (const label of labels) {
+      const cell = document.createElement("th");
+      cell.textContent = label;
+      header.append(cell);
+    }
+    const head = document.createElement("thead");
+    head.append(header);
+    table.append(head);
+    const body = document.createElement("tbody");
+    const maximum = Math.max(1, ...values.flat());
+    values.forEach((rowValues, rowIndex) => {
+      const row = document.createElement("tr");
+      const label = document.createElement("th");
+      label.textContent = labels[rowIndex];
+      row.append(label);
+      rowValues.forEach((value, columnIndex) => {
+        const cell = document.createElement("td");
+        cell.textContent = String(value);
+        cell.style.setProperty("--cell-strength", String(value / maximum));
+        cell.className = rowIndex === columnIndex ? "matrix-correct" : "matrix-error";
+        row.append(cell);
+      });
+      body.append(row);
+    });
+    table.append(body);
+    container.append(table);
+  };
+  renderConfusionMatrix(elements.confusionMatrixV1, report.confusion_matrices?.v1 || []);
+  renderConfusionMatrix(elements.confusionMatrixV2, report.confusion_matrices?.v2 || []);
 
   elements.confusionDiagnosticsResults.replaceChildren();
   elements.confusionEmptyMessage.hidden = report.confusion_diagnostics.length > 0;
