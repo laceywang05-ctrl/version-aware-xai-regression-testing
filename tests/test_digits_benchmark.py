@@ -7,6 +7,7 @@ from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
     run_digits_explanation_split_robustness,
     run_digits_explanation_stability,
+    run_digits_explanation_threshold_sensitivity,
     run_digits_split_robustness,
     run_digits_training_robustness,
 )
@@ -82,6 +83,23 @@ class DigitsCloseVersionBenchmarkTests(unittest.TestCase):
                 all(
                     pair["total_samples_compared"] == 40
                     for pair in result["pair_summaries"]
+                )
+            )
+
+    def test_explanation_threshold_sensitivity_is_monotonic(self):
+        with TemporaryDirectory() as temporary:
+            result = run_digits_explanation_threshold_sensitivity(
+                temporary,
+                thresholds=(0.70, 0.80, 0.90),
+                split_seeds=(11, 23),
+                sample_limit=20,
+            )
+            flags = [row["hidden_drift_flags"] for row in result["sensitivity"]]
+            self.assertEqual(flags, sorted(flags))
+            self.assertTrue(
+                all(
+                    row["same_prediction_comparisons"] > 0
+                    for row in result["sensitivity"]
                 )
             )
 

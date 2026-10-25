@@ -12,6 +12,7 @@ from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
     run_digits_explanation_split_robustness,
     run_digits_explanation_stability,
+    run_digits_explanation_threshold_sensitivity,
     run_digits_split_robustness,
     run_digits_training_robustness,
 )
@@ -338,6 +339,15 @@ def build_parser() -> argparse.ArgumentParser:
     digits_explanation_robustness_parser.add_argument(
         "--threshold", type=float, default=0.80
     )
+    digits_threshold_parser = subparsers.add_parser(
+        "digits-explanation-threshold-sensitivity",
+        help="Compare hidden-drift workload across explanation thresholds.",
+    )
+    digits_threshold_parser.add_argument(
+        "--output-dir",
+        default="artifacts/digits_explanation_threshold_sensitivity",
+    )
+    digits_threshold_parser.add_argument("--sample-limit", type=int, default=80)
     serve_parser.add_argument(
         "--portfolio-report",
         default=None,
@@ -744,6 +754,27 @@ def run_digits_explanation_robustness_experiment(
     return 0
 
 
+def run_digits_explanation_threshold_experiment(
+    output_dir: str | Path,
+    sample_limit: int,
+) -> int:
+    """Run and describe explanation-threshold sensitivity."""
+    result = run_digits_explanation_threshold_sensitivity(
+        _project_path(output_dir),
+        sample_limit=sample_limit,
+    )
+    print("Handwritten-digit explanation threshold sensitivity", flush=True)
+    print("---------------------------------------------------", flush=True)
+    for row in result["sensitivity"]:
+        print(
+            f"Threshold {row['threshold']:.2f}: "
+            f"{row['hidden_drift_flags']} flags ({row['flag_rate']:.2%})",
+            flush=True,
+        )
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -841,6 +872,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.output_dir,
                 args.sample_limit,
                 args.threshold,
+            )
+        if args.command == "digits-explanation-threshold-sensitivity":
+            return run_digits_explanation_threshold_experiment(
+                args.output_dir,
+                args.sample_limit,
             )
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
