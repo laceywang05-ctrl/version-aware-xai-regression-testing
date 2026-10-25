@@ -78,6 +78,9 @@ class DashboardTests(unittest.TestCase):
             "upload-results",
             "upload-validation",
             "upload-validation-grid",
+            "candidate-verdict",
+            "candidate-verdict-status",
+            "candidate-verdict-message",
             "upload-readiness",
             "upload-readiness-status",
             "readiness-task",
@@ -180,6 +183,10 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('confidenceBar.className = "confidence-bar"', script)
         self.assertIn('accuracyBar.className = "accuracy-bar"', script)
         self.assertIn("function renderUploadValidation", script)
+        self.assertIn("function renderCandidateVerdict", script)
+        self.assertIn("Improvement supported", script)
+        self.assertIn("Regression supported", script)
+        self.assertIn("not an automatic deployment decision", script)
         self.assertIn("function downloadComparisonJson", script)
         self.assertIn("function downloadSamplesCsv", script)
         self.assertIn("function downloadRegressionJson", script)

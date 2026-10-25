@@ -80,6 +80,9 @@ const elements = {
   uploadValidation: document.querySelector("#upload-validation"),
   uploadValidationSummary: document.querySelector("#upload-validation-summary"),
   uploadValidationGrid: document.querySelector("#upload-validation-grid"),
+  candidateVerdict: document.querySelector("#candidate-verdict"),
+  candidateVerdictStatus: document.querySelector("#candidate-verdict-status"),
+  candidateVerdictMessage: document.querySelector("#candidate-verdict-message"),
   uploadResults: document.querySelector("#upload-results"),
   regressionResults: document.querySelector("#regression-results"),
   downloadRegressionJson: document.querySelector("#download-regression-json"),
@@ -416,6 +419,7 @@ function updateUploadTask() {
   elements.uploadResults.hidden = true;
   elements.regressionResults.hidden = true;
   elements.uploadValidation.hidden = true;
+  elements.candidateVerdict.hidden = true;
   elements.uploadMessage.textContent = isRegression
     ? "Upload two regressors and a numeric labelled CSV."
     : "Upload two to five classifiers and a labelled CSV.";
@@ -640,6 +644,35 @@ function renderUploadValidation(report) {
     elements.uploadValidationGrid.append(card);
   }
   elements.uploadValidation.hidden = false;
+}
+
+function renderCandidateVerdict(task, summary, v1Name, v2Name) {
+  let verdict = "inconclusive";
+  let message;
+  if (task === "classification") {
+    if (summary.mcnemar_significant && summary.accuracy_change > 0) verdict = "improvement";
+    if (summary.mcnemar_significant && summary.accuracy_change < 0) verdict = "regression";
+    message = verdict === "improvement"
+      ? `${v2Name} has significantly higher paired accuracy than ${v1Name} on the supplied labelled samples.`
+      : verdict === "regression"
+        ? `${v2Name} has significantly lower paired accuracy than ${v1Name} on the supplied labelled samples.`
+        : `The observed accuracy difference between ${v1Name} and ${v2Name} is not statistically conclusive on these samples.`;
+  } else {
+    if (summary.mae_change_ci_95.upper < 0) verdict = "improvement";
+    if (summary.mae_change_ci_95.lower > 0) verdict = "regression";
+    message = verdict === "improvement"
+      ? `${v2Name} has a supported reduction in MAE compared with ${v1Name} on the supplied labelled samples.`
+      : verdict === "regression"
+        ? `${v2Name} has a supported increase in MAE compared with ${v1Name} on the supplied labelled samples.`
+        : `The paired MAE interval for ${v1Name} and ${v2Name} crosses zero, so the direction is not conclusive.`;
+  }
+  elements.candidateVerdict.className = `content-section candidate-verdict supported-${verdict}`;
+  elements.candidateVerdictStatus.className = `candidate-verdict-status ${verdict}`;
+  elements.candidateVerdictStatus.textContent = verdict === "improvement"
+    ? "Improvement supported"
+    : verdict === "regression" ? "Regression supported" : "Inconclusive";
+  elements.candidateVerdictMessage.textContent = `${message} This is evidence for review, not an automatic deployment decision.`;
+  elements.candidateVerdict.hidden = false;
 }
 
 function downloadLocalFile(filename, content, mediaType) {
@@ -950,6 +983,7 @@ function renderUploadComparison(report) {
   elements.pairedEvidenceNote.textContent = summary.mcnemar_significant
     ? `The paired difference is significant at α=${summary.mcnemar_alpha}. This describes the uploaded labelled sample.`
     : `The paired difference did not reach α=${summary.mcnemar_alpha}. Treat the observed change as exploratory.`;
+  renderCandidateVerdict("classification", summary, v1Name, v2Name);
   elements.uploadV1Label.textContent = `${v1Name} accuracy`;
   elements.uploadV2Label.textContent = `${v2Name} accuracy`;
   elements.v1PredictionHeading.textContent = `${v1Name} prediction`;
@@ -1246,6 +1280,7 @@ function renderRegressionComparison(report) {
     ? `Error directions differ at p=${formatNumber(summary.paired_sign_test_p)}.`
     : `Direction-only sign test p=${formatNumber(summary.paired_sign_test_p)}.`;
   elements.regressionEvidenceNote.textContent = `${intervalConclusion} ${signConclusion}`;
+  renderCandidateVerdict("regression", summary, v1Name, v2Name);
   elements.regressionOutcomeFilter.value = "all";
   elements.uploadResults.hidden = true;
   elements.regressionResults.hidden = false;
@@ -1729,6 +1764,7 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   }
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";
+  elements.candidateVerdict.hidden = true;
   elements.uploadMessage.className = "upload-comparison-message working";
   elements.uploadMessage.textContent = isRegression
     ? "Checking regression model compatibility before running the comparison."
