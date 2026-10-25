@@ -5,6 +5,7 @@ import unittest
 
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
+    run_digits_explanation_split_robustness,
     run_digits_explanation_stability,
     run_digits_split_robustness,
     run_digits_training_robustness,
@@ -65,6 +66,22 @@ class DigitsCloseVersionBenchmarkTests(unittest.TestCase):
                 all(
                     -1.0 <= pair["mean_cosine_similarity"] <= 1.0
                     for pair in result["pairs"]
+                )
+            )
+
+    def test_explanation_split_robustness_aggregates_pair_results(self):
+        with TemporaryDirectory() as temporary:
+            result = run_digits_explanation_split_robustness(
+                temporary,
+                split_seeds=(11, 23),
+                sample_limit=20,
+            )
+            self.assertEqual(len(result["runs"]), 2)
+            self.assertEqual(len(result["pair_summaries"]), 3)
+            self.assertTrue(
+                all(
+                    pair["total_samples_compared"] == 40
+                    for pair in result["pair_summaries"]
                 )
             )
 

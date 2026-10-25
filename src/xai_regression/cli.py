@@ -10,6 +10,7 @@ from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
+    run_digits_explanation_split_robustness,
     run_digits_explanation_stability,
     run_digits_split_robustness,
     run_digits_training_robustness,
@@ -323,6 +324,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     digits_explanation_parser.add_argument("--sample-limit", type=int, default=120)
     digits_explanation_parser.add_argument("--threshold", type=float, default=0.80)
+    digits_explanation_robustness_parser = subparsers.add_parser(
+        "digits-explanation-split-robustness",
+        help="Repeat digit explanation comparisons across data splits.",
+    )
+    digits_explanation_robustness_parser.add_argument(
+        "--output-dir",
+        default="artifacts/digits_explanation_split_robustness",
+    )
+    digits_explanation_robustness_parser.add_argument(
+        "--sample-limit", type=int, default=80
+    )
+    digits_explanation_robustness_parser.add_argument(
+        "--threshold", type=float, default=0.80
+    )
     serve_parser.add_argument(
         "--portfolio-report",
         default=None,
@@ -706,6 +721,29 @@ def run_digits_explanation_experiment(
     return 0
 
 
+def run_digits_explanation_robustness_experiment(
+    output_dir: str | Path,
+    sample_limit: int,
+    threshold: float,
+) -> int:
+    """Run and describe explanation comparisons across data splits."""
+    result = run_digits_explanation_split_robustness(
+        _project_path(output_dir),
+        sample_limit=sample_limit,
+        similarity_threshold=threshold,
+    )
+    hidden_drift = sum(
+        pair["total_hidden_drift"] for pair in result["pair_summaries"]
+    )
+    print("Handwritten-digit explanation split robustness", flush=True)
+    print("----------------------------------------------", flush=True)
+    print(f"Splits: {len(result['split_seeds'])}", flush=True)
+    print(f"Samples per split: {result['sample_limit_per_split']}", flush=True)
+    print(f"Hidden-drift flags: {hidden_drift}", flush=True)
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -794,6 +832,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_digits_training_stability(args.output_dir)
         if args.command == "digits-explanation-stability":
             return run_digits_explanation_experiment(
+                args.output_dir,
+                args.sample_limit,
+                args.threshold,
+            )
+        if args.command == "digits-explanation-split-robustness":
+            return run_digits_explanation_robustness_experiment(
                 args.output_dir,
                 args.sample_limit,
                 args.threshold,
