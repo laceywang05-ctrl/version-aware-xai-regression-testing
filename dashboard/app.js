@@ -646,9 +646,10 @@ function renderUploadValidation(report) {
   elements.uploadValidation.hidden = false;
 }
 
-function renderCandidateVerdict(task, summary, v1Name, v2Name) {
+function candidateVerdictData(task, summary, v1Name, v2Name) {
   let verdict = "inconclusive";
   let message;
+  let evidence;
   if (task === "classification") {
     if (summary.mcnemar_significant && summary.accuracy_change > 0) verdict = "improvement";
     if (summary.mcnemar_significant && summary.accuracy_change < 0) verdict = "regression";
@@ -657,6 +658,12 @@ function renderCandidateVerdict(task, summary, v1Name, v2Name) {
       : verdict === "regression"
         ? `${v2Name} has significantly lower paired accuracy than ${v1Name} on the supplied labelled samples.`
         : `The observed accuracy difference between ${v1Name} and ${v2Name} is not statistically conclusive on these samples.`;
+    evidence = {
+      method: "exact_mcnemar",
+      alpha: summary.mcnemar_alpha,
+      p_value: summary.mcnemar_exact_p,
+      accuracy_change: summary.accuracy_change,
+    };
   } else {
     if (summary.mae_change_ci_95.upper < 0) verdict = "improvement";
     if (summary.mae_change_ci_95.lower > 0) verdict = "regression";
@@ -665,13 +672,35 @@ function renderCandidateVerdict(task, summary, v1Name, v2Name) {
       : verdict === "regression"
         ? `${v2Name} has a supported increase in MAE compared with ${v1Name} on the supplied labelled samples.`
         : `The paired MAE interval for ${v1Name} and ${v2Name} crosses zero, so the direction is not conclusive.`;
+    evidence = {
+      method: summary.mae_change_ci_95.method,
+      confidence_level: 0.95,
+      mae_change: summary.mae_change,
+      interval_lower: summary.mae_change_ci_95.lower,
+      interval_upper: summary.mae_change_ci_95.upper,
+      resamples: summary.mae_change_ci_95.resamples,
+    };
   }
-  elements.candidateVerdict.className = `content-section candidate-verdict supported-${verdict}`;
-  elements.candidateVerdictStatus.className = `candidate-verdict-status ${verdict}`;
-  elements.candidateVerdictStatus.textContent = verdict === "improvement"
+  return {
+    task,
+    verdict,
+    label: verdict === "improvement"
     ? "Improvement supported"
-    : verdict === "regression" ? "Regression supported" : "Inconclusive";
-  elements.candidateVerdictMessage.textContent = `${message} This is evidence for review, not an automatic deployment decision.`;
+      : verdict === "regression" ? "Regression supported" : "Inconclusive",
+    baseline_model: v1Name,
+    candidate_model: v2Name,
+    message,
+    evidence,
+    limitation: "Evidence for review, not an automatic deployment decision.",
+  };
+}
+
+function renderCandidateVerdict(task, summary, v1Name, v2Name) {
+  const result = candidateVerdictData(task, summary, v1Name, v2Name);
+  elements.candidateVerdict.className = `content-section candidate-verdict supported-${result.verdict}`;
+  elements.candidateVerdictStatus.className = `candidate-verdict-status ${result.verdict}`;
+  elements.candidateVerdictStatus.textContent = result.label;
+  elements.candidateVerdictMessage.textContent = `${result.message} This is evidence for review, not an automatic deployment decision.`;
   elements.candidateVerdict.hidden = false;
 }
 
@@ -719,6 +748,12 @@ function downloadComparisonJson() {
     exported_at: new Date().toISOString(),
     validation: state.uploadValidation,
     overview: state.modelOverview,
+    candidate_verdict: candidateVerdictData(
+      "classification",
+      state.uploadComparison.summary,
+      state.uploadComparison.models?.v1?.filename || "Model V1",
+      state.uploadComparison.models?.v2?.filename || "Model V2",
+    ),
     comparison: comparisonForExport(),
   };
   downloadLocalFile(
@@ -765,6 +800,13 @@ function downloadRegressionJson() {
     JSON.stringify({
       exported_at: new Date().toISOString(),
       overview: state.regressionOverview,
+      validation: state.uploadValidation,
+      candidate_verdict: candidateVerdictData(
+        "regression",
+        state.regressionComparison.summary,
+        state.regressionComparison.models?.v1?.filename || "Model V1",
+        state.regressionComparison.models?.v2?.filename || "Model V2",
+      ),
       comparison: state.regressionComparison,
     }, null, 2),
     "application/json",
