@@ -17,16 +17,29 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 
 
-def _load_image_npz(input_path: str | Path) -> tuple[Path, np.ndarray, np.ndarray]:
-    source = Path(input_path)
-    try:
-        with np.load(source, allow_pickle=False) as archive:
-            if "images" not in archive or "labels" not in archive:
-                raise ValueError("NPZ input must contain images and labels arrays.")
-            images = np.asarray(archive["images"])
-            labels = np.asarray(archive["labels"])
-    except OSError as error:
-        raise ValueError(f"Could not read NPZ input: {source}.") from error
+def _select_image_arrays(archive) -> tuple[np.ndarray, np.ndarray, str]:
+    """Select a labelled image pair from generic or Keras-style NPZ keys."""
+    keys = set(archive.files)
+    if {"images", "labels"} <= keys:
+        return np.asarray(archive["images"]), np.asarray(archive["labels"]), "images/labels"
+    if {"x_test", "y_test"} <= keys:
+        return np.asarray(archive["x_test"]), np.asarray(archive["y_test"]), "x_test/y_test"
+    if {"x_train", "y_train"} <= keys:
+        return np.asarray(archive["x_train"]), np.asarray(archive["y_train"]), "x_train/y_train"
+    raise ValueError(
+        "NPZ input must contain images/labels, x_test/y_test, or x_train/y_train arrays."
+    )
+
+
+def _normalise_labels(labels: np.ndarray) -> np.ndarray:
+    """Accept the flat or single-column labels used by MNIST and CIFAR archives."""
+    if labels.ndim == 2 and labels.shape[1] == 1:
+        return labels.reshape(-1)
+    return labels
+
+
+def _validate_image_arrays(images: np.ndarray, labels: np.ndarray) -> None:
+    labels = _normalise_labels(labels)
     if images.ndim not in {3, 4}:
         raise ValueError("Images must have shape (N,H,W) or (N,H,W,C).")
     if images.ndim == 4 and images.shape[-1] not in {1, 3, 4}:
@@ -35,7 +48,18 @@ def _load_image_npz(input_path: str | Path) -> tuple[Path, np.ndarray, np.ndarra
         raise ValueError("Labels must be one-dimensional with one value per image.")
     if len(images) == 0:
         raise ValueError("NPZ input contains no images.")
-    return source, images, labels
+
+
+def _load_image_npz(input_path: str | Path) -> tuple[Path, np.ndarray, np.ndarray, str]:
+    source = Path(input_path)
+    try:
+        with np.load(source, allow_pickle=False) as archive:
+            images, labels, array_source = _select_image_arrays(archive)
+    except OSError as error:
+        raise ValueError(f"Could not read NPZ input: {source}.") from error
+    labels = _normalise_labels(labels)
+    _validate_image_arrays(images, labels)
+    return source, images, labels, array_source
 
 
 def prepare_image_npz_bundle(
@@ -43,11 +67,11 @@ def prepare_image_npz_bundle(
     output_dir: str | Path,
     *,
     limit: int = 500,
-) -> dict[str, Path | int | tuple[int, ...]]:
-    """Convert NPZ ``images`` and ``labels`` arrays into dashboard upload files."""
+) -> dict[str, Path | int | str | tuple[int, ...]]:
+    """Convert generic or Keras-style NPZ image arrays into dashboard files."""
     if limit < 1 or limit > 5_000:
         raise ValueError("Image bundle limit must be between 1 and 5,000.")
-    source, images, labels = _load_image_npz(input_path)
+    source, images, labels, array_source = _load_image_npz(input_path)
     count = min(len(images), limit)
     images = images[:count]
     labels = labels[:count]
@@ -79,7 +103,9 @@ def prepare_image_npz_bundle(
         "feature_columns": feature_columns,
         "class_names": {str(value): str(value) for value in class_values},
         "trusted_model_files": True,
-        "dataset_note": f"Prepared from {source.name}; first {count} labelled images.",
+        "dataset_note": (
+            f"Prepared from {source.name} ({array_source}); first {count} labelled images."
+        ),
     }
     if images.ndim == 3:
         manifest["image_shape"] = [int(images.shape[1]), int(images.shape[2])]
@@ -89,6 +115,7 @@ def prepare_image_npz_bundle(
         "sample_count": count,
         "image_shape": tuple(images.shape[1:]),
         "feature_count": flat.shape[1],
+        "array_source": array_source,
     }
 
 
@@ -106,7 +133,7 @@ def build_image_model_demo(
     """Train four lightweight classifiers and create an upload-ready image bundle."""
     if limit < 20 or limit > 5_000:
         raise ValueError("Image demo limit must be between 20 and 5,000.")
-    source, images, labels = _load_image_npz(input_path)
+    source, images, labels, array_source = _load_image_npz(input_path)
     images = images[:limit]
     labels = labels[:limit]
     classes, counts = np.unique(labels, return_counts=True)
@@ -142,6 +169,7 @@ def build_image_model_demo(
     temporary.unlink()
     summary = {
         "source": source.name,
+        "array_source": array_source,
         "training_samples": len(train_indices),
         "test_samples": len(test_indices),
         "models": [
