@@ -10,6 +10,7 @@ from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
+    run_digits_explanation_stability,
     run_digits_split_robustness,
     run_digits_training_robustness,
 )
@@ -312,6 +313,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default="artifacts/digits_training_robustness",
     )
+    digits_explanation_parser = subparsers.add_parser(
+        "digits-explanation-stability",
+        help="Compare explanations for closely matched digit model versions.",
+    )
+    digits_explanation_parser.add_argument(
+        "--output-dir",
+        default="artifacts/digits_explanation_stability",
+    )
+    digits_explanation_parser.add_argument("--sample-limit", type=int, default=120)
+    digits_explanation_parser.add_argument("--threshold", type=float, default=0.80)
     serve_parser.add_argument(
         "--portfolio-report",
         default=None,
@@ -675,6 +686,26 @@ def run_digits_training_stability(output_dir: str | Path) -> int:
     return 0
 
 
+def run_digits_explanation_experiment(
+    output_dir: str | Path,
+    sample_limit: int,
+    threshold: float,
+) -> int:
+    """Run and describe the close-version explanation comparison."""
+    result = run_digits_explanation_stability(
+        _project_path(output_dir),
+        sample_limit=sample_limit,
+        similarity_threshold=threshold,
+    )
+    print("Handwritten-digit explanation stability", flush=True)
+    print("---------------------------------------", flush=True)
+    print(f"Samples: {result['sample_limit']}", flush=True)
+    print(f"Model pairs: {len(result['pairs'])}", flush=True)
+    print(f"Inspection threshold: {result['similarity_threshold']:.2f}", flush=True)
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -761,6 +792,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_digits_robustness(args.output_dir)
         if args.command == "digits-training-robustness":
             return run_digits_training_stability(args.output_dir)
+        if args.command == "digits-explanation-stability":
+            return run_digits_explanation_experiment(
+                args.output_dir,
+                args.sample_limit,
+                args.threshold,
+            )
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 

@@ -5,6 +5,7 @@ import unittest
 
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
+    run_digits_explanation_stability,
     run_digits_split_robustness,
     run_digits_training_robustness,
 )
@@ -49,6 +50,23 @@ class DigitsCloseVersionBenchmarkTests(unittest.TestCase):
             self.assertEqual(len(result["runs"]), 2)
             self.assertEqual(len(result["models"]), 4)
             self.assertEqual(len(result["pairwise_accuracy_changes"]), 6)
+
+    def test_explanation_stability_compares_three_close_model_pairs(self):
+        with TemporaryDirectory() as temporary:
+            result = run_digits_explanation_stability(
+                temporary,
+                sample_limit=20,
+            )
+            self.assertEqual(len(result["pairs"]), 3)
+            self.assertTrue(
+                all(pair["samples_compared"] == 20 for pair in result["pairs"])
+            )
+            self.assertTrue(
+                all(
+                    -1.0 <= pair["mean_cosine_similarity"] <= 1.0
+                    for pair in result["pairs"]
+                )
+            )
 
 
 if __name__ == "__main__":

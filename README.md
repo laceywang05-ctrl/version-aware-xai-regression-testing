@@ -571,3 +571,19 @@ PYTHONPATH=src python -m xai_regression benchmark \
 
 The results are documented in
 [`docs/SECOND_DATASET_VALIDATION_RESULT.md`](docs/SECOND_DATASET_VALIDATION_RESULT.md).
+
+## Handwritten-digit explanation stability
+
+Compare Tree SHAP predicted-class contribution maps for the closely performing
+V1, V2 and V3 handwritten-digit model versions:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression digits-explanation-stability
+```
+
+The experiment measures cosine similarity on the same 120 test images and
+separately flags hidden explanation drift, where predictions agree but
+explanations fall below the inspection threshold. Results and limitations are
+documented in
+[`docs/DIGITS_EXPLANATION_STABILITY_RESULT.md`](docs/DIGITS_EXPLANATION_STABILITY_RESULT.md).
