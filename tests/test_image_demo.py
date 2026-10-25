@@ -70,6 +70,9 @@ class ImageDemoTests(unittest.TestCase):
             summary = json.loads((output / "README.json").read_text())
             self.assertIn("DecisionTreeClassifier", summary["model_v1"])
             self.assertEqual(len(summary["models"]), 4)
+            self.assertTrue(
+                all("test_macro_f1" in model for model in summary["models"])
+            )
 
 
 if __name__ == "__main__":

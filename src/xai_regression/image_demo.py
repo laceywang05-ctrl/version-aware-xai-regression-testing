@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import load_digits
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+from sklearn.metrics import f1_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
@@ -134,14 +135,25 @@ def build_digits_image_demo(output_dir: str | Path) -> dict[str, Path | int | fl
         encoding="utf-8",
     )
 
+    def model_summary(filename: str, model) -> dict[str, str | float]:
+        prediction = model.predict(test_features)
+        return {
+            "filename": filename,
+            "model_type": type(model).__name__,
+            "test_accuracy": float(np.mean(prediction == test_labels)),
+            "test_macro_f1": float(
+                f1_score(test_labels, prediction, average="macro")
+            ),
+        }
+
     summary = {
         "dataset": "scikit-learn handwritten digits (8x8)",
         "sample_count": len(selected),
         "models": [
-            {"filename": model_v1_path.name, "model_type": "DecisionTreeClassifier", "test_accuracy": float(model_v1.score(test_features, test_labels))},
-            {"filename": model_v2_path.name, "model_type": "RandomForestClassifier", "test_accuracy": float(model_v2.score(test_features, test_labels))},
-            {"filename": model_v3_path.name, "model_type": "ExtraTreesClassifier", "test_accuracy": float(model_v3.score(test_features, test_labels))},
-            {"filename": model_v4_path.name, "model_type": "KNeighborsClassifier", "test_accuracy": float(model_v4.score(test_features, test_labels))},
+            model_summary(model_v1_path.name, model_v1),
+            model_summary(model_v2_path.name, model_v2),
+            model_summary(model_v3_path.name, model_v3),
+            model_summary(model_v4_path.name, model_v4),
         ],
         "model_v1": "DecisionTreeClassifier(max_depth=3)",
         "model_v2": "RandomForestClassifier(n_estimators=80)",
