@@ -400,6 +400,15 @@ main { display: grid; gap: 24px; }
 .error-change.reduced { background: #e5f5ef; color: var(--green); }
 .error-change.increased { background: var(--orange-soft); color: #a84518; }
 .error-change.unchanged { background: #edf0f1; color: var(--muted); }
+.confusion-matrix-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.confusion-matrix-grid article { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfc; }
+.confusion-matrix-grid h3 { margin: 0 0 12px; overflow-wrap: anywhere; color: var(--navy); font-size: .85rem; }
+.confusion-matrix-wrap { overflow-x: auto; }
+.confusion-matrix { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: .68rem; }
+.confusion-matrix th { max-width: 110px; padding: 6px; overflow-wrap: anywhere; color: var(--muted); font-weight: 750; text-align: center; }
+.confusion-matrix td { min-width: 34px; padding: 8px 5px; border-radius: 6px; color: var(--navy); font-weight: 850; text-align: center; }
+.confusion-matrix td.matrix-correct { background: rgb(41 139 109 / calc(.10 + var(--cell-strength) * .72)); }
+.confusion-matrix td.matrix-error { background: rgb(239 121 58 / calc(.06 + var(--cell-strength) * .64)); }
 .export-panel { background: linear-gradient(135deg, #f5fbfb, #ffffff); }
 .export-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .secondary-action { border: 1px solid var(--blue); border-radius: 10px; padding: 11px 16px; background: white; color: var(--blue); cursor: pointer; font: inherit; font-size: .75rem; font-weight: 850; }
@@ -455,6 +464,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
   .model-pair-picker > span { display: none; }
   .transition-grid { grid-template-columns: repeat(2, 1fr); }
   .regression-visual-grid { grid-template-columns: 1fr; }
+  .confusion-matrix-grid { grid-template-columns: 1fr; }
   .regression-importance-row { grid-template-columns: 1fr; gap: 9px; }
   .explanation-visuals { grid-template-columns: 1fr; }
   .benchmark-summary { grid-template-columns: repeat(2, 1fr); }

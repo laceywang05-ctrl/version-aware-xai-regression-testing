@@ -141,6 +141,9 @@ class UploadComparisonTests(unittest.TestCase):
         }
         self.assertEqual(confusion[("negative", "positive")]["error_change"], -1)
         self.assertEqual(confusion[("positive", "negative")]["error_change"], 1)
+        self.assertEqual(result["confusion_matrices"]["labels"], ["negative", "positive"])
+        self.assertEqual(result["confusion_matrices"]["v1"], [[1, 1], [1, 1]])
+        self.assertEqual(result["confusion_matrices"]["v2"], [[2, 0], [2, 0]])
 
     def test_high_confidence_candidate_errors_are_prioritized(self):
         dataset = pd.DataFrame(

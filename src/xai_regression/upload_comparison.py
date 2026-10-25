@@ -660,6 +660,24 @@ def compare_classifiers(
             item["predicted_class"],
         )
     )
+    actual_named = np.asarray([_label(value, manifest.class_names) for value in labels])
+    v1_named = np.asarray([_label(value, manifest.class_names) for value in prediction_v1])
+    v2_named = np.asarray([_label(value, manifest.class_names) for value in prediction_v2])
+    matrix_labels = sorted({*actual_named, *v1_named, *v2_named})
+
+    def confusion_matrix(named_predictions: np.ndarray) -> list[list[int]]:
+        return [
+            [
+                int(
+                    np.count_nonzero(
+                        (actual_named == actual_label)
+                        & (named_predictions == predicted_label)
+                    )
+                )
+                for predicted_label in matrix_labels
+            ]
+            for actual_label in matrix_labels
+        ]
     return {
         "schema_version": 1,
         "task": "classification",
@@ -697,6 +715,11 @@ def compare_classifiers(
             **counts,
         },
         "class_diagnostics": class_diagnostics,
+        "confusion_matrices": {
+            "labels": matrix_labels,
+            "v1": confusion_matrix(v1_named),
+            "v2": confusion_matrix(v2_named),
+        },
         "confusion_diagnostics": confusion_diagnostics,
         "samples": samples,
         "limitations": [
