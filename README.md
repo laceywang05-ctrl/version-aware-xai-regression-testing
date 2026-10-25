@@ -198,7 +198,9 @@ uploaded model against the shared feature columns and blocks comparison with an
 actionable per-file message if a model cannot produce compatible predictions.
 
 The results first rank every uploaded model by accuracy on the shared labelled
-sample and report pairwise prediction agreement. The detailed section then
+sample, display macro F1 for every model, and report pairwise prediction
+agreement. Accuracy breaks ranking ties with macro F1 so minority-class
+performance remains visible. The detailed section then
 compares the selected baseline and candidate at sample level, including image
 transitions and compatible explanation maps.
 
