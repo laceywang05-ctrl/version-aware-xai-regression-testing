@@ -582,6 +582,7 @@ def run_image_model_demo(input_path: str | Path, output_dir: str | Path, limit: 
     print(f"Models: {result['model_count']}", flush=True)
     print(f"Training samples: {result['training_samples']}", flush=True)
     print(f"Test samples: {result['test_samples']}", flush=True)
+    print(f"Split: {result['split_strategy']}", flush=True)
     print(f"Best accuracy: {result['best_accuracy']:.1%}", flush=True)
     print(f"Files saved to: {result['output_dir']}", flush=True)
     return 0

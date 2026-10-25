@@ -62,6 +62,28 @@ def _load_image_npz(input_path: str | Path) -> tuple[Path, np.ndarray, np.ndarra
     return source, images, labels, array_source
 
 
+def _load_official_splits(
+    input_path: str | Path,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
+    """Return official Keras-style train/test arrays when all four are present."""
+    source = Path(input_path)
+    try:
+        with np.load(source, allow_pickle=False) as archive:
+            if not {"x_train", "y_train", "x_test", "y_test"} <= set(archive.files):
+                return None
+            train_images = np.asarray(archive["x_train"])
+            train_labels = _normalise_labels(np.asarray(archive["y_train"]))
+            test_images = np.asarray(archive["x_test"])
+            test_labels = _normalise_labels(np.asarray(archive["y_test"]))
+    except OSError as error:
+        raise ValueError(f"Could not read NPZ input: {source}.") from error
+    _validate_image_arrays(train_images, train_labels)
+    _validate_image_arrays(test_images, test_labels)
+    if train_images.shape[1:] != test_images.shape[1:]:
+        raise ValueError("Official train and test images must have the same shape.")
+    return train_images, train_labels, test_images, test_labels
+
+
 def prepare_image_npz_bundle(
     input_path: str | Path,
     output_dir: str | Path,
@@ -129,26 +151,44 @@ def build_image_model_demo(
     *,
     limit: int = 1_000,
     test_size: float = 0.30,
-) -> dict[str, Path | int | float]:
+) -> dict[str, Path | int | float | str]:
     """Train four lightweight classifiers and create an upload-ready image bundle."""
     if limit < 20 or limit > 5_000:
         raise ValueError("Image demo limit must be between 20 and 5,000.")
-    source, images, labels, array_source = _load_image_npz(input_path)
-    images = images[:limit]
-    labels = labels[:limit]
-    classes, counts = np.unique(labels, return_counts=True)
+    source = Path(input_path)
+    official_splits = _load_official_splits(input_path)
+    if official_splits is not None:
+        train_images, train_labels, test_images, test_labels = official_splits
+        train_images = train_images[:limit]
+        train_labels = train_labels[:limit]
+        test_images = test_images[:limit]
+        test_labels = test_labels[:limit]
+        split_strategy = "official x_train/y_train and x_test/y_test"
+    else:
+        source, images, labels, _ = _load_image_npz(input_path)
+        images = images[:limit]
+        labels = labels[:limit]
+        classes, counts = np.unique(labels, return_counts=True)
+        if len(classes) < 2 or np.any(counts < 2):
+            raise ValueError("Image demo requires at least two classes with two samples each.")
+        indices = np.arange(len(images))
+        train_indices, test_indices = train_test_split(
+            indices, test_size=test_size, random_state=42, stratify=labels
+        )
+        train_images = images[train_indices]
+        train_labels = labels[train_indices]
+        test_images = images[test_indices]
+        test_labels = labels[test_indices]
+        split_strategy = f"fixed stratified split ({1 - test_size:.0%}/{test_size:.0%})"
+    classes, counts = np.unique(train_labels, return_counts=True)
     if len(classes) < 2 or np.any(counts < 2):
         raise ValueError("Image demo requires at least two classes with two samples each.")
-    indices = np.arange(len(images))
-    train_indices, test_indices = train_test_split(
-        indices, test_size=test_size, random_state=42, stratify=labels
-    )
-    feature_columns = [f"pixel_{index}" for index in range(images[0].size)]
+    feature_columns = [f"pixel_{index}" for index in range(train_images[0].size)]
     train_features = pd.DataFrame(
-        images[train_indices].reshape(len(train_indices), -1), columns=feature_columns
+        train_images.reshape(len(train_images), -1), columns=feature_columns
     )
     test_features = pd.DataFrame(
-        images[test_indices].reshape(len(test_indices), -1), columns=feature_columns
+        test_images.reshape(len(test_images), -1), columns=feature_columns
     )
     models = [
         ("model_1_dummy.joblib", DummyClassifier(strategy="most_frequent")),
@@ -160,18 +200,18 @@ def build_image_model_demo(
     destination.mkdir(parents=True, exist_ok=True)
     scores = []
     for filename, model in models:
-        model.fit(train_features, labels[train_indices])
-        scores.append(float(model.score(test_features, labels[test_indices])))
+        model.fit(train_features, train_labels)
+        scores.append(float(model.score(test_features, test_labels)))
         joblib.dump(model, destination / filename)
     temporary = destination / "test-data.npz"
-    np.savez(temporary, images=images[test_indices], labels=labels[test_indices])
-    prepared = prepare_image_npz_bundle(temporary, destination, limit=len(test_indices))
+    np.savez(temporary, images=test_images, labels=test_labels)
+    prepared = prepare_image_npz_bundle(temporary, destination, limit=len(test_images))
     temporary.unlink()
     summary = {
         "source": source.name,
-        "array_source": array_source,
-        "training_samples": len(train_indices),
-        "test_samples": len(test_indices),
+        "split_strategy": split_strategy,
+        "training_samples": len(train_images),
+        "test_samples": len(test_images),
         "models": [
             {"filename": filename, "model_type": type(model).__name__, "test_accuracy": score}
             for (filename, model), score in zip(models, scores)
@@ -184,7 +224,8 @@ def build_image_model_demo(
     return {
         "output_dir": destination,
         "model_count": len(models),
-        "training_samples": len(train_indices),
+        "training_samples": len(train_images),
         "test_samples": prepared["sample_count"],
         "best_accuracy": max(scores),
+        "split_strategy": split_strategy,
     }
