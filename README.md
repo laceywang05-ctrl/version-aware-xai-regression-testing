@@ -613,3 +613,20 @@ PYTHONPATH=src python -m xai_regression \
 This analysis treats the threshold as a review-workload choice rather than a
 calibrated failure boundary. Results are documented in
 [`docs/DIGITS_EXPLANATION_THRESHOLD_SENSITIVITY_RESULT.md`](docs/DIGITS_EXPLANATION_THRESHOLD_SENSITIVITY_RESULT.md).
+
+## MNIST multi-model validation
+
+Run the upload workflow on a real Keras-style MNIST archive:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression image-model-demo \
+  --input mnist.npz \
+  --output-dir artifacts/mnist_model_demo \
+  --limit 1000
+```
+
+The validated run ranks four uploaded classifiers and compares the two closest
+tree ensembles on 1,000 official test images. Results, explanation findings and
+limitations are documented in
+[`docs/MNIST_MULTIMODEL_RESULT.md`](docs/MNIST_MULTIMODEL_RESULT.md).
