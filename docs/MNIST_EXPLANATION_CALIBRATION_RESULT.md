@@ -29,6 +29,17 @@ almost every benign retraining comparison. Using the pooled fifth percentile
 gives a provisional MNIST inspection threshold of 0.486. This is designed to
 place approximately 5% of benign same-prediction comparisons into review.
 
+## Held-out validation
+
+Three new training seeds (83, 97 and 109), disjoint from the four calibration
+seeds, were evaluated after fixing the 0.486 threshold. Across their three
+pairwise comparisons, 6.89% of same-prediction explanations were flagged.
+
+This is reasonably close to the intended 5% review rate and far below the
+97.35% benign rate produced by the old 0.80 threshold. The difference between
+5% and 6.89% also shows that the threshold is an empirical workload control,
+not an exact guarantee on new retraining runs.
+
 ## Applying the calibrated threshold
 
 The Random Forest versus Extra Trees upload comparison contained 449
@@ -54,7 +65,8 @@ PYTHONPATH=src python -m xai_regression mnist-explanation-calibration \
 
 ## Limitations
 
-- Calibration uses four training seeds and one Random Forest configuration.
+- Calibration uses four training seeds, held-out validation uses three seeds,
+  and both use one Random Forest configuration.
 - The 1,057 comparisons are correlated because model pairs reuse fitted models
   and test images.
 - The fifth percentile controls review workload under observed benign

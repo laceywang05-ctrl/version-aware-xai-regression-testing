@@ -13,6 +13,7 @@ from xai_regression.upload_comparison import compare_classifiers, parse_manifest
 
 
 DEFAULT_SEEDS = (11, 29, 47, 71)
+DEFAULT_VALIDATION_SEEDS = (83, 97, 109)
 
 
 def run_mnist_explanation_calibration(
@@ -20,6 +21,7 @@ def run_mnist_explanation_calibration(
     output_dir: str | Path,
     *,
     training_seeds: tuple[int, ...] = DEFAULT_SEEDS,
+    validation_seeds: tuple[int, ...] = DEFAULT_VALIDATION_SEEDS,
     train_limit: int = 1_000,
     sample_limit: int = 200,
     quantile: float = 0.05,
@@ -27,6 +29,10 @@ def run_mnist_explanation_calibration(
     """Estimate a lower-tail similarity threshold from benign retraining."""
     if len(training_seeds) < 3:
         raise ValueError("MNIST calibration requires at least three training seeds.")
+    if len(validation_seeds) < 2:
+        raise ValueError("MNIST calibration requires at least two validation seeds.")
+    if set(training_seeds) & set(validation_seeds):
+        raise ValueError("Calibration and validation seeds must be disjoint.")
     if train_limit < 100:
         raise ValueError("MNIST calibration requires at least 100 training images.")
     if not 20 <= sample_limit <= 500:
@@ -115,9 +121,46 @@ def run_mnist_explanation_calibration(
 
     similarities = np.asarray(calibration_similarities)
     calibrated_threshold = float(np.quantile(similarities, quantile))
+    validation_models = [
+        RandomForestClassifier(n_estimators=60, random_state=seed, n_jobs=1).fit(
+            train_features, train_labels
+        )
+        for seed in validation_seeds
+    ]
+    validation_similarities = []
+    validation_pairs = []
+    for left in range(len(validation_models)):
+        for right in range(left + 1, len(validation_models)):
+            comparison = compare_classifiers(
+                validation_models[left], validation_models[right], dataset, manifest
+            )
+            pair_similarities = [
+                float(sample["explanation_similarity"])
+                for sample in comparison["samples"]
+                if sample["explanation_similarity"] is not None
+                and not sample["prediction_changed"]
+            ]
+            validation_similarities.extend(pair_similarities)
+            validation_pairs.append(
+                {
+                    "left_seed": validation_seeds[left],
+                    "right_seed": validation_seeds[right],
+                    "same_prediction_comparisons": len(pair_similarities),
+                    "flag_count": int(
+                        np.count_nonzero(
+                            np.asarray(pair_similarities) < calibrated_threshold
+                        )
+                    ),
+                }
+            )
+    validation_values = np.asarray(validation_similarities)
+    validation_flags = int(
+        np.count_nonzero(validation_values < calibrated_threshold)
+    )
     report = {
         "dataset": "MNIST 28x28 official split",
         "training_seeds": list(training_seeds),
+        "validation_seeds": list(validation_seeds),
         "train_limit": train_limit,
         "sample_limit": sample_limit,
         "model_configuration": {
@@ -131,6 +174,14 @@ def run_mnist_explanation_calibration(
         "calibrated_threshold": calibrated_threshold,
         "rate_below_0_80": float(np.mean(similarities < 0.80)),
         "pairs": pairs,
+        "heldout_validation": {
+            "pairs": validation_pairs,
+            "same_prediction_comparisons": len(validation_values),
+            "flag_count": validation_flags,
+            "flag_rate": validation_flags / len(validation_values),
+            "mean_similarity": float(validation_values.mean()),
+            "median_similarity": float(np.median(validation_values)),
+        },
         "interpretation": (
             "The threshold estimates the lower tail of benign same-configuration "
             "retraining. It is a review baseline, not proof of harmful drift."

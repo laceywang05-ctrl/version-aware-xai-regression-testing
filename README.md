@@ -640,6 +640,6 @@ PYTHONPATH=src python -m xai_regression mnist-explanation-calibration \
   --input mnist.npz
 ```
 
-The experiment estimates the lower tail of benign explanation similarity and
-documents the revised review workload in
+The experiment estimates the lower tail of benign explanation similarity,
+checks it on disjoint training seeds and documents the revised review workload in
 [`docs/MNIST_EXPLANATION_CALIBRATION_RESULT.md`](docs/MNIST_EXPLANATION_CALIBRATION_RESULT.md).
