@@ -630,3 +630,16 @@ The validated run ranks four uploaded classifiers and compares the two closest
 tree ensembles on 1,000 official test images. Results, explanation findings and
 limitations are documented in
 [`docs/MNIST_MULTIMODEL_RESULT.md`](docs/MNIST_MULTIMODEL_RESULT.md).
+
+Calibrate the MNIST explanation threshold using same-configuration Random
+Forest retraining:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression mnist-explanation-calibration \
+  --input mnist.npz
+```
+
+The experiment estimates the lower tail of benign explanation similarity and
+documents the revised review workload in
+[`docs/MNIST_EXPLANATION_CALIBRATION_RESULT.md`](docs/MNIST_EXPLANATION_CALIBRATION_RESULT.md).

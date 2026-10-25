@@ -26,6 +26,7 @@ from xai_regression.image_bundle import build_image_model_demo, prepare_image_np
 from xai_regression.regression_demo import build_regression_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
+from xai_regression.mnist_calibration import run_mnist_explanation_calibration
 from xai_regression.pipeline import run_pipeline
 from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
@@ -283,6 +284,16 @@ def build_parser() -> argparse.ArgumentParser:
     image_model_demo_parser.add_argument("--input", required=True)
     image_model_demo_parser.add_argument("--output-dir", default="artifacts/image_model_demo")
     image_model_demo_parser.add_argument("--limit", type=int, default=1000)
+    mnist_calibration_parser = subparsers.add_parser(
+        "mnist-explanation-calibration",
+        help="Calibrate MNIST explanation similarity under benign retraining.",
+    )
+    mnist_calibration_parser.add_argument("--input", required=True)
+    mnist_calibration_parser.add_argument(
+        "--output-dir", default="artifacts/mnist_explanation_calibration"
+    )
+    mnist_calibration_parser.add_argument("--train-limit", type=int, default=1000)
+    mnist_calibration_parser.add_argument("--sample-limit", type=int, default=200)
     regression_demo_parser = subparsers.add_parser(
         "regression-demo",
         help="Build a ready-to-upload four-model regression bundle.",
@@ -775,6 +786,31 @@ def run_digits_explanation_threshold_experiment(
     return 0
 
 
+def run_mnist_calibration_experiment(
+    input_path: str | Path,
+    output_dir: str | Path,
+    train_limit: int,
+    sample_limit: int,
+) -> int:
+    """Run and describe MNIST benign-retraining calibration."""
+    result = run_mnist_explanation_calibration(
+        _project_path(input_path),
+        _project_path(output_dir),
+        train_limit=train_limit,
+        sample_limit=sample_limit,
+    )
+    print("MNIST explanation calibration", flush=True)
+    print("-----------------------------", flush=True)
+    print(f"Benign pairs: {len(result['pairs'])}", flush=True)
+    print(
+        f"Same-prediction comparisons: {result['same_prediction_comparisons']}",
+        flush=True,
+    )
+    print(f"5th-percentile threshold: {result['calibrated_threshold']:.3f}", flush=True)
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -853,6 +889,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_prepare_image_data(args.input, args.output_dir, args.limit)
         if args.command == "image-model-demo":
             return run_image_model_demo(args.input, args.output_dir, args.limit)
+        if args.command == "mnist-explanation-calibration":
+            return run_mnist_calibration_experiment(
+                args.input,
+                args.output_dir,
+                args.train_limit,
+                args.sample_limit,
+            )
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
         if args.command == "digits-close-benchmark":
