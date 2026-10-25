@@ -63,6 +63,9 @@ When both models produce explanation maps, the comparison also reports their
 cosine similarity. The drift boundary defaults to 0.80 and can be changed in
 the same triage controls. Values below the selected boundary are flagged,
 including a separate hidden-drift filter for samples whose predicted class stayed the same.
+Hidden-drift samples also appear in a compact review gallery above the table.
+Each card identifies the sample and similarity score and opens the original
+image beside the two model-specific contribution heatmaps.
 The maps must come from comparable feature layouts; this score describes model
 behavior and does not establish a causal explanation.
 

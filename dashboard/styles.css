@@ -357,6 +357,18 @@ main { display: grid; gap: 24px; }
 .sample-table .high-confidence-risk-row td { background: rgba(255, 239, 228, 0.72); }
 .sample-table .explanation-drift-row { box-shadow: inset 4px 0 0 #7557b7; }
 .sample-table .explanation-drift-row td { background: rgba(242, 237, 252, 0.72); }
+.drift-gallery-panel { margin: 20px 0 24px; padding: 18px; border: 1px solid #d9d0ef; border-radius: 18px; background: #faf8fe; }
+.drift-gallery-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+.drift-gallery-heading h3 { margin: 3px 0 0; color: var(--navy); font-size: 1.05rem; }
+.drift-gallery-heading > p { max-width: 520px; margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.5; text-align: right; }
+.drift-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 16px; }
+.drift-card { display: grid; grid-template-columns: 68px 1fr; gap: 12px; align-items: center; padding: 12px; border: 1px solid #d9d0ef; border-radius: 14px; background: white; }
+.drift-card .sample-thumbnail { width: 68px; height: 68px; }
+.drift-card .sample-placeholder { display: grid; place-items: center; color: var(--muted); font-size: .62rem; text-align: center; }
+.drift-card-copy { min-width: 0; }
+.drift-card-copy strong { display: block; color: var(--navy); font-size: .8rem; }
+.drift-card-copy span { display: block; margin: 3px 0 9px; color: var(--muted); font-size: .68rem; line-height: 1.4; }
+.drift-card-copy .explanation-button { padding: 5px 8px; }
 .sample-thumbnail { display: block; width: 68px; height: 68px; border: 1px solid var(--line); border-radius: 10px; background: white; object-fit: contain; }
 .sample-table td { vertical-align: middle; }
 .optional-image-field { grid-column: 1 / -1; }
@@ -455,6 +467,8 @@ main { display: grid; gap: 24px; }
 footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px 0 40px; color: var(--muted); font-size: .72rem; }
 
 @media (max-width: 820px) {
+  .drift-gallery-heading { align-items: start; flex-direction: column; gap: 8px; }
+  .drift-gallery-heading > p { text-align: left; }
   .status-panel { grid-template-columns: 1fr; }
   .method-grid, .metric-grid { grid-template-columns: 1fr; }
   .scenario-grid { grid-template-columns: 1fr; }
