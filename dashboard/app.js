@@ -572,7 +572,13 @@ function renderModelOverview(report) {
     name.textContent = model.filename;
     const accuracy = document.createElement("span");
     accuracy.className = "accuracy";
-    accuracy.textContent = formatPercent(model.accuracy);
+    accuracy.textContent = `Accuracy ${formatPercent(model.accuracy)}`;
+    const metrics = document.createElement("div");
+    metrics.className = "model-metrics";
+    const f1Metric = document.createElement("span");
+    f1Metric.textContent = `Macro F1 ${formatPercent(model.macro_f1)}`;
+    if (model.index === report.best_macro_f1_index) f1Metric.classList.add("best-metric");
+    metrics.append(f1Metric);
     const count = document.createElement("small");
     count.textContent = `${model.correct_count} of ${report.dataset.rows} samples correct`;
     const calibration = document.createElement("div");
@@ -583,7 +589,7 @@ function renderModelOverview(report) {
     } else {
       calibration.textContent = "Calibration unavailable: model has no probability output";
     }
-    card.append(rank, name, accuracy, count, calibration, renderReliabilityChart(model));
+    card.append(rank, name, accuracy, metrics, count, calibration, renderReliabilityChart(model));
     elements.modelOverviewGrid.append(card);
   }
   elements.modelAgreementResults.replaceChildren();

@@ -257,10 +257,13 @@ class UploadComparisonTests(unittest.TestCase):
 
         self.assertEqual(len(result["models"]), 3)
         self.assertEqual(result["models"][0]["accuracy"], 1.0)
+        self.assertEqual(result["models"][0]["macro_f1"], 1.0)
         self.assertTrue(result["models"][0]["supports_confidence"])
         self.assertAlmostEqual(result["models"][0]["expected_calibration_error"], 0.0)
         self.assertEqual(result["models"][2]["accuracy"], 0.5)
+        self.assertAlmostEqual(result["models"][2]["macro_f1"], 1 / 3)
         self.assertEqual(result["best_model_index"], 0)
+        self.assertEqual(result["best_macro_f1_index"], 0)
         self.assertEqual(len(result["pairwise_agreements"]), 3)
         self.assertEqual(result["pairwise_agreements"][0]["agreement"], 1.0)
 

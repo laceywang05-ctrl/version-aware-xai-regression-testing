@@ -371,6 +371,9 @@ main { display: grid; gap: 24px; }
 .model-overview-card .rank { color: var(--blue); font-size: .68rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
 .model-overview-card strong { overflow-wrap: anywhere; color: var(--navy); font-size: .85rem; }
 .model-overview-card .accuracy { color: var(--navy); font-size: 1.7rem; font-weight: 850; }
+.model-metrics { display: flex; flex-wrap: wrap; gap: 7px; }
+.model-metrics span { padding: 5px 8px; border-radius: 99px; background: #edf2f4; color: var(--muted); font-size: .65rem; font-weight: 750; }
+.model-metrics span.best-metric { background: #e5f5ef; color: var(--green); }
 .model-overview-card small { color: var(--muted); font-size: .7rem; }
 .model-overview-card .calibration-summary { padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: .69rem; line-height: 1.5; }
 .reliability-chart { display: grid; gap: 5px; margin-top: 2px; color: var(--muted); font-size: .62rem; }

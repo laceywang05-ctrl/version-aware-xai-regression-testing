@@ -845,11 +845,17 @@ def summarize_upload_models(
                 "index": index,
                 "filename": filename,
                 "accuracy": float((prediction == labels).mean()),
+                "macro_f1": float(
+                    f1_score(labels, prediction, average="macro", zero_division=0)
+                ),
                 "correct_count": int(np.count_nonzero(prediction == labels)),
                 **calibration,
             }
         )
-    ranked = sorted(summaries, key=lambda item: (-item["accuracy"], item["index"]))
+    ranked = sorted(
+        summaries,
+        key=lambda item: (-item["accuracy"], -item["macro_f1"], item["index"]),
+    )
     for rank, item in enumerate(ranked, start=1):
         summaries[item["index"]]["rank"] = rank
     agreements = []
@@ -873,6 +879,9 @@ def summarize_upload_models(
         "models": summaries,
         "pairwise_agreements": agreements,
         "best_model_index": ranked[0]["index"],
+        "best_macro_f1_index": max(
+            summaries, key=lambda item: (item["macro_f1"], item["accuracy"])
+        )["index"],
     }
 
 
