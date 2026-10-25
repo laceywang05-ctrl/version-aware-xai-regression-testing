@@ -8,7 +8,10 @@ from typing import Sequence
 
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
-from xai_regression.digits_benchmark import run_digits_close_version_benchmark
+from xai_regression.digits_benchmark import (
+    run_digits_close_version_benchmark,
+    run_digits_split_robustness,
+)
 from xai_regression.lime_workflow import (
     run_lime_cross_version,
     run_lime_heldout_validation,
@@ -291,6 +294,14 @@ def build_parser() -> argparse.ArgumentParser:
     digits_benchmark_parser.add_argument(
         "--output-dir",
         default="artifacts/digits_close_version_benchmark",
+    )
+    digits_robustness_parser = subparsers.add_parser(
+        "digits-split-robustness",
+        help="Repeat the four-version digit benchmark across ten data splits.",
+    )
+    digits_robustness_parser.add_argument(
+        "--output-dir",
+        default="artifacts/digits_split_robustness",
     )
     serve_parser.add_argument(
         "--portfolio-report",
@@ -623,6 +634,22 @@ def run_digits_benchmark(output_dir: str | Path) -> int:
     return 0
 
 
+def run_digits_robustness(output_dir: str | Path) -> int:
+    """Run and describe the repeated-split digit benchmark."""
+    result = run_digits_split_robustness(_project_path(output_dir))
+    best = max(result["models"], key=lambda model: model["mean_accuracy"])
+    print("Handwritten-digit split robustness", flush=True)
+    print("----------------------------------", flush=True)
+    print(f"Splits: {len(result['split_seeds'])}", flush=True)
+    print(f"Models per split: {len(result['models'])}", flush=True)
+    print(
+        f"Best mean accuracy: {best['mean_accuracy']:.1%} ({best['name']})",
+        flush=True,
+    )
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -705,6 +732,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_regression_demo(args.output_dir)
         if args.command == "digits-close-benchmark":
             return run_digits_benchmark(args.output_dir)
+        if args.command == "digits-split-robustness":
+            return run_digits_robustness(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 
