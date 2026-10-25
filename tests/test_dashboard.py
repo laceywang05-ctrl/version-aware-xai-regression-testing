@@ -104,6 +104,7 @@ class DashboardTests(unittest.TestCase):
             "confusion-v2-heading",
             "confusion-empty-message",
             "download-comparison-json",
+            "download-comparison-summary",
             "download-samples-csv",
             "confidence-risk-summary",
             "confidence-threshold-input",
@@ -115,6 +116,7 @@ class DashboardTests(unittest.TestCase):
             "regression-results",
             "regression-model-overview-grid",
             "download-regression-json",
+            "download-regression-summary",
             "download-regression-samples-csv",
             "download-regression-ranking-csv",
             "additional-model-names",
@@ -192,8 +194,11 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("Regression supported", script)
         self.assertIn("not an automatic deployment decision", script)
         self.assertIn("function downloadComparisonJson", script)
+        self.assertIn("function downloadComparisonSummary", script)
         self.assertIn("function downloadSamplesCsv", script)
         self.assertIn("function downloadRegressionJson", script)
+        self.assertIn("function downloadRegressionSummary", script)
+        self.assertIn("text/markdown;charset=utf-8", script)
         self.assertIn("function downloadRegressionSamplesCsv", script)
         self.assertIn("function downloadRegressionRankingCsv", script)
         self.assertIn("application/json", script)

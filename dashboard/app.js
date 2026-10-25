@@ -86,6 +86,7 @@ const elements = {
   uploadResults: document.querySelector("#upload-results"),
   regressionResults: document.querySelector("#regression-results"),
   downloadRegressionJson: document.querySelector("#download-regression-json"),
+  downloadRegressionSummary: document.querySelector("#download-regression-summary"),
   downloadRegressionSamplesCsv: document.querySelector("#download-regression-samples-csv"),
   downloadRegressionRankingCsv: document.querySelector("#download-regression-ranking-csv"),
   regressionModelOverviewGrid: document.querySelector("#regression-model-overview-grid"),
@@ -140,6 +141,7 @@ const elements = {
   confusionV2Heading: document.querySelector("#confusion-v2-heading"),
   confusionEmptyMessage: document.querySelector("#confusion-empty-message"),
   downloadComparisonJson: document.querySelector("#download-comparison-json"),
+  downloadComparisonSummary: document.querySelector("#download-comparison-summary"),
   downloadSamplesCsv: document.querySelector("#download-samples-csv"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
   confidenceThresholdInput: document.querySelector("#confidence-threshold-input"),
@@ -763,6 +765,50 @@ function downloadComparisonJson() {
   );
 }
 
+function downloadComparisonSummary() {
+  if (!state.uploadComparison) return;
+  const report = comparisonForExport();
+  const summary = report.summary;
+  const v1Name = report.models?.v1?.filename || "Model V1";
+  const v2Name = report.models?.v2?.filename || "Model V2";
+  const verdict = candidateVerdictData("classification", summary, v1Name, v2Name);
+  const lines = [
+    "# Classification model comparison summary",
+    "",
+    `- Baseline (V1): ${v1Name}`,
+    `- Candidate (V2): ${v2Name}`,
+    `- Labelled samples: ${summary.total_samples}`,
+    `- V1 accuracy: ${formatPercent(summary.v1_accuracy)}`,
+    `- V2 accuracy: ${formatPercent(summary.v2_accuracy)}`,
+    `- Accuracy change: ${summary.accuracy_change > 0 ? "+" : ""}${formatPercent(summary.accuracy_change)}`,
+    `- Prediction agreement: ${formatPercent(summary.prediction_agreement)}`,
+    "",
+    "## Paired evidence conclusion",
+    "",
+    `**${verdict.label}.** ${verdict.message}`,
+    "",
+    `Exact McNemar p-value: ${formatPValue(summary.mcnemar_exact_p)} (alpha ${summary.mcnemar_alpha}).`,
+    "",
+    "## Sample transitions",
+    "",
+    `- Both correct: ${summary.both_correct}`,
+    `- Wrong to correct: ${summary.v1_wrong_v2_correct}`,
+    `- Correct to wrong: ${summary.v1_correct_v2_wrong}`,
+    `- Both wrong: ${summary.both_wrong}`,
+    "",
+    "## Interpretation boundary",
+    "",
+    verdict.limitation,
+    "The result describes only the supplied labelled sample and uploaded model artifacts.",
+    "",
+  ];
+  downloadLocalFile(
+    `xai-comparison-summary-${exportTimestamp()}.md`,
+    lines.join("\n"),
+    "text/markdown;charset=utf-8",
+  );
+}
+
 function csvCell(value) {
   if (value === null || value === undefined) return "";
   const text = String(value);
@@ -810,6 +856,50 @@ function downloadRegressionJson() {
       comparison: state.regressionComparison,
     }, null, 2),
     "application/json",
+  );
+}
+
+function downloadRegressionSummary() {
+  if (!state.regressionComparison) return;
+  const report = state.regressionComparison;
+  const summary = report.summary;
+  const v1Name = report.models?.v1?.filename || "Model V1";
+  const v2Name = report.models?.v2?.filename || "Model V2";
+  const verdict = candidateVerdictData("regression", summary, v1Name, v2Name);
+  const interval = summary.mae_change_ci_95;
+  const lines = [
+    "# Regression model comparison summary",
+    "",
+    `- Baseline (V1): ${v1Name}`,
+    `- Candidate (V2): ${v2Name}`,
+    `- Labelled samples: ${summary.total_samples}`,
+    `- V1 MAE: ${formatNumber(summary.v1.mae)}`,
+    `- V2 MAE: ${formatNumber(summary.v2.mae)}`,
+    `- MAE change: ${summary.mae_change > 0 ? "+" : ""}${formatNumber(summary.mae_change)}`,
+    `- MAE change 95% CI: ${formatNumber(interval.lower)} to ${formatNumber(interval.upper)}`,
+    `- V1 RMSE / R²: ${formatNumber(summary.v1.rmse)} / ${formatNumber(summary.v1.r2)}`,
+    `- V2 RMSE / R²: ${formatNumber(summary.v2.rmse)} / ${formatNumber(summary.v2.r2)}`,
+    "",
+    "## Paired evidence conclusion",
+    "",
+    `**${verdict.label}.** ${verdict.message}`,
+    "",
+    "## Sample-level error changes",
+    "",
+    `- Improved: ${summary.improved_count}`,
+    `- Worsened: ${summary.worsened_count}`,
+    `- Unchanged: ${summary.unchanged_count}`,
+    "",
+    "## Interpretation boundary",
+    "",
+    verdict.limitation,
+    "The result describes only the supplied labelled sample and uploaded model artifacts.",
+    "",
+  ];
+  downloadLocalFile(
+    `xai-regression-summary-${exportTimestamp()}.md`,
+    lines.join("\n"),
+    "text/markdown;charset=utf-8",
   );
 }
 
@@ -1741,8 +1831,10 @@ for (const input of [elements.confidenceThresholdInput, elements.explanationThre
   });
 }
 elements.downloadComparisonJson.addEventListener("click", downloadComparisonJson);
+elements.downloadComparisonSummary.addEventListener("click", downloadComparisonSummary);
 elements.downloadSamplesCsv.addEventListener("click", downloadSamplesCsv);
 elements.downloadRegressionJson.addEventListener("click", downloadRegressionJson);
+elements.downloadRegressionSummary.addEventListener("click", downloadRegressionSummary);
 elements.downloadRegressionSamplesCsv.addEventListener("click", downloadRegressionSamplesCsv);
 elements.downloadRegressionRankingCsv.addEventListener("click", downloadRegressionRankingCsv);
 for (const input of [
