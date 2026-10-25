@@ -351,6 +351,7 @@ def run_digits_explanation_stability(
     *,
     sample_limit: int = 120,
     similarity_threshold: float = 0.80,
+    split_seed: int = 42,
 ) -> dict:
     """Compare Tree SHAP maps for three closely performing forest versions."""
     if not 20 <= sample_limit <= 500:
@@ -363,7 +364,7 @@ def run_digits_explanation_stability(
     train_indices, test_indices = train_test_split(
         indices,
         test_size=0.30,
-        random_state=42,
+        random_state=split_seed,
         stratify=digits.target,
     )
     train_features = pd.DataFrame(digits.data[train_indices], columns=columns)
@@ -382,7 +383,9 @@ def run_digits_explanation_stability(
             "feature_columns": columns,
             "class_names": {str(value): f"digit {value}" for value in range(10)},
             "trusted_model_files": True,
-            "dataset_note": "Fixed seed-42 held-out handwritten-digit subset.",
+            "dataset_note": (
+                f"Fixed seed-{split_seed} held-out handwritten-digit subset."
+            ),
         }
     )
     models = []
@@ -440,7 +443,7 @@ def run_digits_explanation_stability(
 
     report = {
         "dataset": "scikit-learn handwritten digits (8x8)",
-        "fixed_split_seed": 42,
+        "fixed_split_seed": split_seed,
         "sample_limit": sample_limit,
         "similarity_threshold": similarity_threshold,
         "explanation_method": "Tree SHAP for predicted-class contributions",
@@ -451,6 +454,89 @@ def run_digits_explanation_stability(
         ),
     }
     destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    report_path = destination / "summary.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return {"output_dir": destination, "report_path": report_path, **report}
+
+
+def run_digits_explanation_split_robustness(
+    output_dir: str | Path,
+    *,
+    split_seeds: tuple[int, ...] = (11, 23, 37, 49, 61),
+    sample_limit: int = 80,
+    similarity_threshold: float = 0.80,
+) -> dict:
+    """Repeat the close-version explanation comparison across data splits."""
+    if len(split_seeds) < 2:
+        raise ValueError("Explanation split robustness requires at least two seeds.")
+    destination = Path(output_dir)
+    runs = []
+    for split_seed in split_seeds:
+        result = run_digits_explanation_stability(
+            destination / f"split_{split_seed}",
+            sample_limit=sample_limit,
+            similarity_threshold=similarity_threshold,
+            split_seed=split_seed,
+        )
+        runs.append(
+            {
+                "split_seed": split_seed,
+                "pairs": result["pairs"],
+            }
+        )
+
+    pair_summaries = []
+    for left in range(3):
+        for right in range(left + 1, 3):
+            pair_runs = [
+                next(
+                    pair
+                    for pair in run["pairs"]
+                    if pair["left"] == MODEL_CONFIGS[left]["name"]
+                    and pair["right"] == MODEL_CONFIGS[right]["name"]
+                )
+                for run in runs
+            ]
+            mean_similarities = np.asarray(
+                [pair["mean_cosine_similarity"] for pair in pair_runs]
+            )
+            pair_summaries.append(
+                {
+                    "left": MODEL_CONFIGS[left]["name"],
+                    "right": MODEL_CONFIGS[right]["name"],
+                    "mean_cosine_similarity": float(mean_similarities.mean()),
+                    "minimum_split_mean_similarity": float(
+                        mean_similarities.min()
+                    ),
+                    "total_samples_compared": int(
+                        sum(pair["samples_compared"] for pair in pair_runs)
+                    ),
+                    "total_below_threshold": int(
+                        sum(pair["below_threshold_count"] for pair in pair_runs)
+                    ),
+                    "total_hidden_drift": int(
+                        sum(pair["hidden_drift_count"] for pair in pair_runs)
+                    ),
+                    "splits_with_hidden_drift": int(
+                        sum(pair["hidden_drift_count"] > 0 for pair in pair_runs)
+                    ),
+                }
+            )
+
+    report = {
+        "dataset": "scikit-learn handwritten digits (8x8)",
+        "split_seeds": list(split_seeds),
+        "sample_limit_per_split": sample_limit,
+        "similarity_threshold": similarity_threshold,
+        "pair_summaries": pair_summaries,
+        "runs": runs,
+        "interpretation": (
+            "Hidden drift requires matching predictions and cosine similarity "
+            "below the inspection threshold. Splits are sensitivity checks, "
+            "not independent population samples."
+        ),
+    }
     destination.mkdir(parents=True, exist_ok=True)
     report_path = destination / "summary.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

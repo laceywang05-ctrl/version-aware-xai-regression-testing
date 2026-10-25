@@ -587,3 +587,16 @@ separately flags hidden explanation drift, where predictions agree but
 explanations fall below the inspection threshold. Results and limitations are
 documented in
 [`docs/DIGITS_EXPLANATION_STABILITY_RESULT.md`](docs/DIGITS_EXPLANATION_STABILITY_RESULT.md).
+
+Repeat the explanation comparison across five stratified train-test splits:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression \
+  digits-explanation-split-robustness
+```
+
+This sensitivity analysis aggregates 1,200 pairwise sample comparisons and
+reports whether hidden explanation drift depends on the data partition. Results
+are documented in
+[`docs/DIGITS_EXPLANATION_SPLIT_ROBUSTNESS_RESULT.md`](docs/DIGITS_EXPLANATION_SPLIT_ROBUSTNESS_RESULT.md).
