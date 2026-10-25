@@ -272,8 +272,10 @@ class CliTests(unittest.TestCase):
                 "xai_regression.cli.build_digits_image_demo",
                 return_value={
                     "sample_count": 12,
+                    "model_count": 4,
                     "v1_accuracy": 0.5,
                     "v2_accuracy": 0.9,
+                    "best_accuracy": 0.95,
                     "output_dir": cli.PROJECT_ROOT / "demo",
                 },
             ) as build,

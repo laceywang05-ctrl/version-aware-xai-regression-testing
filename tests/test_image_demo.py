@@ -17,6 +17,8 @@ class ImageDemoTests(unittest.TestCase):
             expected = {
                 "model_v1.joblib",
                 "model_v2.joblib",
+                "model_v3_extra_trees.joblib",
+                "model_v4_knn.joblib",
                 "samples.csv",
                 "manifest.json",
                 "images.zip",
@@ -24,6 +26,7 @@ class ImageDemoTests(unittest.TestCase):
             }
             self.assertEqual({path.name for path in output.iterdir()}, expected)
             self.assertGreater(result["v2_accuracy"], result["v1_accuracy"])
+            self.assertEqual(result["model_count"], 4)
             with ZipFile(output / "images.zip") as archive:
                 self.assertEqual(len(archive.namelist()), result["sample_count"])
 
@@ -66,6 +69,7 @@ class ImageDemoTests(unittest.TestCase):
             )
             summary = json.loads((output / "README.json").read_text())
             self.assertIn("DecisionTreeClassifier", summary["model_v1"])
+            self.assertEqual(len(summary["models"]), 4)
 
 
 if __name__ == "__main__":

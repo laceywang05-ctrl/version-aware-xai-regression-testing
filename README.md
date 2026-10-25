@@ -237,11 +237,13 @@ Generate a complete offline handwritten-digit demonstration bundle with:
 PYTHONPATH=src python -m xai_regression image-demo
 ```
 
-The command trains a deliberately limited decision-tree V1 and a stronger
-random-forest V2, then writes both trusted model files, a labelled sample CSV,
-an image ZIP, and the matching manifest under
-`artifacts/demo_image_upload/`. Upload those five files on **Compare uploaded
-models** to demonstrate concrete image-level improvements and regressions.
+The command trains a deliberately limited decision-tree V1, random forest,
+extra-trees classifier, and k-nearest-neighbours classifier. It writes all four
+trusted model files, a labelled sample CSV, an image ZIP, and the matching
+manifest under `artifacts/demo_image_upload/`. Upload the first two model files,
+select the other two together under **Additional models**, and use **Compare
+uploaded models** to demonstrate model ranking and concrete image-level
+improvements and regressions.
 This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
 offline; true MNIST and CIFAR-10 remain the next dataset integrations.
 
