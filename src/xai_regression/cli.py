@@ -8,6 +8,7 @@ from typing import Sequence
 
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
+from xai_regression.digits_benchmark import run_digits_close_version_benchmark
 from xai_regression.lime_workflow import (
     run_lime_cross_version,
     run_lime_heldout_validation,
@@ -282,6 +283,14 @@ def build_parser() -> argparse.ArgumentParser:
     regression_demo_parser.add_argument(
         "--output-dir",
         default="artifacts/demo_regression_upload",
+    )
+    digits_benchmark_parser = subparsers.add_parser(
+        "digits-close-benchmark",
+        help="Compare four closely matched random-forest digit models.",
+    )
+    digits_benchmark_parser.add_argument(
+        "--output-dir",
+        default="artifacts/digits_close_version_benchmark",
     )
     serve_parser.add_argument(
         "--portfolio-report",
@@ -601,6 +610,19 @@ def run_regression_demo(output_dir: str | Path) -> int:
     return 0
 
 
+def run_digits_benchmark(output_dir: str | Path) -> int:
+    """Run and describe the close-version handwritten-digit benchmark."""
+    result = run_digits_close_version_benchmark(_project_path(output_dir))
+    best = max(result["models"], key=lambda model: model["accuracy"])
+    print("Close-version handwritten-digit benchmark", flush=True)
+    print("-------------------------------------------", flush=True)
+    print(f"Models: {len(result['models'])}", flush=True)
+    print(f"Test samples: {result['split']['test_samples']}", flush=True)
+    print(f"Best accuracy: {best['accuracy']:.1%} ({best['name']})", flush=True)
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -681,6 +703,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_image_model_demo(args.input, args.output_dir, args.limit)
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
+        if args.command == "digits-close-benchmark":
+            return run_digits_benchmark(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
         parser.error(str(error))
 
