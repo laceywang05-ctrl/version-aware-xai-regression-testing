@@ -660,3 +660,21 @@ PYTHONPATH=src python -m xai_regression mnist-explanation-calibration \
 The experiment estimates the lower tail of benign explanation similarity,
 checks it on disjoint training seeds and documents the revised review workload in
 [`docs/MNIST_EXPLANATION_CALIBRATION_RESULT.md`](docs/MNIST_EXPLANATION_CALIBRATION_RESULT.md).
+
+## CIFAR-10 multi-model validation
+
+Run the same four-model upload workflow directly from the official CIFAR-10
+Python archive:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression image-model-demo \
+  --input cifar-10-python.tar.gz \
+  --output-dir artifacts/cifar10_model_demo \
+  --limit 1000
+```
+
+The validated run uses 1,000 official training and test images, ranks four
+models, and compares the two closest ensemble methods. Results, class-level
+changes and limitations are documented in
+[`docs/CIFAR10_MULTIMODEL_RESULT.md`](docs/CIFAR10_MULTIMODEL_RESULT.md).
