@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from io import BytesIO
 import json
+import pickle
 from pathlib import Path
+import tarfile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import matplotlib.image as mpimg
@@ -29,6 +31,102 @@ CIFAR10_CLASS_NAMES = [
     "ship",
     "truck",
 ]
+
+
+def _is_cifar10_python_archive(source: Path) -> bool:
+    """Recognise the official CIFAR-10 Python tar archive by its suffix."""
+    lowered = source.name.lower()
+    return lowered.endswith(".tar.gz") or lowered.endswith(".tgz")
+
+
+def _read_cifar10_member(archive: tarfile.TarFile, filename: str) -> dict:
+    """Read one expected regular-file pickle from a CIFAR-10 archive."""
+    matches = [
+        member
+        for member in archive.getmembers()
+        if member.isfile() and Path(member.name).name == filename
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"CIFAR-10 archive must contain exactly one {filename} file.")
+    member = matches[0]
+    if member.size > 40_000_000:
+        raise ValueError(f"CIFAR-10 archive member {filename} is unexpectedly large.")
+    stream = archive.extractfile(member)
+    if stream is None:
+        raise ValueError(f"Could not read {filename} from the CIFAR-10 archive.")
+    try:
+        payload = pickle.load(stream, encoding="bytes")
+    except (pickle.UnpicklingError, EOFError, AttributeError, ValueError) as error:
+        raise ValueError(f"Could not decode {filename} in the CIFAR-10 archive.") from error
+    if not isinstance(payload, dict):
+        raise ValueError(f"CIFAR-10 archive member {filename} must contain a dictionary.")
+    return payload
+
+
+def _cifar10_batch_arrays(payload: dict, filename: str) -> tuple[np.ndarray, np.ndarray]:
+    data = payload.get(b"data", payload.get("data"))
+    labels = payload.get(b"labels", payload.get("labels"))
+    if labels is None:
+        labels = payload.get(b"fine_labels", payload.get("fine_labels"))
+    if data is None or labels is None:
+        raise ValueError(f"CIFAR-10 archive member {filename} lacks data or labels.")
+    flat = np.asarray(data)
+    label_array = _normalise_labels(np.asarray(labels))
+    if flat.ndim != 2 or flat.shape[1] != 3_072:
+        raise ValueError(f"CIFAR-10 archive member {filename} must contain 3,072 pixels per image.")
+    if label_array.ndim != 1 or len(label_array) != len(flat):
+        raise ValueError(f"CIFAR-10 archive member {filename} has mismatched labels.")
+    images = flat.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+    return images, label_array
+
+
+def _load_cifar10_python_splits(
+    input_path: str | Path,
+    *,
+    limit: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict[str, str]]:
+    """Load only the requested rows from the official CIFAR-10 Python archive."""
+    source = Path(input_path)
+    try:
+        archive = tarfile.open(source, mode="r:gz")
+    except (OSError, tarfile.TarError) as error:
+        raise ValueError(f"Could not read CIFAR-10 archive: {source}.") from error
+    with archive:
+        train_image_parts = []
+        train_label_parts = []
+        remaining = limit
+        for batch_index in range(1, 6):
+            if remaining == 0:
+                break
+            filename = f"data_batch_{batch_index}"
+            images, labels = _cifar10_batch_arrays(
+                _read_cifar10_member(archive, filename), filename
+            )
+            take = min(remaining, len(images))
+            train_image_parts.append(images[:take])
+            train_label_parts.append(labels[:take])
+            remaining -= take
+        if not train_image_parts:
+            raise ValueError("CIFAR-10 archive contains no training images.")
+        test_images, test_labels = _cifar10_batch_arrays(
+            _read_cifar10_member(archive, "test_batch"), "test_batch"
+        )
+        test_images = test_images[:limit]
+        test_labels = test_labels[:limit]
+        meta = _read_cifar10_member(archive, "batches.meta")
+        names = meta.get(b"label_names", meta.get("label_names"))
+        if names is None or len(names) != 10:
+            raise ValueError("CIFAR-10 batches.meta must contain ten label names.")
+        decoded_names = [
+            value.decode("utf-8") if isinstance(value, bytes) else str(value)
+            for value in names
+        ]
+    train_images = np.concatenate(train_image_parts)
+    train_labels = np.concatenate(train_label_parts)
+    _validate_image_arrays(train_images, train_labels)
+    _validate_image_arrays(test_images, test_labels)
+    class_names = {str(index): name for index, name in enumerate(decoded_names)}
+    return train_images, train_labels, test_images, test_labels, class_names
 
 
 def _select_image_arrays(archive) -> tuple[np.ndarray, np.ndarray, str]:
@@ -200,8 +298,19 @@ def build_image_model_demo(
     if limit < 20 or limit > 5_000:
         raise ValueError("Image demo limit must be between 20 and 5,000.")
     source = Path(input_path)
-    official_splits = _load_official_splits(input_path)
-    if official_splits is not None:
+    source_class_names = None
+    class_name_source = None
+    if _is_cifar10_python_archive(source):
+        (
+            train_images,
+            train_labels,
+            test_images,
+            test_labels,
+            source_class_names,
+        ) = _load_cifar10_python_splits(input_path, limit=limit)
+        split_strategy = "official CIFAR-10 Python train/test batches"
+        class_name_source = "CIFAR-10 batches.meta"
+    elif (official_splits := _load_official_splits(input_path)) is not None:
         train_images, train_labels, test_images, test_labels = official_splits
         train_images = train_images[:limit]
         train_labels = train_labels[:limit]
@@ -224,7 +333,8 @@ def build_image_model_demo(
         test_images = images[test_indices]
         test_labels = labels[test_indices]
         split_strategy = f"fixed stratified split ({1 - test_size:.0%}/{test_size:.0%})"
-    source_class_names, class_name_source = _image_class_names(source, test_labels)
+    if source_class_names is None:
+        source_class_names, class_name_source = _image_class_names(source, test_labels)
     classes, counts = np.unique(train_labels, return_counts=True)
     if len(classes) < 2 or np.any(counts < 2):
         raise ValueError("Image demo requires at least two classes with two samples each.")

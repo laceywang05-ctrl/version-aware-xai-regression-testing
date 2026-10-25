@@ -1,4 +1,7 @@
 import json
+import io
+import pickle
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,10 +10,44 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 
-from xai_regression.image_bundle import build_image_model_demo, prepare_image_npz_bundle
+from xai_regression.image_bundle import (
+    CIFAR10_CLASS_NAMES,
+    build_image_model_demo,
+    prepare_image_npz_bundle,
+)
 
 
 class ImageBundleTests(unittest.TestCase):
+    def _write_cifar_archive(self, path: Path) -> None:
+        def add_pickle(archive, name, value):
+            payload = pickle.dumps(value, protocol=2)
+            info = tarfile.TarInfo(f"cifar-10-batches-py/{name}")
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+
+        with tarfile.open(path, "w:gz") as archive:
+            for batch_index in range(1, 6):
+                labels = np.asarray([(batch_index + index) % 2 for index in range(6)])
+                pixels = np.arange(6 * 3_072, dtype=np.uint8).reshape(6, 3_072)
+                add_pickle(
+                    archive,
+                    f"data_batch_{batch_index}",
+                    {b"data": pixels, b"labels": labels.tolist()},
+                )
+            add_pickle(
+                archive,
+                "test_batch",
+                {
+                    b"data": np.arange(12 * 3_072, dtype=np.uint8).reshape(12, 3_072),
+                    b"labels": [index % 2 for index in range(12)],
+                },
+            )
+            add_pickle(
+                archive,
+                "batches.meta",
+                {b"label_names": [name.encode("utf-8") for name in CIFAR10_CLASS_NAMES]},
+            )
+
     def test_rgb_npz_is_prepared_for_dashboard_upload(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -121,3 +158,23 @@ class ImageBundleTests(unittest.TestCase):
             self.assertEqual(result["test_samples"], 12)
             self.assertEqual(result["split_strategy"], "official x_train/y_train and x_test/y_test")
             self.assertEqual(summary["split_strategy"], result["split_strategy"])
+
+    def test_four_model_demo_reads_official_cifar10_python_archive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cifar-10-python.tar.gz"
+            self._write_cifar_archive(source)
+            result = build_image_model_demo(source, root / "demo", limit=20)
+            manifest = json.loads((root / "demo" / "manifest.json").read_text())
+            summary = json.loads((root / "demo" / "README.json").read_text())
+            frame = pd.read_csv(root / "demo" / "samples.csv")
+            self.assertEqual(result["training_samples"], 20)
+            self.assertEqual(result["test_samples"], 12)
+            self.assertEqual(
+                result["split_strategy"], "official CIFAR-10 Python train/test batches"
+            )
+            self.assertEqual(manifest["class_names"]["0"], "airplane")
+            self.assertEqual(manifest["class_names"]["1"], "automobile")
+            self.assertEqual(len(manifest["feature_columns"]), 3_072)
+            self.assertEqual(len(frame), 12)
+            self.assertEqual(summary["class_name_source"], "CIFAR-10 batches.meta")

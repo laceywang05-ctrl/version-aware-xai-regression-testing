@@ -279,7 +279,7 @@ def build_parser() -> argparse.ArgumentParser:
     image_bundle_parser.add_argument("--limit", type=int, default=500)
     image_model_demo_parser = subparsers.add_parser(
         "image-model-demo",
-        help="Train four classifiers on MNIST/CIFAR-style NPZ arrays.",
+        help="Train four classifiers on image NPZ arrays or the official CIFAR-10 archive.",
     )
     image_model_demo_parser.add_argument("--input", required=True)
     image_model_demo_parser.add_argument("--output-dir", default="artifacts/image_model_demo")
