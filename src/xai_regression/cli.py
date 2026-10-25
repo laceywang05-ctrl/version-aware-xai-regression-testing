@@ -14,7 +14,7 @@ from xai_regression.lime_workflow import (
     run_lime_stability,
 )
 from xai_regression.image_demo import build_digits_image_demo
-from xai_regression.image_bundle import prepare_image_npz_bundle
+from xai_regression.image_bundle import build_image_model_demo, prepare_image_npz_bundle
 from xai_regression.regression_demo import build_regression_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
@@ -268,6 +268,13 @@ def build_parser() -> argparse.ArgumentParser:
     image_bundle_parser.add_argument("--input", required=True)
     image_bundle_parser.add_argument("--output-dir", default="artifacts/prepared_image_upload")
     image_bundle_parser.add_argument("--limit", type=int, default=500)
+    image_model_demo_parser = subparsers.add_parser(
+        "image-model-demo",
+        help="Train four classifiers on MNIST/CIFAR-style NPZ arrays.",
+    )
+    image_model_demo_parser.add_argument("--input", required=True)
+    image_model_demo_parser.add_argument("--output-dir", default="artifacts/image_model_demo")
+    image_model_demo_parser.add_argument("--limit", type=int, default=1000)
     regression_demo_parser = subparsers.add_parser(
         "regression-demo",
         help="Build a ready-to-upload four-model regression bundle.",
@@ -562,6 +569,21 @@ def run_prepare_image_data(input_path: str | Path, output_dir: str | Path, limit
     return 0
 
 
+def run_image_model_demo(input_path: str | Path, output_dir: str | Path, limit: int) -> int:
+    """Train and describe a four-model image comparison demonstration."""
+    result = build_image_model_demo(
+        _project_path(input_path), _project_path(output_dir), limit=limit
+    )
+    print("Four-model image upload demo", flush=True)
+    print("----------------------------", flush=True)
+    print(f"Models: {result['model_count']}", flush=True)
+    print(f"Training samples: {result['training_samples']}", flush=True)
+    print(f"Test samples: {result['test_samples']}", flush=True)
+    print(f"Best accuracy: {result['best_accuracy']:.1%}", flush=True)
+    print(f"Files saved to: {result['output_dir']}", flush=True)
+    return 0
+
+
 def run_regression_demo(output_dir: str | Path) -> int:
     """Build and describe the local multi-model regression demonstration."""
     result = build_regression_demo(_project_path(output_dir))
@@ -650,6 +672,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_image_demo(args.output_dir)
         if args.command == "prepare-image-data":
             return run_prepare_image_data(args.input, args.output_dir, args.limit)
+        if args.command == "image-model-demo":
+            return run_image_model_demo(args.input, args.output_dir, args.limit)
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
     except (ConfigError, FileNotFoundError, ValueError, RuntimeError) as error:
