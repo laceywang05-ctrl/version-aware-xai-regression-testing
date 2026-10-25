@@ -155,6 +155,9 @@ const elements = {
   confidenceThresholdInput: document.querySelector("#confidence-threshold-input"),
   explanationThresholdInput: document.querySelector("#explanation-threshold-input"),
   confidenceRiskSummary: document.querySelector("#confidence-risk-summary"),
+  driftGallery: document.querySelector("#drift-gallery"),
+  driftGallerySummary: document.querySelector("#drift-gallery-summary"),
+  driftGalleryEmpty: document.querySelector("#drift-gallery-empty"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
   uploadLimitations: document.querySelector("#upload-limitations"),
@@ -1083,6 +1086,51 @@ function renderUploadSamples() {
     : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`;
 }
 
+function renderDriftGallery() {
+  if (!state.uploadComparison) return;
+  const threshold = triageThresholds().explanation;
+  const matching = state.uploadComparison.samples.filter(
+    (sample) => sampleTriage(sample).hidden_explanation_drift,
+  );
+  elements.driftGallery.replaceChildren();
+  elements.driftGallerySummary.textContent =
+    `Showing up to six cases below ${formatPercent(threshold)} similarity where the predicted class stayed unchanged.`;
+  elements.driftGalleryEmpty.hidden = matching.length > 0;
+  elements.driftGalleryEmpty.textContent = matching.length
+    ? ""
+    : "No hidden explanation-drift cases were found at the current threshold.";
+  for (const sample of matching.slice(0, 6)) {
+    const card = document.createElement("article");
+    card.className = "drift-card";
+    if (sample.image_data_url) {
+      const image = document.createElement("img");
+      image.className = "sample-thumbnail";
+      image.src = sample.image_data_url;
+      image.alt = `Sample ${sample.sample_id}`;
+      card.append(image);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.className = "sample-thumbnail sample-placeholder";
+      placeholder.textContent = "No image";
+      card.append(placeholder);
+    }
+    const copy = document.createElement("div");
+    copy.className = "drift-card-copy";
+    const title = document.createElement("strong");
+    title.textContent = `Sample ${sample.sample_id} · ${formatSimilarity(sample.explanation_similarity)}`;
+    const detail = document.createElement("span");
+    detail.textContent = `Both models predicted ${sample.v1_prediction}; actual class ${sample.actual}.`;
+    const button = document.createElement("button");
+    button.className = "explanation-button";
+    button.type = "button";
+    button.textContent = "Compare heatmaps";
+    button.addEventListener("click", () => openExplanation(sample));
+    copy.append(title, detail, button);
+    card.append(copy);
+    elements.driftGallery.append(card);
+  }
+}
+
 function renderTriageSummary() {
   if (!state.uploadComparison) return;
   const report = state.uploadComparison;
@@ -1100,6 +1148,7 @@ function renderTriageSummary() {
     `${v2Name} made ${candidateRiskCount} wrong prediction${candidateRiskCount === 1 ? "" : "s"} `
     + `at or above ${formatPercent(thresholds.confidence)} confidence; ${regressionRiskCount} were regressions from a correct ${v1Name} result. `
     + `${explanationCount} samples had comparable explanation maps; ${hiddenDriftCount} kept the same prediction with similarity below ${formatPercent(thresholds.explanation)}.`;
+  renderDriftGallery();
 }
 
 function renderUploadComparison(report) {

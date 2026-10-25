@@ -117,6 +117,9 @@ class DashboardTests(unittest.TestCase):
             "confidence-risk-summary",
             "confidence-threshold-input",
             "explanation-threshold-input",
+            "drift-gallery",
+            "drift-gallery-summary",
+            "drift-gallery-empty",
             "upload-sample-results",
             "explanation-dialog",
             "v1-heatmap",
@@ -232,6 +235,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function triageThresholds", script)
         self.assertIn("function sampleTriage", script)
         self.assertIn("function renderTriageSummary", script)
+        self.assertIn("function renderDriftGallery", script)
+        self.assertIn("Compare heatmaps", script)
         self.assertIn("function comparisonForExport", script)
         self.assertIn("triage_settings: triageThresholds()", script)
         self.assertIn('"v2_high_confidence_wrong", "high_confidence_regression"', script)
