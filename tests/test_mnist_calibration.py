@@ -27,6 +27,7 @@ class MnistCalibrationTests(unittest.TestCase):
                 source,
                 Path(temporary) / "output",
                 training_seeds=(11, 29, 47),
+                validation_seeds=(59, 71),
                 train_limit=120,
                 sample_limit=20,
             )
@@ -34,6 +35,19 @@ class MnistCalibrationTests(unittest.TestCase):
             self.assertGreater(result["same_prediction_comparisons"], 0)
             self.assertGreaterEqual(result["calibrated_threshold"], -1.0)
             self.assertLessEqual(result["calibrated_threshold"], 1.0)
+            self.assertEqual(len(result["heldout_validation"]["pairs"]), 1)
+            self.assertGreater(
+                result["heldout_validation"]["same_prediction_comparisons"], 0
+            )
+
+    def test_calibration_rejects_overlapping_seed_sets(self):
+        with self.assertRaisesRegex(ValueError, "disjoint"):
+            run_mnist_explanation_calibration(
+                "unused.npz",
+                "unused",
+                training_seeds=(11, 29, 47),
+                validation_seeds=(47, 59),
+            )
 
 
 if __name__ == "__main__":

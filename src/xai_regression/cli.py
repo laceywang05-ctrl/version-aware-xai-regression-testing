@@ -807,6 +807,11 @@ def run_mnist_calibration_experiment(
         flush=True,
     )
     print(f"5th-percentile threshold: {result['calibrated_threshold']:.3f}", flush=True)
+    print(
+        "Held-out benign flag rate: "
+        f"{result['heldout_validation']['flag_rate']:.2%}",
+        flush=True,
+    )
     print(f"Report saved to: {result['report_path']}", flush=True)
     return 0
 
