@@ -78,6 +78,14 @@ class DashboardTests(unittest.TestCase):
             "upload-results",
             "upload-validation",
             "upload-validation-grid",
+            "upload-readiness",
+            "upload-readiness-status",
+            "readiness-task",
+            "readiness-dataset",
+            "readiness-model-count",
+            "readiness-manifest",
+            "readiness-baseline",
+            "readiness-candidate",
             "model-overview-grid",
             "model-agreement-results",
             "paired-accuracy-change",
@@ -184,6 +192,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("function openExplanation", script)
         self.assertIn("function uploadedModels", script)
         self.assertIn("function updateModelSelectors", script)
+        self.assertIn("function updateUploadReadiness", script)
+        self.assertIn("Ready to check", script)
         self.assertIn('name.className = "selected-file-name"', script)
         self.assertIn("function parseCsvHeader", script)
         self.assertIn("function updateManifestBuilder", script)
