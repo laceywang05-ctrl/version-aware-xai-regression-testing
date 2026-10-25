@@ -90,3 +90,7 @@ baseline and `model_4_extra_trees.joblib` as the candidate.
   measure causal correctness.
 - A benign-retraining calibration experiment is needed before setting an MNIST
   explanation-review threshold.
+
+The follow-up benign-retraining calibration and revised review workload are
+documented in
+[`MNIST_EXPLANATION_CALIBRATION_RESULT.md`](MNIST_EXPLANATION_CALIBRATION_RESULT.md).
