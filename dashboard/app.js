@@ -67,6 +67,14 @@ const elements = {
   manifestImageWidth: document.querySelector("#manifest-image-width"),
   manifestTrustModels: document.querySelector("#manifest-trust-models"),
   imagesUpload: document.querySelector("#images-upload"),
+  uploadReadinessStatus: document.querySelector("#upload-readiness-status"),
+  readinessTask: document.querySelector("#readiness-task"),
+  readinessDataset: document.querySelector("#readiness-dataset"),
+  readinessModelCount: document.querySelector("#readiness-model-count"),
+  readinessManifest: document.querySelector("#readiness-manifest"),
+  readinessBaseline: document.querySelector("#readiness-baseline"),
+  readinessCandidate: document.querySelector("#readiness-candidate"),
+  uploadReadinessMessage: document.querySelector("#upload-readiness-message"),
   uploadSubmit: document.querySelector("#run-upload-comparison"),
   uploadMessage: document.querySelector("#upload-comparison-message"),
   uploadValidation: document.querySelector("#upload-validation"),
@@ -411,6 +419,40 @@ function updateUploadTask() {
   elements.uploadMessage.textContent = isRegression
     ? "Upload two regressors and a numeric labelled CSV."
     : "Upload two to five classifiers and a labelled CSV.";
+  updateUploadReadiness();
+}
+
+function updateUploadReadiness() {
+  const models = uploadedModels();
+  const dataset = elements.datasetUpload.files[0];
+  const baseline = models[Number(elements.baselineModelSelector.value)];
+  const candidate = models[Number(elements.candidateModelSelector.value)];
+  const differentPair = Boolean(baseline && candidate && baseline !== candidate);
+  const manifestReady = Boolean(
+    elements.manifestUpload.files[0]
+    || (elements.manifestLabelColumn.value && elements.manifestTrustModels.checked),
+  );
+  const ready = models.length >= 2 && Boolean(dataset) && differentPair && manifestReady;
+  elements.readinessTask.textContent = elements.uploadTaskSelector.value === "regression"
+    ? "Regression"
+    : "Classification";
+  elements.readinessDataset.textContent = dataset ? dataset.name : "Not selected";
+  elements.readinessModelCount.textContent = `${models.length} selected`;
+  elements.readinessManifest.textContent = elements.manifestUpload.files[0]
+    ? elements.manifestUpload.files[0].name
+    : manifestReady ? "Built from CSV columns" : "Not ready";
+  elements.readinessBaseline.textContent = baseline ? baseline.name : "Not selected";
+  elements.readinessCandidate.textContent = candidate ? candidate.name : "Not selected";
+  elements.uploadReadinessStatus.textContent = ready ? "Ready to check" : "Incomplete";
+  elements.uploadReadinessStatus.className = `readiness-status ${ready ? "ready" : "incomplete"}`;
+  const missing = [];
+  if (models.length < 2) missing.push("two trusted models");
+  if (!dataset) missing.push("a labelled CSV");
+  if (models.length >= 2 && !differentPair) missing.push("two different models for V1 and V2");
+  if (!manifestReady) missing.push("a manifest or confirmed CSV column mapping");
+  elements.uploadReadinessMessage.textContent = ready
+    ? "Selections are complete. The next step checks every model before comparison."
+    : `Still needed: ${missing.join(", ")}.`;
 }
 
 function updateModelSelectors() {
@@ -456,6 +498,7 @@ function updateModelSelectors() {
   elements.modelCollectionMessage.textContent = extraCount > 3
     ? "Only the first three additional models will be available (five total)."
     : `${files.length} model${files.length === 1 ? "" : "s"} ready; select two different models.`;
+  updateUploadReadiness();
 }
 
 function reportModelName(key, fallback) {
@@ -1632,7 +1675,15 @@ for (const input of [
 ]) {
   input.addEventListener("change", updateModelSelectors);
 }
-elements.datasetUpload.addEventListener("change", updateManifestBuilder);
+elements.datasetUpload.addEventListener("change", async () => {
+  await updateManifestBuilder();
+  updateUploadReadiness();
+});
+elements.manifestUpload.addEventListener("change", updateUploadReadiness);
+elements.manifestLabelColumn.addEventListener("change", updateUploadReadiness);
+elements.manifestTrustModels.addEventListener("change", updateUploadReadiness);
+elements.baselineModelSelector.addEventListener("change", updateUploadReadiness);
+elements.candidateModelSelector.addEventListener("change", updateUploadReadiness);
 elements.uploadTaskSelector.addEventListener("change", updateUploadTask);
 elements.regressionOutcomeFilter.addEventListener("change", renderRegressionSamples);
 elements.closeExplanationDialog.addEventListener("click", () => {

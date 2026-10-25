@@ -182,16 +182,20 @@ rerunning the experiments, use:
 PYTHONPATH=src python -m xai_regression serve
 ```
 
-The server-backed dashboard now includes a **Compare uploaded models** MVP.
-It accepts two to five trusted scikit-learn-compatible `.joblib` classifiers,
-one labelled CSV, and a JSON manifest. Select any two uploaded models as the
-baseline and candidate, then inspect overall accuracy and the exact samples
-that changed from correct to wrong or wrong to correct. The selected pair is
-processed locally in memory and files are not persisted; changing the pair
-reuses the dataset and images already selected in the browser. Because loading
-joblib can execute Python, only trusted model files should be used. The current
-upload workflow is intentionally limited to classification; regression remains
-a future extension.
+The server-backed dashboard now includes a **Compare uploaded models** workflow.
+It accepts two to five trusted scikit-learn-compatible `.joblib` classifiers or
+regressors, one labelled CSV, and an uploaded or browser-generated JSON
+manifest. Select any two uploaded models as the baseline and candidate, then
+inspect aggregate metrics and the exact samples that improved or regressed.
+The selected pair is processed locally in memory and files are not persisted;
+changing the pair reuses the dataset and optional images already selected in
+the browser. Because loading joblib can execute Python, only trusted model
+files should be used.
+
+Before execution, the selection summary shows the task, dataset, model count,
+manifest source, and exact V1/V2 filenames. A preflight check then runs every
+uploaded model against the shared feature columns and blocks comparison with an
+actionable per-file message if a model cannot produce compatible predictions.
 
 The results first rank every uploaded model by accuracy on the shared labelled
 sample and report pairwise prediction agreement. The detailed section then

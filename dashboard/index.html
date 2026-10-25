@@ -316,6 +316,21 @@
               <small>ZIP of PNG, JPEG, WebP or GIF files referenced by the CSV</small>
               <input id="images-upload" name="images" type="file" accept=".zip,application/zip" />
             </label>
+            <section id="upload-readiness" class="upload-readiness" aria-labelledby="upload-readiness-heading">
+              <div class="upload-readiness-head">
+                <div><span class="eyebrow">Before you run</span><h3 id="upload-readiness-heading">Selection summary</h3></div>
+                <strong id="upload-readiness-status" class="readiness-status incomplete">Incomplete</strong>
+              </div>
+              <dl class="upload-readiness-grid">
+                <div><dt>Task</dt><dd id="readiness-task">Classification</dd></div>
+                <div><dt>Dataset</dt><dd id="readiness-dataset">Not selected</dd></div>
+                <div><dt>Models</dt><dd id="readiness-model-count">0 selected</dd></div>
+                <div><dt>Manifest</dt><dd id="readiness-manifest">Not ready</dd></div>
+                <div><dt>Baseline (V1)</dt><dd id="readiness-baseline">Not selected</dd></div>
+                <div><dt>Candidate (V2)</dt><dd id="readiness-candidate">Not selected</dd></div>
+              </dl>
+              <p id="upload-readiness-message" class="table-note">Choose two trusted models and one labelled CSV.</p>
+            </section>
             <div class="upload-actions">
               <button id="run-upload-comparison" class="primary-action" type="submit">Run local comparison</button>
               <a href="data/upload-manifest-example.json" download>Download example manifest</a>
