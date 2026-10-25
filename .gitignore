@@ -15,4 +15,5 @@ data/raw/
 data/processed/
 models/
 /mnist.npz
+/cifar-10-python.tar.gz
 
