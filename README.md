@@ -254,6 +254,17 @@ improvements and regressions.
 This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
 offline; true MNIST and CIFAR-10 remain the next dataset integrations.
 
+Run the complementary close-version benchmark with:
+
+```bash
+PYTHONPATH=src python -m xai_regression digits-close-benchmark
+```
+
+This evaluates four related random-forest versions on the same 540-image
+held-out test set and reports accuracy, macro F1, pairwise prediction agreement,
+discordant correctness counts, and exact McNemar p-values. It is designed to
+show subtle model-version changes rather than an intentionally large V1–V2 gap.
+
 To prepare MNIST, CIFAR-10, or another labelled image dataset supplied as an
 NPZ file, use generic `images` and `labels` arrays or the common Keras-style
 `x_train`/`y_train` and `x_test`/`y_test` keys, then run:
