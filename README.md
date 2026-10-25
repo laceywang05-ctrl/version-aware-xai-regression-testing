@@ -248,7 +248,8 @@ This uses scikit-learn's bundled 8×8 handwritten digits so the demo is fully
 offline; true MNIST and CIFAR-10 remain the next dataset integrations.
 
 To prepare MNIST, CIFAR-10, or another labelled image dataset supplied as an
-NPZ file, store arrays under the keys `images` and `labels`, then run:
+NPZ file, use generic `images` and `labels` arrays or the common Keras-style
+`x_train`/`y_train` and `x_test`/`y_test` keys, then run:
 
 ```bash
 PYTHONPATH=src python -m xai_regression prepare-image-data \
@@ -257,8 +258,10 @@ PYTHONPATH=src python -m xai_regression prepare-image-data \
   --limit 500
 ```
 
-The command accepts grayscale `(N,H,W)` or channel-last `(N,H,W,C)` arrays and
-creates `samples.csv`, `images.zip`, and `manifest.json`. Upload those files
+The command prefers `x_test`/`y_test` when both Keras-style splits are present,
+accepts flat labels or CIFAR-style `(N,1)` labels, and supports grayscale
+`(N,H,W)` or channel-last `(N,H,W,C)` arrays. It creates `samples.csv`,
+`images.zip`, and `manifest.json`. Upload those files
 with two to five trusted `.joblib` classifiers trained on the same flattened
 pixel order. RGB images are displayed in the sample table; pixel heatmaps remain
 limited to grayscale inputs with an `image_shape` manifest entry.

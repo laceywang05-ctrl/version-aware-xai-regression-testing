@@ -38,6 +38,36 @@ class ImageBundleTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one value per image"):
                 prepare_image_npz_bundle(source, Path(directory) / "output")
 
+    def test_keras_test_split_and_column_labels_are_recognised(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cifar10.npz"
+            np.savez(
+                source,
+                x_train=np.zeros((4, 4, 4, 3), dtype=np.uint8),
+                y_train=np.asarray([[0], [1], [0], [1]]),
+                x_test=np.ones((3, 4, 4, 3), dtype=np.uint8),
+                y_test=np.asarray([[2], [3], [4]]),
+            )
+            result = prepare_image_npz_bundle(source, root / "output")
+            frame = pd.read_csv(root / "output" / "samples.csv")
+            manifest = json.loads((root / "output" / "manifest.json").read_text())
+            self.assertEqual(result["array_source"], "x_test/y_test")
+            self.assertEqual(frame["target"].tolist(), [2, 3, 4])
+            self.assertIn("x_test/y_test", manifest["dataset_note"])
+
+    def test_train_split_is_used_when_test_split_is_absent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "mnist-train.npz"
+            np.savez(
+                source,
+                x_train=np.zeros((3, 4, 4), dtype=np.uint8),
+                y_train=np.asarray([5, 6, 7]),
+            )
+            result = prepare_image_npz_bundle(source, root / "output")
+            self.assertEqual(result["array_source"], "x_train/y_train")
+
     def test_four_model_demo_is_upload_ready(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
