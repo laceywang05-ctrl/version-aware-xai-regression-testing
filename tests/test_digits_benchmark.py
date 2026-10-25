@@ -6,6 +6,7 @@ import unittest
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
     run_digits_split_robustness,
+    run_digits_training_robustness,
 )
 
 
@@ -36,6 +37,18 @@ class DigitsCloseVersionBenchmarkTests(unittest.TestCase):
             self.assertEqual(len(result["models"]), 4)
             self.assertEqual(len(result["pairwise_accuracy_changes"]), 6)
             self.assertEqual(len(result["models"][0]["accuracy_ci_95"]), 2)
+
+    def test_training_robustness_holds_the_split_fixed(self):
+        with TemporaryDirectory() as temporary:
+            result = run_digits_training_robustness(
+                temporary,
+                training_seeds=(13, 31),
+                bootstrap_samples=100,
+            )
+            self.assertEqual(result["fixed_split_seed"], 42)
+            self.assertEqual(len(result["runs"]), 2)
+            self.assertEqual(len(result["models"]), 4)
+            self.assertEqual(len(result["pairwise_accuracy_changes"]), 6)
 
 
 if __name__ == "__main__":
