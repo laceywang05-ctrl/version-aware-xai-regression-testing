@@ -17,6 +17,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 
 
+CIFAR10_CLASS_NAMES = [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+]
+
+
 def _select_image_arrays(archive) -> tuple[np.ndarray, np.ndarray, str]:
     """Select a labelled image pair from generic or Keras-style NPZ keys."""
     keys = set(archive.files)
@@ -84,11 +98,37 @@ def _load_official_splits(
     return train_images, train_labels, test_images, test_labels
 
 
+def _image_class_names(input_path: str | Path, labels: np.ndarray) -> tuple[dict[str, str], str]:
+    """Load explicit class names or infer well-known MNIST/CIFAR-10 labels."""
+    source = Path(input_path)
+    explicit_names = None
+    try:
+        with np.load(source, allow_pickle=False) as archive:
+            if "class_names" in archive:
+                explicit_names = [str(value) for value in np.asarray(archive["class_names"]).reshape(-1)]
+    except OSError as error:
+        raise ValueError(f"Could not read NPZ input: {source}.") from error
+    class_values = sorted({_json_label(value) for value in labels})
+    if explicit_names is not None:
+        if not all(isinstance(value, (int, np.integer)) for value in class_values):
+            raise ValueError("NPZ class_names require integer labels starting at zero.")
+        if class_values and max(class_values) >= len(explicit_names):
+            raise ValueError("NPZ class_names do not cover every numeric label.")
+        return {str(value): explicit_names[int(value)] for value in class_values}, "NPZ class_names"
+    lowered_name = source.name.lower().replace("-", "").replace("_", "")
+    if "cifar10" in lowered_name and set(class_values) <= set(range(10)):
+        return {str(value): CIFAR10_CLASS_NAMES[int(value)] for value in class_values}, "CIFAR-10"
+    if ("mnist" in lowered_name or "digit" in lowered_name) and set(class_values) <= set(range(10)):
+        return {str(value): f"digit {value}" for value in class_values}, "MNIST/digits"
+    return {str(value): str(value) for value in class_values}, "numeric labels"
+
+
 def prepare_image_npz_bundle(
     input_path: str | Path,
     output_dir: str | Path,
     *,
     limit: int = 500,
+    class_names: dict[str, str] | None = None,
 ) -> dict[str, Path | int | str | tuple[int, ...]]:
     """Convert generic or Keras-style NPZ image arrays into dashboard files."""
     if limit < 1 or limit > 5_000:
@@ -116,14 +156,17 @@ def prepare_image_npz_bundle(
             options = {"cmap": "gray"} if rendered.ndim == 2 else {}
             mpimg.imsave(stream, rendered, format="png", **options)
             output.writestr(f"images/image-{index:05d}.png", stream.getvalue())
-    class_values = sorted({_json_label(value) for value in labels})
+    inferred_class_names, class_name_source = _image_class_names(source, labels)
+    resolved_class_names = class_names or inferred_class_names
+    if class_names is not None:
+        class_name_source = "source dataset"
     manifest = {
         "task": "classification",
         "label_column": "target",
         "id_column": "sample_id",
         "image_column": "image_filename",
         "feature_columns": feature_columns,
-        "class_names": {str(value): str(value) for value in class_values},
+        "class_names": resolved_class_names,
         "trusted_model_files": True,
         "dataset_note": (
             f"Prepared from {source.name} ({array_source}); first {count} labelled images."
@@ -138,6 +181,7 @@ def prepare_image_npz_bundle(
         "image_shape": tuple(images.shape[1:]),
         "feature_count": flat.shape[1],
         "array_source": array_source,
+        "class_name_source": class_name_source,
     }
 
 
@@ -180,6 +224,7 @@ def build_image_model_demo(
         test_images = images[test_indices]
         test_labels = labels[test_indices]
         split_strategy = f"fixed stratified split ({1 - test_size:.0%}/{test_size:.0%})"
+    source_class_names, class_name_source = _image_class_names(source, test_labels)
     classes, counts = np.unique(train_labels, return_counts=True)
     if len(classes) < 2 or np.any(counts < 2):
         raise ValueError("Image demo requires at least two classes with two samples each.")
@@ -205,11 +250,17 @@ def build_image_model_demo(
         joblib.dump(model, destination / filename)
     temporary = destination / "test-data.npz"
     np.savez(temporary, images=test_images, labels=test_labels)
-    prepared = prepare_image_npz_bundle(temporary, destination, limit=len(test_images))
+    prepared = prepare_image_npz_bundle(
+        temporary,
+        destination,
+        limit=len(test_images),
+        class_names=source_class_names,
+    )
     temporary.unlink()
     summary = {
         "source": source.name,
         "split_strategy": split_strategy,
+        "class_name_source": class_name_source,
         "training_samples": len(train_images),
         "test_samples": len(test_images),
         "models": [

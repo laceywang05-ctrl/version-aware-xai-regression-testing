@@ -265,6 +265,9 @@ accepts flat labels or CIFAR-style `(N,1)` labels, and supports grayscale
 with two to five trusted `.joblib` classifiers trained on the same flattened
 pixel order. RGB images are displayed in the sample table; pixel heatmaps remain
 limited to grayscale inputs with an `image_shape` manifest entry.
+An optional one-dimensional `class_names` array maps numeric labels to readable
+names. If it is absent, filenames containing `cifar10` receive the standard ten
+CIFAR-10 names, while MNIST/digits filenames receive readable digit labels.
 
 For a complete four-model demonstration from the same NPZ format, run:
 

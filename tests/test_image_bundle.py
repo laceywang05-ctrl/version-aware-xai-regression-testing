@@ -55,6 +55,8 @@ class ImageBundleTests(unittest.TestCase):
             self.assertEqual(result["array_source"], "x_test/y_test")
             self.assertEqual(frame["target"].tolist(), [2, 3, 4])
             self.assertIn("x_test/y_test", manifest["dataset_note"])
+            self.assertEqual(manifest["class_names"]["2"], "bird")
+            self.assertEqual(result["class_name_source"], "CIFAR-10")
 
     def test_train_split_is_used_when_test_split_is_absent(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -67,6 +69,21 @@ class ImageBundleTests(unittest.TestCase):
             )
             result = prepare_image_npz_bundle(source, root / "output")
             self.assertEqual(result["array_source"], "x_train/y_train")
+
+    def test_explicit_npz_class_names_are_written_to_manifest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "animals.npz"
+            np.savez(
+                source,
+                images=np.zeros((3, 4, 4, 3), dtype=np.uint8),
+                labels=np.asarray([0, 1, 1]),
+                class_names=np.asarray(["cat", "dog"]),
+            )
+            result = prepare_image_npz_bundle(source, root / "output")
+            manifest = json.loads((root / "output" / "manifest.json").read_text())
+            self.assertEqual(manifest["class_names"], {"0": "cat", "1": "dog"})
+            self.assertEqual(result["class_name_source"], "NPZ class_names")
 
     def test_four_model_demo_is_upload_ready(self):
         with tempfile.TemporaryDirectory() as directory:
