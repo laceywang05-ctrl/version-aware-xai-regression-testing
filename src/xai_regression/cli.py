@@ -567,6 +567,7 @@ def run_prepare_image_data(input_path: str | Path, output_dir: str | Path, limit
     print(f"Samples: {result['sample_count']}", flush=True)
     print(f"Image shape: {result['image_shape']}", flush=True)
     print(f"Arrays used: {result['array_source']}", flush=True)
+    print(f"Class names: {result['class_name_source']}", flush=True)
     print(f"Features: {result['feature_count']}", flush=True)
     print(f"Files saved to: {result['output_dir']}", flush=True)
     return 0
