@@ -261,6 +261,21 @@ with two to five trusted `.joblib` classifiers trained on the same flattened
 pixel order. RGB images are displayed in the sample table; pixel heatmaps remain
 limited to grayscale inputs with an `image_shape` manifest entry.
 
+For a complete four-model demonstration from the same NPZ format, run:
+
+```bash
+PYTHONPATH=src python -m xai_regression image-model-demo \
+  --input path/to/dataset.npz \
+  --output-dir artifacts/image_model_demo \
+  --limit 1000
+```
+
+This performs a fixed stratified train/test split and trains a dummy baseline,
+decision tree, random forest, and extra-trees classifier. The output directory
+contains all four trusted `.joblib` files plus the held-out CSV, image ZIP,
+manifest, and a JSON summary. These are intentionally lightweight demo
+baselines rather than recommended MNIST or CIFAR-10 architectures.
+
 Generate a ready-to-upload four-model regression demonstration with:
 
 ```bash
