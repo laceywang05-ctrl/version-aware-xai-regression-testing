@@ -280,6 +280,9 @@ decision tree, random forest, and extra-trees classifier. The output directory
 contains all four trusted `.joblib` files plus the held-out CSV, image ZIP,
 manifest, and a JSON summary. These are intentionally lightweight demo
 baselines rather than recommended MNIST or CIFAR-10 architectures.
+When all four Keras-style split arrays are present, the command instead trains
+on `x_train`/`y_train` and evaluates only on `x_test`/`y_test`, preserving the
+dataset's official split. The generated upload bundle contains test samples.
 
 Generate a ready-to-upload four-model regression demonstration with:
 

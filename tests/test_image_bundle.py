@@ -83,3 +83,24 @@ class ImageBundleTests(unittest.TestCase):
             self.assertTrue((output / "images.zip").is_file())
             summary = json.loads((output / "README.json").read_text())
             self.assertEqual(len(summary["models"]), 4)
+            self.assertIn("stratified split", result["split_strategy"])
+
+    def test_four_model_demo_preserves_official_keras_split(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "mnist.npz"
+            train_labels = np.asarray([index % 2 for index in range(30)])
+            test_labels = np.asarray([index % 2 for index in range(12)])
+            np.savez(
+                source,
+                x_train=np.arange(30 * 4 * 4).reshape(30, 4, 4) % 16,
+                y_train=train_labels,
+                x_test=np.arange(12 * 4 * 4).reshape(12, 4, 4) % 16,
+                y_test=test_labels,
+            )
+            result = build_image_model_demo(source, root / "demo", limit=100)
+            summary = json.loads((root / "demo" / "README.json").read_text())
+            self.assertEqual(result["training_samples"], 30)
+            self.assertEqual(result["test_samples"], 12)
+            self.assertEqual(result["split_strategy"], "official x_train/y_train and x_test/y_test")
+            self.assertEqual(summary["split_strategy"], result["split_strategy"])
