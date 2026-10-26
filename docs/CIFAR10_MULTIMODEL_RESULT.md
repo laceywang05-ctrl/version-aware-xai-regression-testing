@@ -132,3 +132,8 @@ paired classification statistics, confusion diagnostics, and per-sample error
 inspection on a second real image dataset. A future experiment can replace the
 lightweight estimators with stronger image models while keeping the same
 comparison workflow.
+
+The follow-up training-scale experiment confirms that increasing the training
+sample from 1,000 to 5,000 images raises the best accuracy from 33.4% to 37.7%,
+but does not remove the flattened-pixel model limitation. See
+[`CIFAR10_TRAINING_SCALE_RESULT.md`](CIFAR10_TRAINING_SCALE_RESULT.md).

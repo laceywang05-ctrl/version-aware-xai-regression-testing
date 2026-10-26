@@ -698,3 +698,16 @@ The upload comparison applies these calibrated explanation thresholds
 automatically when its manifest identifies MNIST (`28×28`) or CIFAR-10 RGB
 (`32×32×3`) inputs. The results page displays both the active threshold and its
 calibration source; users can still edit it to perform sensitivity analysis.
+
+Measure how the lightweight CIFAR-10 demo scales from 1,000 to 5,000 training
+images while retaining the same official test sample:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression cifar10-training-scale \
+  --input cifar-10-python.tar.gz
+```
+
+The result separates the effect of additional training data from the known
+limitation of using flattened pixels with shallow tree ensembles. See
+[`docs/CIFAR10_TRAINING_SCALE_RESULT.md`](docs/CIFAR10_TRAINING_SCALE_RESULT.md).

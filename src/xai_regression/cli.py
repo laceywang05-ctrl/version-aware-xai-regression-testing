@@ -9,6 +9,7 @@ from typing import Sequence
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
 from xai_regression.cifar10_calibration import run_cifar10_explanation_calibration
+from xai_regression.cifar10_scaling import run_cifar10_training_scale
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
     run_digits_explanation_split_robustness,
@@ -305,6 +306,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     cifar10_calibration_parser.add_argument("--train-limit", type=int, default=1000)
     cifar10_calibration_parser.add_argument("--sample-limit", type=int, default=50)
+    cifar10_scaling_parser = subparsers.add_parser(
+        "cifar10-training-scale",
+        help="Measure CIFAR-10 demo accuracy across training-set sizes.",
+    )
+    cifar10_scaling_parser.add_argument("--input", required=True)
+    cifar10_scaling_parser.add_argument(
+        "--output-dir", default="artifacts/cifar10_training_scale"
+    )
+    cifar10_scaling_parser.add_argument("--test-limit", type=int, default=1000)
     regression_demo_parser = subparsers.add_parser(
         "regression-demo",
         help="Build a ready-to-upload four-model regression bundle.",
@@ -949,6 +959,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.train_limit,
                 args.sample_limit,
             )
+        if args.command == "cifar10-training-scale":
+            result = run_cifar10_training_scale(
+                args.input,
+                args.output_dir,
+                test_limit=args.test_limit,
+            )
+            print("CIFAR-10 training-scale benchmark", flush=True)
+            print("---------------------------------", flush=True)
+            for row in result["best_by_size"]:
+                print(
+                    f"{row['training_samples']} training images: "
+                    f"{row['name']} accuracy {row['accuracy']:.1%}",
+                    flush=True,
+                )
+            print(f"Report saved to: {result['summary_path']}", flush=True)
+            return 0
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
         if args.command == "digits-close-benchmark":
