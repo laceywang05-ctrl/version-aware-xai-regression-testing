@@ -122,8 +122,8 @@ Upload the four `.joblib` files, `samples.csv`, `images.zip`, and
   of one production model.
 - The observed +1.3-point change was not statistically significant.
 - RGB channel aggregation can hide channel-specific attribution differences.
-- The 0.80 explanation threshold is provisional and was not calibrated for
-  CIFAR-10.
+- The initial 0.80 explanation threshold was provisional and inappropriate for
+  CIFAR-10; the follow-up benign-retraining calibration replaced it with 0.047.
 - Uploaded `.joblib` models and CIFAR pickle archives must come from trusted
   sources.
 
