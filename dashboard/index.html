@@ -501,7 +501,7 @@
                   <input id="confidence-threshold-input" type="number" min="50" max="100" step="1" value="80" />
                 </label>
                 <label>Drift similarity (%)
-                  <input id="explanation-threshold-input" type="number" min="0" max="100" step="1" value="80" />
+                  <input id="explanation-threshold-input" type="number" min="0" max="100" step="0.1" value="80" />
                 </label>
                 <label>Show
                   <select id="upload-transition-filter">
@@ -518,6 +518,7 @@
                 </label>
               </div>
             </div>
+            <p id="explanation-threshold-source" class="table-note"></p>
             <div class="drift-gallery-panel" aria-labelledby="drift-gallery-heading">
               <div class="drift-gallery-heading">
                 <div>

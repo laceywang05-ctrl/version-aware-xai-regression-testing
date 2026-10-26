@@ -14,6 +14,7 @@ from xai_regression.upload_comparison import (
     _calibration_summary,
     _exact_mcnemar_p,
     _explanation_similarity,
+    _explanation_threshold,
     compare_classifiers,
     compare_upload_payloads,
     load_uploaded_images,
@@ -38,6 +39,23 @@ class StubClassifier:
 
 
 class UploadComparisonTests(unittest.TestCase):
+    def test_explanation_threshold_uses_dataset_specific_calibration(self):
+        base = {
+            "task": "classification",
+            "label_column": "target",
+            "trusted_model_files": True,
+        }
+        mnist = parse_manifest({**base, "image_shape": [28, 28]})
+        cifar = parse_manifest({**base, "image_shape": [32, 32, 3]})
+        unknown = parse_manifest(base)
+
+        self.assertEqual(_explanation_threshold(mnist), (0.486, "MNIST benign-retraining calibration", True))
+        self.assertAlmostEqual(_explanation_threshold(cifar)[0], 0.04665091646)
+        self.assertIn("CIFAR-10", _explanation_threshold(cifar)[1])
+        self.assertTrue(_explanation_threshold(cifar)[2])
+        self.assertEqual(_explanation_threshold(unknown)[0], 0.8)
+        self.assertFalse(_explanation_threshold(unknown)[2])
+
     def test_exact_mcnemar_uses_only_discordant_correctness_pairs(self):
         self.assertEqual(_exact_mcnemar_p(0, 0), 1.0)
         self.assertEqual(_exact_mcnemar_p(1, 1), 1.0)

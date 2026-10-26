@@ -155,6 +155,7 @@ const elements = {
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
   confidenceThresholdInput: document.querySelector("#confidence-threshold-input"),
   explanationThresholdInput: document.querySelector("#explanation-threshold-input"),
+  explanationThresholdSource: document.querySelector("#explanation-threshold-source"),
   confidenceRiskSummary: document.querySelector("#confidence-risk-summary"),
   driftGallery: document.querySelector("#drift-gallery"),
   driftGallerySummary: document.querySelector("#drift-gallery-summary"),
@@ -1206,6 +1207,13 @@ function renderUploadComparison(report) {
     || "Accuracy summarizes the supplied samples; the table shows the concrete changes behind it.";
   elements.confidenceThresholdInput.value = String((summary.high_confidence_threshold ?? 0.8) * 100);
   elements.explanationThresholdInput.value = String((summary.explanation_similarity_threshold ?? 0.8) * 100);
+  const thresholdKind = summary.explanation_similarity_threshold_calibrated
+    ? "Calibrated threshold"
+    : "Exploratory threshold";
+  const thresholdSource = summary.explanation_similarity_threshold_source
+    || "No dataset-specific calibration metadata was supplied";
+  elements.explanationThresholdSource.textContent =
+    `${thresholdKind}: ${formatPercent(summary.explanation_similarity_threshold ?? 0.8)} · ${thresholdSource}. You can adjust it for sensitivity analysis.`;
   renderTriageSummary();
 
   const transitions = [

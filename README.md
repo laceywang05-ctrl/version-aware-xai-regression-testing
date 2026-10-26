@@ -693,3 +693,8 @@ same-configuration Random Forest retrainings and checks it on two unseen seeds.
 The validated threshold and its effect on the cross-model review workload are
 documented in
 [`docs/CIFAR10_EXPLANATION_CALIBRATION_RESULT.md`](docs/CIFAR10_EXPLANATION_CALIBRATION_RESULT.md).
+
+The upload comparison applies these calibrated explanation thresholds
+automatically when its manifest identifies MNIST (`28×28`) or CIFAR-10 RGB
+(`32×32×3`) inputs. The results page displays both the active threshold and its
+calibration source; users can still edit it to perform sensitivity analysis.
