@@ -22,6 +22,8 @@ MAX_IMAGE_COUNT = 1_000
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
 MAX_EXPLANATION_ROWS = 500
+MAX_RGB_EXPLANATION_ROWS = 100
+MAX_RGB_OCCLUSION_ROWS = 20
 HIGH_CONFIDENCE_THRESHOLD = 0.80
 EXPLANATION_SIMILARITY_THRESHOLD = 0.80
 IMAGE_MEDIA_TYPES = {
@@ -41,7 +43,7 @@ class UploadManifest:
     label_column: str
     id_column: str | None
     image_column: str | None
-    image_shape: tuple[int, int] | None
+    image_shape: tuple[int, ...] | None
     dataset_note: str | None
     feature_columns: tuple[str, ...] | None
     class_names: dict[str, str]
@@ -81,11 +83,13 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
     if shape is not None:
         if (
             not isinstance(shape, list)
-            or len(shape) != 2
+            or len(shape) not in {2, 3}
             or any(not isinstance(value, int) or value < 1 for value in shape)
         ):
-            raise ValueError("image_shape must contain two positive integers.")
-        image_shape = (shape[0], shape[1])
+            raise ValueError("image_shape must contain two or three positive integers.")
+        if len(shape) == 3 and shape[2] not in {1, 3, 4}:
+            raise ValueError("RGB image_shape channels must be 1, 3 or 4.")
+        image_shape = tuple(shape)
     features = raw.get("feature_columns")
     if features is not None:
         if not isinstance(features, list) or not features:
@@ -279,7 +283,7 @@ def _tree_shap_explanations(
     model: Any,
     features: pd.DataFrame,
     predictions: np.ndarray,
-    image_shape: tuple[int, int] | None,
+    image_shape: tuple[int, ...] | None,
 ) -> tuple[list[list[list[float]] | None], dict[str, str]]:
     """Return normalized Tree SHAP maps for each model prediction when possible."""
     if image_shape is None:
@@ -288,15 +292,20 @@ def _tree_shap_explanations(
             "label": "Unavailable",
             "note": "Add image_shape to request pixel explanations.",
         }
-    if image_shape[0] * image_shape[1] != features.shape[1]:
+    if int(np.prod(image_shape)) != features.shape[1]:
         raise ValueError(
             "image_shape must contain exactly one cell per selected feature."
         )
     try:
         import shap
 
-        explained_features = features.iloc[:MAX_EXPLANATION_ROWS]
-        explained_predictions = predictions[:MAX_EXPLANATION_ROWS]
+        row_limit = (
+            MAX_RGB_EXPLANATION_ROWS
+            if len(image_shape) == 3
+            else MAX_EXPLANATION_ROWS
+        )
+        explained_features = features.iloc[:row_limit]
+        explained_predictions = predictions[:row_limit]
         raw_values = np.asarray(
             shap.TreeExplainer(model).shap_values(explained_features)
         )
@@ -323,16 +332,26 @@ def _tree_shap_explanations(
             raise ValueError("Unexpected Tree SHAP output dimensions.")
         maps: list[list[list[float]] | None] = []
         for row in selected:
-            maximum = float(np.max(np.abs(row)))
-            normalized = row / maximum if maximum > 0 else np.zeros_like(row)
-            maps.append(normalized.reshape(image_shape).round(5).tolist())
+            spatial = np.asarray(row).reshape(image_shape)
+            if len(image_shape) == 3:
+                spatial = spatial.sum(axis=2)
+            maximum = float(np.max(np.abs(spatial)))
+            normalized = (
+                spatial / maximum if maximum > 0 else np.zeros_like(spatial)
+            )
+            maps.append(normalized.round(5).tolist())
         maps.extend([None] * (len(features) - len(maps)))
         return maps, {
             "method": "tree_shap",
             "label": "Tree SHAP",
             "note": (
                 "Tree SHAP contribution to the predicted class; "
-                f"limited to the first {MAX_EXPLANATION_ROWS} rows."
+                f"limited to the first {row_limit} rows."
+                + (
+                    " RGB channel contributions are summed per spatial pixel."
+                    if len(image_shape) == 3
+                    else ""
+                )
             ),
         }
     except Exception as error:
@@ -347,7 +366,7 @@ def _occlusion_explanations(
     model: Any,
     features: pd.DataFrame,
     predictions: np.ndarray,
-    image_shape: tuple[int, int] | None,
+    image_shape: tuple[int, ...] | None,
 ) -> tuple[list[list[list[float]] | None], dict[str, str]]:
     """Explain predicted-class probability by zeroing one pixel at a time."""
     unavailable = {
@@ -361,24 +380,32 @@ def _occlusion_explanations(
     classes = list(getattr(model, "classes_", []))
     if not callable(predict_proba) or not classes:
         return [None] * len(features), unavailable
+    if int(np.prod(image_shape)) != features.shape[1]:
+        raise ValueError(
+            "image_shape must contain exactly one cell per selected feature."
+        )
     try:
-        explained = features.iloc[:MAX_EXPLANATION_ROWS]
-        explained_predictions = predictions[:MAX_EXPLANATION_ROWS]
-        feature_count = explained.shape[1]
-        repeated = np.repeat(explained.to_numpy(), feature_count, axis=0)
-        feature_indices = np.tile(np.arange(feature_count), len(explained))
-        repeated[np.arange(len(repeated)), feature_indices] = 0.0
-        occluded = pd.DataFrame(repeated, columns=explained.columns)
+        is_rgb = len(image_shape) == 3
+        row_limit = MAX_RGB_OCCLUSION_ROWS if is_rgb else MAX_EXPLANATION_ROWS
+        explained = features.iloc[:row_limit]
+        explained_predictions = predictions[:row_limit]
+        channel_count = image_shape[2] if is_rgb else 1
+        spatial_count = image_shape[0] * image_shape[1]
         original_probabilities = np.asarray(predict_proba(explained))
-        occluded_probabilities = np.asarray(predict_proba(occluded))
         maps: list[list[list[float]] | None] = []
         for row_index, prediction in enumerate(explained_predictions):
             class_index = classes.index(prediction)
-            start = row_index * feature_count
-            stop = start + feature_count
+            repeated = np.repeat(
+                explained.iloc[[row_index]].to_numpy(), spatial_count, axis=0
+            )
+            for pixel_index in range(spatial_count):
+                start = pixel_index * channel_count
+                repeated[pixel_index, start : start + channel_count] = 0.0
+            occluded = pd.DataFrame(repeated, columns=explained.columns)
+            occluded_probabilities = np.asarray(predict_proba(occluded))
             contribution = (
                 original_probabilities[row_index, class_index]
-                - occluded_probabilities[start:stop, class_index]
+                - occluded_probabilities[:, class_index]
             )
             maximum = float(np.max(np.abs(contribution)))
             normalized = (
@@ -386,14 +413,18 @@ def _occlusion_explanations(
                 if maximum > 0
                 else np.zeros_like(contribution)
             )
-            maps.append(normalized.reshape(image_shape).round(5).tolist())
+            maps.append(
+                normalized.reshape(image_shape[:2]).round(5).tolist()
+            )
         maps.extend([None] * (len(features) - len(maps)))
         return maps, {
             "method": "pixel_occlusion",
             "label": "Pixel occlusion",
             "note": (
                 "Predicted-class probability change after replacing one pixel "
-                "feature with zero."
+                "with zero"
+                + (" across all RGB channels." if is_rgb else ".")
+                + f" Limited to the first {row_limit} rows."
             ),
         }
     except Exception as error:
@@ -407,7 +438,7 @@ def _model_explanations(
     model: Any,
     features: pd.DataFrame,
     predictions: np.ndarray,
-    image_shape: tuple[int, int] | None,
+    image_shape: tuple[int, ...] | None,
 ) -> tuple[list[list[list[float]] | None], dict[str, str]]:
     """Choose the most suitable installed explanation adapter."""
     maps, metadata = _tree_shap_explanations(

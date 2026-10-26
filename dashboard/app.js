@@ -65,6 +65,7 @@ const elements = {
   manifestImageColumn: document.querySelector("#manifest-image-column"),
   manifestImageHeight: document.querySelector("#manifest-image-height"),
   manifestImageWidth: document.querySelector("#manifest-image-width"),
+  manifestImageChannels: document.querySelector("#manifest-image-channels"),
   manifestTrustModels: document.querySelector("#manifest-trust-models"),
   imagesUpload: document.querySelector("#images-upload"),
   uploadReadinessStatus: document.querySelector("#upload-readiness-status"),
@@ -410,9 +411,10 @@ function selectedManifestFile() {
   };
   const height = isRegression ? 0 : Number(elements.manifestImageHeight.value);
   const width = isRegression ? 0 : Number(elements.manifestImageWidth.value);
+  const channels = isRegression ? 1 : Number(elements.manifestImageChannels.value);
   if (height || width) {
     if (!height || !width) throw new Error("Enter both image height and image width.");
-    manifest.image_shape = [height, width];
+    manifest.image_shape = channels === 1 ? [height, width] : [height, width, channels];
   }
   if (imageColumn && !elements.imagesUpload.files[0]) {
     throw new Error("Upload the image ZIP or set the image filename column to None.");

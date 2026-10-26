@@ -90,6 +90,24 @@ class UploadComparisonTests(unittest.TestCase):
                     "trusted_model_files": True,
                 }
             )
+        rgb = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "image_shape": [32, 32, 3],
+                "trusted_model_files": True,
+            }
+        )
+        self.assertEqual(rgb.image_shape, (32, 32, 3))
+        with self.assertRaisesRegex(ValueError, "channels"):
+            parse_manifest(
+                {
+                    "task": "classification",
+                    "label_column": "target",
+                    "image_shape": [32, 32, 2],
+                    "trusted_model_files": True,
+                }
+            )
 
     def test_comparison_reports_all_correctness_transitions(self):
         dataset = pd.DataFrame(
@@ -386,6 +404,33 @@ class UploadComparisonTests(unittest.TestCase):
         )
         self.assertEqual(len(result["samples"][0]["v1_explanation"]), 2)
         self.assertEqual(len(result["samples"][0]["v1_explanation"][0]), 2)
+
+    def test_rgb_tree_explanations_are_aggregated_to_spatial_maps(self):
+        columns = [f"p{index}" for index in range(12)]
+        values = np.arange(8 * 12, dtype=float).reshape(8, 12)
+        labels = np.asarray([index % 2 for index in range(8)])
+        features = pd.DataFrame(values, columns=columns)
+        model = DecisionTreeClassifier(max_depth=2, random_state=5).fit(
+            features, labels
+        )
+        dataset = features.assign(target=labels)
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": columns,
+                "image_shape": [2, 2, 3],
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(model, model, dataset, manifest)
+
+        self.assertEqual(result["explanations"]["image_shape"], [2, 2, 3])
+        self.assertEqual(result["explanations"]["v1"]["method"], "tree_shap")
+        self.assertEqual(len(result["samples"][0]["v1_explanation"]), 2)
+        self.assertEqual(len(result["samples"][0]["v1_explanation"][0]), 2)
+        self.assertIn("RGB channel contributions", result["explanations"]["v1"]["note"])
 
 
 if __name__ == "__main__":
