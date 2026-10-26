@@ -65,7 +65,7 @@ class ImageBundleTests(unittest.TestCase):
             self.assertEqual(result["feature_count"], 48)
             self.assertEqual(len(frame), 2)
             self.assertEqual(len(manifest["feature_columns"]), 48)
-            self.assertNotIn("image_shape", manifest)
+            self.assertEqual(manifest["image_shape"], [4, 4, 3])
             self.assertEqual(len(names), 2)
 
     def test_npz_requires_matching_images_and_labels(self):
@@ -176,5 +176,6 @@ class ImageBundleTests(unittest.TestCase):
             self.assertEqual(manifest["class_names"]["0"], "airplane")
             self.assertEqual(manifest["class_names"]["1"], "automobile")
             self.assertEqual(len(manifest["feature_columns"]), 3_072)
+            self.assertEqual(manifest["image_shape"], [32, 32, 3])
             self.assertEqual(len(frame), 12)
             self.assertEqual(summary["class_name_source"], "CIFAR-10 batches.meta")

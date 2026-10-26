@@ -675,6 +675,7 @@ PYTHONPATH=src python -m xai_regression image-model-demo \
 ```
 
 The validated run uses 1,000 official training and test images, ranks four
-models, and compares the two closest ensemble methods. Results, class-level
-changes and limitations are documented in
+models, compares the two closest ensemble methods, and generates spatial Tree
+SHAP maps by aggregating RGB-channel contributions at each pixel. Results,
+class-level changes and limitations are documented in
 [`docs/CIFAR10_MULTIMODEL_RESULT.md`](docs/CIFAR10_MULTIMODEL_RESULT.md).

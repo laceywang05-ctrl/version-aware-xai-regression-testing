@@ -124,6 +124,7 @@ class DashboardTests(unittest.TestCase):
             "explanation-dialog",
             "v1-heatmap",
             "v2-heatmap",
+            "manifest-image-channels",
             "regression-results",
             "regression-model-overview-grid",
             "download-regression-json",

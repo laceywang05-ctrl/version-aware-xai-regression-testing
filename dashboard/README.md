@@ -159,6 +159,8 @@ regressions, making the prediction-level page useful for a live demonstration.
 The generated manifest includes `"image_shape": [8, 8]`, enabling a **Compare
 maps** action on every sample. Compatible tree models use Tree SHAP. Other
 classifiers with `predict_proba()` and `classes_` use a pixel-occlusion fallback.
+RGB manifests use `"image_shape": [height, width, 3]`; channel contributions
+are combined into a two-dimensional spatial heatmap for comparison.
 The dialog names the method used for each model and shows contributions toward
 each version's own predicted class: red supports that prediction and blue
 opposes it. Each map is normalized independently, so color strength is not

@@ -73,11 +73,22 @@ The ensemble models had ECE values of 6.1% and 4.7% on this sample. Neither
 model produced an incorrect prediction at or above the dashboard's 80%
 high-confidence threshold, so no high-confidence regression was recorded.
 
-Pixel explanation comparison was not run for this RGB bundle. The current
-dashboard supports pixel heatmaps for grayscale images with a two-dimensional
-`image_shape`; CIFAR-10 is displayed as RGB images but has no directly
-comparable heatmap in this experiment. This is a documented capability gap,
-not evidence that explanation drift was absent.
+RGB Tree SHAP maps were generated for the first 100 test images. Contributions
+from the red, green and blue feature channels were summed at each spatial pixel,
+producing one 32×32 heatmap per model and sample. All 100 pairs were comparable:
+
+- mean cosine similarity: 0.088;
+- median cosine similarity: 0.091;
+- 100 of 100 pairs fell below the provisional 0.80 review threshold;
+- 61 pairs retained the same predicted class, and all 61 fell below 0.80.
+
+These results demonstrate that RGB heatmaps can now be inspected in the same
+sample-level dialog as grayscale explanations. They do **not** establish that
+all 100 explanations failed. The models use different ensemble algorithms, and
+the 0.80 boundary was not calibrated for CIFAR-10 RGB explanations. The flags
+therefore identify a cross-model spatial-attribution difference that requires a
+CIFAR-specific benign-retraining baseline before it can be interpreted as
+regression evidence.
 
 ## Reproduction
 
@@ -104,7 +115,9 @@ Upload the four `.joblib` files, `samples.csv`, `images.zip`, and
 - The two ensemble models are different model families rather than two releases
   of one production model.
 - The observed +1.3-point change was not statistically significant.
-- RGB pixel explanation maps were not evaluated.
+- RGB channel aggregation can hide channel-specific attribution differences.
+- The 0.80 explanation threshold is provisional and was not calibrated for
+  CIFAR-10.
 - Uploaded `.joblib` models and CIFAR pickle archives must come from trusted
   sources.
 

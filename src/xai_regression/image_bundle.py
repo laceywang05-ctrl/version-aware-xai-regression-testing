@@ -272,6 +272,12 @@ def prepare_image_npz_bundle(
     }
     if images.ndim == 3:
         manifest["image_shape"] = [int(images.shape[1]), int(images.shape[2])]
+    elif images.ndim == 4:
+        manifest["image_shape"] = [
+            int(images.shape[1]),
+            int(images.shape[2]),
+            int(images.shape[3]),
+        ]
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return {
         "output_dir": destination,
