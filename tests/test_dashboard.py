@@ -117,6 +117,7 @@ class DashboardTests(unittest.TestCase):
             "confidence-risk-summary",
             "confidence-threshold-input",
             "explanation-threshold-input",
+            "explanation-threshold-source",
             "drift-gallery",
             "drift-gallery-summary",
             "drift-gallery-empty",

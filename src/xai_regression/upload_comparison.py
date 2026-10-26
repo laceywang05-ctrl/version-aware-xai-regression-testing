@@ -26,6 +26,8 @@ MAX_RGB_EXPLANATION_ROWS = 100
 MAX_RGB_OCCLUSION_ROWS = 20
 HIGH_CONFIDENCE_THRESHOLD = 0.80
 EXPLANATION_SIMILARITY_THRESHOLD = 0.80
+MNIST_EXPLANATION_SIMILARITY_THRESHOLD = 0.486
+CIFAR10_EXPLANATION_SIMILARITY_THRESHOLD = 0.04665091646
 IMAGE_MEDIA_TYPES = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -48,6 +50,27 @@ class UploadManifest:
     feature_columns: tuple[str, ...] | None
     class_names: dict[str, str]
     trusted_model_files: bool
+
+
+def _explanation_threshold(manifest: UploadManifest) -> tuple[float, str, bool]:
+    """Select a calibrated threshold when the uploaded image shape is known."""
+    if manifest.image_shape in {(28, 28), (28, 28, 1)}:
+        return (
+            MNIST_EXPLANATION_SIMILARITY_THRESHOLD,
+            "MNIST benign-retraining calibration",
+            True,
+        )
+    if manifest.image_shape == (32, 32, 3):
+        return (
+            CIFAR10_EXPLANATION_SIMILARITY_THRESHOLD,
+            "CIFAR-10 RGB benign-retraining calibration",
+            True,
+        )
+    return (
+        EXPLANATION_SIMILARITY_THRESHOLD,
+        "Exploratory default (not calibrated for this dataset)",
+        False,
+    )
 
 
 def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
@@ -558,6 +581,9 @@ def compare_classifiers(
         ["both_correct", "v1_correct_v2_wrong", "v1_wrong_v2_correct"],
         default="both_wrong",
     )
+    explanation_threshold, explanation_threshold_source, threshold_calibrated = (
+        _explanation_threshold(manifest)
+    )
     samples = []
     for index in range(len(dataset)):
         image_name = None
@@ -582,7 +608,7 @@ def compare_classifiers(
         )
         explanation_drift = bool(
             explanation_similarity is not None
-            and explanation_similarity < EXPLANATION_SIMILARITY_THRESHOLD
+            and explanation_similarity < explanation_threshold
         )
         samples.append(
             {
@@ -765,7 +791,9 @@ def compare_classifiers(
             "v1_high_confidence_wrong_count": v1_high_confidence_wrong_count,
             "v2_high_confidence_wrong_count": v2_high_confidence_wrong_count,
             "high_confidence_regression_count": high_confidence_regression_count,
-            "explanation_similarity_threshold": EXPLANATION_SIMILARITY_THRESHOLD,
+            "explanation_similarity_threshold": explanation_threshold,
+            "explanation_similarity_threshold_source": explanation_threshold_source,
+            "explanation_similarity_threshold_calibrated": threshold_calibrated,
             "explanation_compared_count": explanation_compared_count,
             "explanation_drift_count": explanation_drift_count,
             "hidden_explanation_drift_count": hidden_explanation_drift_count,

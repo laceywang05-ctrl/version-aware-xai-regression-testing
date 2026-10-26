@@ -60,8 +60,11 @@ became confidently wrong. This descriptive threshold helps prioritize
 inspection; it is not a calibrated statistical acceptance rule.
 
 When both models produce explanation maps, the comparison also reports their
-cosine similarity. The drift boundary defaults to 0.80 and can be changed in
-the same triage controls. Values below the selected boundary are flagged,
+cosine similarity. The dashboard automatically uses the held-out benign-retraining
+threshold for recognised MNIST (`0.486`) and CIFAR-10 RGB (`0.04665`) image
+shapes. Other datasets retain an explicitly labelled exploratory default of
+`0.80`. The selected boundary and its source are displayed beside the controls
+and can be changed for sensitivity analysis. Values below it are flagged,
 including a separate hidden-drift filter for samples whose predicted class stayed the same.
 Hidden-drift samples also appear in a compact review gallery above the table.
 Each card identifies the sample and similarity score and opens the original
