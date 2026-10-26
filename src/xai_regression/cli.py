@@ -8,6 +8,7 @@ from typing import Sequence
 
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
+from xai_regression.cifar10_calibration import run_cifar10_explanation_calibration
 from xai_regression.digits_benchmark import (
     run_digits_close_version_benchmark,
     run_digits_explanation_split_robustness,
@@ -294,6 +295,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mnist_calibration_parser.add_argument("--train-limit", type=int, default=1000)
     mnist_calibration_parser.add_argument("--sample-limit", type=int, default=200)
+    cifar10_calibration_parser = subparsers.add_parser(
+        "cifar10-explanation-calibration",
+        help="Calibrate CIFAR-10 RGB explanation similarity under benign retraining.",
+    )
+    cifar10_calibration_parser.add_argument("--input", required=True)
+    cifar10_calibration_parser.add_argument(
+        "--output-dir", default="artifacts/cifar10_explanation_calibration"
+    )
+    cifar10_calibration_parser.add_argument("--train-limit", type=int, default=1000)
+    cifar10_calibration_parser.add_argument("--sample-limit", type=int, default=50)
     regression_demo_parser = subparsers.add_parser(
         "regression-demo",
         help="Build a ready-to-upload four-model regression bundle.",
@@ -816,6 +827,36 @@ def run_mnist_calibration_experiment(
     return 0
 
 
+def run_cifar10_calibration_experiment(
+    input_path: str | Path,
+    output_dir: str | Path,
+    train_limit: int,
+    sample_limit: int,
+) -> int:
+    """Run and describe CIFAR-10 benign-retraining calibration."""
+    result = run_cifar10_explanation_calibration(
+        _project_path(input_path),
+        _project_path(output_dir),
+        train_limit=train_limit,
+        sample_limit=sample_limit,
+    )
+    print("CIFAR-10 explanation calibration", flush=True)
+    print("--------------------------------", flush=True)
+    print(f"Benign pairs: {len(result['pairs'])}", flush=True)
+    print(
+        f"Same-prediction comparisons: {result['same_prediction_comparisons']}",
+        flush=True,
+    )
+    print(f"5th-percentile threshold: {result['calibrated_threshold']:.3f}", flush=True)
+    print(
+        "Held-out benign flag rate: "
+        f"{result['heldout_validation']['flag_rate']:.2%}",
+        flush=True,
+    )
+    print(f"Report saved to: {result['report_path']}", flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -896,6 +937,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_image_model_demo(args.input, args.output_dir, args.limit)
         if args.command == "mnist-explanation-calibration":
             return run_mnist_calibration_experiment(
+                args.input,
+                args.output_dir,
+                args.train_limit,
+                args.sample_limit,
+            )
+        if args.command == "cifar10-explanation-calibration":
+            return run_cifar10_calibration_experiment(
                 args.input,
                 args.output_dir,
                 args.train_limit,
