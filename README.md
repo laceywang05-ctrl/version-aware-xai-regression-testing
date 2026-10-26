@@ -1,5 +1,9 @@
 # Version-Aware XAI Regression Testing
 
+The consolidated research questions, evidence, limitations and final prototype
+assessment are available in
+[`docs/FINAL_EVALUATION_SUMMARY.md`](docs/FINAL_EVALUATION_SUMMARY.md).
+
 An FYP project for detecting unexpected changes in model explanations across machine-learning model versions.
 
 ## Research question
