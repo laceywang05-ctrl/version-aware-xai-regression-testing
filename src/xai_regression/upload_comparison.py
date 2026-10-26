@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score
 
+from xai_regression.provenance import artifact_fingerprint
+
 
 MAX_DATASET_ROWS = 5_000
 MAX_IMAGE_COUNT = 1_000
@@ -844,9 +846,15 @@ def compare_upload_payloads(
     )
     result = compare_classifiers(first, second, frame, contract, image_lookup)
     result["models"] = {
-        "v1": {"filename": model_v1[0]},
-        "v2": {"filename": model_v2[0]},
+        "v1": artifact_fingerprint(*model_v1),
+        "v2": artifact_fingerprint(*model_v2),
     }
+    result["artifacts"] = {
+        "dataset": artifact_fingerprint(*dataset),
+        "manifest": artifact_fingerprint("manifest.json", manifest),
+    }
+    if images is not None:
+        result["artifacts"]["images"] = artifact_fingerprint(*images)
     return result
 
 
@@ -902,7 +910,7 @@ def summarize_upload_models(
         summaries.append(
             {
                 "index": index,
-                "filename": filename,
+                **artifact_fingerprint(filename, payload),
                 "accuracy": float((prediction == labels).mean()),
                 "macro_f1": float(
                     f1_score(labels, prediction, average="macro", zero_division=0)
@@ -934,7 +942,9 @@ def summarize_upload_models(
             "rows": len(frame),
             "feature_count": len(feature_columns),
             "label_column": contract.label_column,
+            **artifact_fingerprint(*dataset),
         },
+        "manifest": artifact_fingerprint("manifest.json", manifest),
         "models": summaries,
         "pairwise_agreements": agreements,
         "best_model_index": ranked[0]["index"],

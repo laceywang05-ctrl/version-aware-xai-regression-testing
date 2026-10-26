@@ -116,6 +116,8 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertAlmostEqual(result["summary"]["v1"]["rmse"], 0.0)
         self.assertAlmostEqual(result["summary"]["v2"]["r2"], 1.0)
         self.assertEqual(result["models"]["v1"]["filename"], "v1.joblib")
+        self.assertEqual(len(result["models"]["v1"]["sha256"]), 64)
+        self.assertEqual(result["artifacts"]["manifest"]["bytes"], len(manifest))
         self.assertEqual(result["feature_importance"]["evaluated_feature_count"], 1)
         self.assertEqual(result["feature_importance"]["features"][0]["feature"], "x")
         self.assertGreater(result["feature_importance"]["features"][0]["v1_importance"], 0)
@@ -127,6 +129,8 @@ class RegressionComparisonTests(unittest.TestCase):
         )
         self.assertEqual(len(overview["models"]), 2)
         self.assertEqual(overview["models"][0]["rank"], 1)
+        self.assertEqual(len(overview["models"][0]["short_sha256"]), 12)
+        self.assertEqual(overview["dataset"]["filename"], "samples.csv")
         self.assertEqual(overview["best_model_index"], 0)
 
     def test_upload_validation_reports_each_regressor(self):

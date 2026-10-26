@@ -576,6 +576,12 @@ function renderModelOverview(report) {
     rank.textContent = model.index === report.best_model_index ? `Rank ${model.rank} · Best accuracy` : `Rank ${model.rank}`;
     const name = document.createElement("strong");
     name.textContent = model.filename;
+    const fingerprint = document.createElement("small");
+    fingerprint.className = "artifact-fingerprint";
+    fingerprint.textContent = model.short_sha256
+      ? `SHA-256 ${model.short_sha256}`
+      : "Fingerprint unavailable";
+    fingerprint.title = model.sha256 || "";
     const accuracy = document.createElement("span");
     accuracy.className = "accuracy";
     accuracy.textContent = `Accuracy ${formatPercent(model.accuracy)}`;
@@ -595,7 +601,7 @@ function renderModelOverview(report) {
     } else {
       calibration.textContent = "Calibration unavailable: model has no probability output";
     }
-    card.append(rank, name, accuracy, metrics, count, calibration, renderReliabilityChart(model));
+    card.append(rank, name, fingerprint, accuracy, metrics, count, calibration, renderReliabilityChart(model));
     elements.modelOverviewGrid.append(card);
   }
   elements.modelAgreementResults.replaceChildren();
@@ -625,12 +631,18 @@ function renderRegressionModelOverview(report) {
     rank.textContent = model.index === report.best_model_index ? `Rank ${model.rank} · Lowest MAE` : `Rank ${model.rank}`;
     const name = document.createElement("strong");
     name.textContent = model.filename;
+    const fingerprint = document.createElement("small");
+    fingerprint.className = "artifact-fingerprint";
+    fingerprint.textContent = model.short_sha256
+      ? `SHA-256 ${model.short_sha256}`
+      : "Fingerprint unavailable";
+    fingerprint.title = model.sha256 || "";
     const mae = document.createElement("span");
     mae.className = "accuracy";
     mae.textContent = `MAE ${formatNumber(model.mae)}`;
     const metrics = document.createElement("small");
     metrics.textContent = `RMSE ${formatNumber(model.rmse)} · R² ${formatNumber(model.r2)}`;
-    card.append(rank, name, mae, metrics);
+    card.append(rank, name, fingerprint, mae, metrics);
     elements.regressionModelOverviewGrid.append(card);
   }
 }
