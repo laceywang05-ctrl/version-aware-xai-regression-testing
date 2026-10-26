@@ -227,6 +227,11 @@ sample-level CSV. The JSON bundles compatibility checks, the multi-model
 overview, and the detailed selected-pair report; the CSV provides predictions,
 confidence values, and transition labels for downstream analysis.
 
+The overview and exported JSON also record SHA-256 content fingerprints for
+every uploaded model plus the labelled dataset and manifest. These fingerprints
+identify the exact compared artifacts independently of their filenames, making
+the audit output suitable for version-aware reproduction.
+
 The manifest can either be uploaded as JSON or generated in the dashboard.
 After a CSV is selected, the browser detects its header and lets the user choose
 the label, optional sample-ID and image columns, plus an optional image shape;

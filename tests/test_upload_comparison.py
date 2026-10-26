@@ -258,6 +258,12 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(result["summary"]["both_correct"], 4)
         self.assertEqual(result["models"]["v1"]["filename"], "v1.joblib")
         self.assertEqual(result["models"]["v2"]["filename"], "v2.joblib")
+        self.assertEqual(len(result["models"]["v1"]["sha256"]), 64)
+        self.assertEqual(
+            result["models"]["v1"]["sha256"],
+            result["models"]["v2"]["sha256"],
+        )
+        self.assertEqual(result["artifacts"]["dataset"]["filename"], "samples.csv")
 
     def test_uploaded_model_collection_is_ranked_and_compared(self):
         features = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]})
@@ -293,6 +299,9 @@ class UploadComparisonTests(unittest.TestCase):
 
         self.assertEqual(len(result["models"]), 3)
         self.assertEqual(result["models"][0]["accuracy"], 1.0)
+        self.assertEqual(len(result["models"][0]["short_sha256"]), 12)
+        self.assertEqual(result["dataset"]["filename"], "samples.csv")
+        self.assertEqual(result["manifest"]["bytes"], len(manifest))
         self.assertEqual(result["models"][0]["macro_f1"], 1.0)
         self.assertTrue(result["models"][0]["supports_confidence"])
         self.assertAlmostEqual(result["models"][0]["expected_calibration_error"], 0.0)

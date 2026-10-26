@@ -80,6 +80,10 @@ the same dataset, manifest, and optional image ZIP selected.
 Each run starts with a collection overview that ranks all selected models by
 accuracy and lists pairwise prediction agreement. The remaining panels retain
 the detailed baseline-versus-candidate comparison for the selected pair.
+Every model card also shows the first 12 characters of its SHA-256 digest; the
+full digest, dataset digest and manifest digest are retained in the downloaded
+JSON audit artifact so comparisons remain traceable even when filenames are
+reused.
 
 That paired comparison includes a two-sided exact McNemar test over discordant
 correctness outcomes: samples where V1 alone was correct versus samples where

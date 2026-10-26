@@ -9,6 +9,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from xai_regression.provenance import artifact_fingerprint
+
 from xai_regression.upload_comparison import (
     _exact_mcnemar_p,
     _json_value,
@@ -288,8 +290,12 @@ def compare_regression_upload_payloads(
     frame = load_uploaded_dataset(dataset[1], dataset[0])
     result = compare_regressors(first, second, frame, contract)
     result["models"] = {
-        "v1": {"filename": model_v1[0]},
-        "v2": {"filename": model_v2[0]},
+        "v1": artifact_fingerprint(*model_v1),
+        "v2": artifact_fingerprint(*model_v2),
+    }
+    result["artifacts"] = {
+        "dataset": artifact_fingerprint(*dataset),
+        "manifest": artifact_fingerprint("manifest.json", manifest),
     }
     return result
 
@@ -329,13 +335,24 @@ def summarize_regression_upload_models(
             ) from error
         if predicted.shape != actual.shape:
             raise ValueError(f"Model {filename} must return one prediction per dataset row.")
-        summaries.append({"index": index, "filename": filename, **_regression_metrics(actual, predicted)})
+        summaries.append(
+            {
+                "index": index,
+                **artifact_fingerprint(filename, payload),
+                **_regression_metrics(actual, predicted),
+            }
+        )
     ranked = sorted(summaries, key=lambda item: (item["mae"], item["index"]))
     for rank, item in enumerate(ranked, start=1):
         summaries[item["index"]]["rank"] = rank
     return {
         "task": "regression",
-        "dataset": {"rows": len(frame), "feature_count": len(feature_columns)},
+        "dataset": {
+            "rows": len(frame),
+            "feature_count": len(feature_columns),
+            **artifact_fingerprint(*dataset),
+        },
+        "manifest": artifact_fingerprint("manifest.json", manifest),
         "models": summaries,
         "best_model_index": ranked[0]["index"],
     }
