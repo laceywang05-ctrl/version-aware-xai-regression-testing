@@ -90,6 +90,12 @@ therefore identify a cross-model spatial-attribution difference that requires a
 CIFAR-specific benign-retraining baseline before it can be interpreted as
 regression evidence.
 
+The follow-up benign-retraining experiment calibrated the fifth-percentile
+boundary at 0.047. Under that dataset-specific threshold, 4 of 61
+same-prediction cross-model comparisons were flagged (6.6%), rather than all
+61. The full calibration design and held-out validation are documented in
+[`CIFAR10_EXPLANATION_CALIBRATION_RESULT.md`](CIFAR10_EXPLANATION_CALIBRATION_RESULT.md).
+
 ## Reproduction
 
 Download the official CIFAR-10 Python archive and run:

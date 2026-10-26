@@ -679,3 +679,17 @@ models, compares the two closest ensemble methods, and generates spatial Tree
 SHAP maps by aggregating RGB-channel contributions at each pixel. Results,
 class-level changes and limitations are documented in
 [`docs/CIFAR10_MULTIMODEL_RESULT.md`](docs/CIFAR10_MULTIMODEL_RESULT.md).
+
+Calibrate the RGB explanation threshold with disjoint benign-retraining seeds:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression cifar10-explanation-calibration \
+  --input cifar-10-python.tar.gz
+```
+
+The command estimates a fifth-percentile similarity boundary from three
+same-configuration Random Forest retrainings and checks it on two unseen seeds.
+The validated threshold and its effect on the cross-model review workload are
+documented in
+[`docs/CIFAR10_EXPLANATION_CALIBRATION_RESULT.md`](docs/CIFAR10_EXPLANATION_CALIBRATION_RESULT.md).
