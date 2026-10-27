@@ -26,6 +26,7 @@ MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
 MAX_EXPLANATION_ROWS = 500
 MAX_RGB_EXPLANATION_ROWS = 100
 MAX_RGB_OCCLUSION_ROWS = 20
+MAX_NEURAL_EXPLANATION_ROWS = 100
 HIGH_CONFIDENCE_THRESHOLD = 0.80
 EXPLANATION_SIMILARITY_THRESHOLD = 0.80
 MNIST_EXPLANATION_SIMILARITY_THRESHOLD = 0.486
@@ -466,6 +467,43 @@ def _model_explanations(
     image_shape: tuple[int, ...] | None,
 ) -> tuple[list[list[list[float]] | None], dict[str, str]]:
     """Choose the most suitable installed explanation adapter."""
+    row_limit = min(len(features), MAX_NEURAL_EXPLANATION_ROWS)
+    grad_cam = getattr(model, "grad_cam", None)
+    if callable(grad_cam) and image_shape is not None:
+        try:
+            maps = list(grad_cam(features.iloc[:row_limit], predictions[:row_limit]))
+            maps.extend([None] * (len(features) - len(maps)))
+            return maps, {
+                "method": "grad_cam",
+                "label": "Grad-CAM",
+                "note": (
+                    "Predicted-class Grad-CAM at the final convolutional layer; "
+                    f"limited to the first {row_limit} rows."
+                ),
+            }
+        except Exception as grad_cam_error:
+            grad_cam_note = f"Grad-CAM unavailable: {grad_cam_error}"
+    else:
+        grad_cam_note = "Grad-CAM requires a convolutional neural-network adapter."
+    integrated_gradients = getattr(model, "integrated_gradients", None)
+    if callable(integrated_gradients) and image_shape is not None:
+        try:
+            maps = list(
+                integrated_gradients(
+                    features.iloc[:row_limit], predictions[:row_limit]
+                )
+            )
+            maps.extend([None] * (len(features) - len(maps)))
+            return maps, {
+                "method": "integrated_gradients",
+                "label": "Integrated Gradients",
+                "note": (
+                    "Zero-baseline Integrated Gradients for the predicted class; "
+                    f"limited to the first {row_limit} rows. {grad_cam_note}"
+                ),
+            }
+        except Exception:
+            pass
     maps, metadata = _tree_shap_explanations(
         model, features, predictions, image_shape
     )
@@ -810,9 +848,9 @@ def compare_classifiers(
         "confusion_diagnostics": confusion_diagnostics,
         "samples": samples,
         "limitations": [
-            "Only trusted local .joblib classifiers are supported in this stage.",
+            "Only trusted local .joblib classifiers are supported in this stage; neural networks can be wrapped with TorchImageClassifier.",
             "Uploaded files are processed in memory and are not persisted.",
-            "Tree SHAP is preferred for compatible trees; other probabilistic classifiers use pixel occlusion.",
+            "CNN adapters use Grad-CAM, other differentiable neural adapters use Integrated Gradients, compatible trees use Tree SHAP, and remaining probabilistic classifiers use pixel occlusion.",
         ],
         "explanations": {
             "image_shape": list(manifest.image_shape) if manifest.image_shape else None,

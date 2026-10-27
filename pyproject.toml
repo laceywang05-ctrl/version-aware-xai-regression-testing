@@ -21,6 +21,9 @@ dependencies = [
     "shap-monitor>=0.0.12,<0.1",
 ]
 
+[project.optional-dependencies]
+neural = ["torch>=2.7,<3"]
+
 [project.scripts]
 xai-regression = "xai_regression.cli:main"
 
