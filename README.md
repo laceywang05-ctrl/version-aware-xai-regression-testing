@@ -6,6 +6,14 @@ assessment are available in
 
 An FYP project for detecting unexpected changes in model explanations across machine-learning model versions.
 
+Every pull request is automatically checked on Python 3.11 and 3.13 using the
+complete unit-test suite. The same verification can be run locally with:
+
+```bash
+MPLBACKEND=Agg MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m unittest discover -s tests -q
+```
+
 ## Research question
 
 When a model changes from version `v1` to `v2`, prediction accuracy may remain acceptable while the model changes which features it relies on. This project investigates how to identify those changes reliably and distinguish them from normal variation in the explanation method.
