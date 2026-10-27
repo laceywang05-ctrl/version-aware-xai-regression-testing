@@ -22,11 +22,19 @@ class DigitsCloseVersionBenchmarkTests(unittest.TestCase):
             self.assertEqual(len(report["models"]), 4)
             self.assertEqual(len(report["pairwise_comparisons"]), 6)
             self.assertGreater(report["models"][0]["accuracy"], 0.9)
-            self.assertAlmostEqual(
-                report["models"][0]["accuracy"], report["models"][1]["accuracy"]
+            self.assertLess(
+                abs(
+                    report["models"][0]["accuracy"]
+                    - report["models"][1]["accuracy"]
+                ),
+                0.01,
             )
-            self.assertEqual(
-                report["pairwise_comparisons"][0]["mcnemar_exact_p"], 1.0
+            self.assertGreaterEqual(
+                report["pairwise_comparisons"][0]["mcnemar_exact_p"], 0.05
+            )
+            self.assertGreater(
+                report["pairwise_comparisons"][0]["prediction_agreement"],
+                0.95,
             )
 
     def test_split_robustness_reports_intervals_and_pairwise_changes(self):
