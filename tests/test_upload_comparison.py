@@ -432,6 +432,74 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(len(result["samples"][0]["v1_explanation"]), 2)
         self.assertEqual(len(result["samples"][0]["v1_explanation"][0]), 2)
 
+    def test_neural_adapter_prefers_grad_cam(self):
+        class NeuralAdapter(StubClassifier):
+            def grad_cam(self, features, predictions):
+                return [[[0.0, 1.0], [0.5, -0.5]] for _ in range(len(features))]
+
+            def integrated_gradients(self, features, predictions):
+                raise AssertionError("Grad-CAM should be preferred for CNN adapters")
+
+        dataset = pd.DataFrame(
+            {
+                "p0": [0.0, 1.0],
+                "p1": [0.0, 1.0],
+                "p2": [0.0, 1.0],
+                "p3": [0.0, 1.0],
+                "target": [0, 1],
+            }
+        )
+        model = NeuralAdapter([0, 1], [[0.9, 0.1], [0.1, 0.9]])
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": ["p0", "p1", "p2", "p3"],
+                "image_shape": [2, 2],
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(model, model, dataset, manifest)
+
+        self.assertEqual(result["explanations"]["v1"]["method"], "grad_cam")
+        self.assertEqual(result["samples"][0]["v1_explanation"][0][1], 1.0)
+
+    def test_neural_adapter_falls_back_to_integrated_gradients(self):
+        class DenseNeuralAdapter(StubClassifier):
+            def grad_cam(self, features, predictions):
+                raise ValueError("no convolutional layer")
+
+            def integrated_gradients(self, features, predictions):
+                return [[[1.0, 0.0], [-0.5, 0.5]] for _ in range(len(features))]
+
+        dataset = pd.DataFrame(
+            {
+                "p0": [0.0, 1.0],
+                "p1": [0.0, 1.0],
+                "p2": [0.0, 1.0],
+                "p3": [0.0, 1.0],
+                "target": [0, 1],
+            }
+        )
+        model = DenseNeuralAdapter([0, 1], [[0.9, 0.1], [0.1, 0.9]])
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "feature_columns": ["p0", "p1", "p2", "p3"],
+                "image_shape": [2, 2],
+                "trusted_model_files": True,
+            }
+        )
+
+        result = compare_classifiers(model, model, dataset, manifest)
+
+        self.assertEqual(
+            result["explanations"]["v1"]["method"], "integrated_gradients"
+        )
+        self.assertIn("Grad-CAM unavailable", result["explanations"]["v1"]["note"])
+
     def test_rgb_tree_explanations_are_aggregated_to_spatial_maps(self):
         columns = [f"p{index}" for index in range(12)]
         values = np.arange(8 * 12, dtype=float).reshape(8, 12)

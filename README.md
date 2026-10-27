@@ -716,6 +716,16 @@ automatically when its manifest identifies MNIST (`28×28`) or CIFAR-10 RGB
 (`32×32×3`) inputs. The results page displays both the active threshold and its
 calibration source; users can still edit it to perform sensitivity analysis.
 
+### Neural-network explanations
+
+Install the optional neural dependency with `python -m pip install -e '.[neural]'`.
+Trusted PyTorch image networks can then be wrapped in
+`xai_regression.neural_explanations.TorchImageClassifier` and saved as a
+`.joblib` upload. The comparison selects Grad-CAM when the network contains a
+convolutional layer and falls back to zero-baseline Integrated Gradients for
+other differentiable networks. Existing tree and non-neural uploads continue
+to use Tree SHAP and pixel occlusion respectively.
+
 Measure how the lightweight CIFAR-10 demo scales from 1,000 to 5,000 training
 images while retaining the same official test sample:
 
