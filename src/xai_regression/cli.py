@@ -29,6 +29,7 @@ from xai_regression.regression_demo import build_regression_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
 from xai_regression.mnist_calibration import run_mnist_explanation_calibration
+from xai_regression.neural_image_demo import build_neural_image_demo
 from xai_regression.pipeline import run_pipeline
 from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
@@ -286,6 +287,15 @@ def build_parser() -> argparse.ArgumentParser:
     image_model_demo_parser.add_argument("--input", required=True)
     image_model_demo_parser.add_argument("--output-dir", default="artifacts/image_model_demo")
     image_model_demo_parser.add_argument("--limit", type=int, default=1000)
+    neural_image_demo_parser = subparsers.add_parser(
+        "neural-image-demo",
+        help="Train upload-ready MLP and CNN models for IG and Grad-CAM.",
+    )
+    neural_image_demo_parser.add_argument("--input", required=True)
+    neural_image_demo_parser.add_argument("--output-dir", default="artifacts/neural_image_demo")
+    neural_image_demo_parser.add_argument("--limit", type=int, default=1000)
+    neural_image_demo_parser.add_argument("--test-limit", type=int, default=500)
+    neural_image_demo_parser.add_argument("--epochs", type=int, default=3)
     mnist_calibration_parser = subparsers.add_parser(
         "mnist-explanation-calibration",
         help="Calibrate MNIST explanation similarity under benign retraining.",
@@ -686,6 +696,19 @@ def run_image_model_demo(input_path: str | Path, output_dir: str | Path, limit: 
     return 0
 
 
+def run_neural_image_demo(input_path: str | Path, output_dir: str | Path, limit: int, test_limit: int, epochs: int) -> int:
+    """Train and describe neural uploads for both gradient explainers."""
+    result = build_neural_image_demo(_project_path(input_path), _project_path(output_dir), limit=limit, test_limit=test_limit, epochs=epochs)
+    print("Neural image explanation demo", flush=True)
+    print("-----------------------------", flush=True)
+    print(f"Models: {result['model_count']}", flush=True)
+    print(f"Training samples: {result['training_samples']}", flush=True)
+    print(f"Test samples: {result['test_samples']}", flush=True)
+    print(f"Best accuracy: {result['best_accuracy']:.1%}", flush=True)
+    print(f"Files saved to: {result['output_dir']}", flush=True)
+    return 0
+
+
 def run_regression_demo(output_dir: str | Path) -> int:
     """Build and describe the local multi-model regression demonstration."""
     result = build_regression_demo(_project_path(output_dir))
@@ -945,6 +968,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_prepare_image_data(args.input, args.output_dir, args.limit)
         if args.command == "image-model-demo":
             return run_image_model_demo(args.input, args.output_dir, args.limit)
+        if args.command == "neural-image-demo":
+            return run_neural_image_demo(args.input, args.output_dir, args.limit, args.test_limit, args.epochs)
         if args.command == "mnist-explanation-calibration":
             return run_mnist_calibration_experiment(
                 args.input,

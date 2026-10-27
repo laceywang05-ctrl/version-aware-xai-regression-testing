@@ -726,6 +726,17 @@ convolutional layer and falls back to zero-baseline Integrated Gradients for
 other differentiable networks. Existing tree and non-neural uploads continue
 to use Tree SHAP and pixel occlusion respectively.
 
+Create four upload-ready MNIST neural models—two MLPs explained with Integrated
+Gradients and two CNNs explained with Grad-CAM—with:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression neural-image-demo \
+  --input mnist.npz \
+  --output-dir artifacts/mnist_neural_demo \
+  --limit 1000 --test-limit 500 --epochs 3
+```
+
 Measure how the lightweight CIFAR-10 demo scales from 1,000 to 5,000 training
 images while retaining the same official test sample:
 
