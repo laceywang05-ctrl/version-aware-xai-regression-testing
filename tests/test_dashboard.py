@@ -118,6 +118,10 @@ class DashboardTests(unittest.TestCase):
             "confidence-threshold-input",
             "explanation-threshold-input",
             "explanation-threshold-source",
+            "explanation-method-summary",
+            "explanation-v1-method",
+            "explanation-v2-method",
+            "explanation-policy-note",
             "drift-gallery",
             "drift-gallery-summary",
             "drift-gallery-empty",
@@ -233,6 +237,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('selected === "high_confidence_regression"', script)
         self.assertIn('selected === "explanation_drift"', script)
         self.assertIn('selected === "hidden_explanation_drift"', script)
+        self.assertIn("Automatic review uses a method-compatible calibrated threshold", script)
+        self.assertIn("Visual comparison only", script)
         self.assertIn("function formatSimilarity", script)
         self.assertIn("function triageThresholds", script)
         self.assertIn("function sampleTriage", script)

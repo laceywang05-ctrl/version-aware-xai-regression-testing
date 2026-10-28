@@ -156,6 +156,13 @@ const elements = {
   confidenceThresholdInput: document.querySelector("#confidence-threshold-input"),
   explanationThresholdInput: document.querySelector("#explanation-threshold-input"),
   explanationThresholdSource: document.querySelector("#explanation-threshold-source"),
+  explanationV1Model: document.querySelector("#explanation-v1-model"),
+  explanationV1Method: document.querySelector("#explanation-v1-method"),
+  explanationV1Note: document.querySelector("#explanation-v1-note"),
+  explanationV2Model: document.querySelector("#explanation-v2-model"),
+  explanationV2Method: document.querySelector("#explanation-v2-method"),
+  explanationV2Note: document.querySelector("#explanation-v2-note"),
+  explanationPolicyNote: document.querySelector("#explanation-policy-note"),
   confidenceRiskSummary: document.querySelector("#confidence-risk-summary"),
   driftGallery: document.querySelector("#drift-gallery"),
   driftGallerySummary: document.querySelector("#drift-gallery-summary"),
@@ -1226,6 +1233,20 @@ function renderUploadComparison(report) {
     || "No dataset-specific calibration metadata was supplied";
   elements.explanationThresholdSource.textContent =
     `${thresholdKind}: ${formatPercent(summary.explanation_similarity_threshold ?? 0.8)} · ${thresholdSource}. You can adjust it for sensitivity analysis.`;
+  const v1Explanation = report.explanations?.v1 || {};
+  const v2Explanation = report.explanations?.v2 || {};
+  elements.explanationV1Model.textContent = v1Name;
+  elements.explanationV2Model.textContent = v2Name;
+  elements.explanationV1Method.textContent = v1Explanation.label || "Explanation unavailable";
+  elements.explanationV2Method.textContent = v2Explanation.label || "Explanation unavailable";
+  elements.explanationV1Note.textContent = v1Explanation.note || "No explanation metadata was returned.";
+  elements.explanationV2Note.textContent = v2Explanation.note || "No explanation metadata was returned.";
+  elements.explanationPolicyNote.textContent = summary.explanation_similarity_threshold_calibrated
+    ? "Automatic review uses a method-compatible calibrated threshold."
+    : "Visual comparison only: this method has no confirmatory calibrated threshold; drift counts are exploratory.";
+  elements.explanationPolicyNote.className = summary.explanation_similarity_threshold_calibrated
+    ? "explanation-policy-note calibrated"
+    : "explanation-policy-note exploratory";
   renderTriageSummary();
 
   const transitions = [
