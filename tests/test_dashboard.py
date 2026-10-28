@@ -159,6 +159,15 @@ class DashboardTests(unittest.TestCase):
         ):
             self.assertIn(f'id="{element_id}"', html)
 
+    def test_exports_record_explanation_method_and_policy(self):
+        script = (DASHBOARD / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function explanationPolicyForExport", script)
+        self.assertIn("explanation_policy: explanationPolicyForExport()", script)
+        self.assertIn("## Explanation method and review policy", script)
+        self.assertIn("Automatic explanation review", script)
+        self.assertIn("Visual comparison only; explanation drift counts are exploratory", script)
+
     def test_dashboard_prefers_runtime_report_then_falls_back(self):
         script = (DASHBOARD / "app.js").read_text(encoding="utf-8")
         self.assertIn('fetch("data/report.json"', script)
