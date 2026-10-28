@@ -152,7 +152,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **135 tests passed** at the time of this summary.
+- Automated test suite: **137 tests passed** at the time of this summary.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.
