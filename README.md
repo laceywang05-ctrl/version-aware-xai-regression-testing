@@ -741,6 +741,12 @@ The paired Integrated Gradients and Grad-CAM validation results, including the
 method-specific threshold limitation, are documented in
 [`docs/MNIST_NEURAL_EXPLANATION_RESULT.md`](docs/MNIST_NEURAL_EXPLANATION_RESULT.md).
 
+Method-specific benign-retraining calibration is documented in
+[`docs/MNIST_NEURAL_CALIBRATION_RESULT.md`](docs/MNIST_NEURAL_CALIBRATION_RESULT.md).
+The resulting MNIST Integrated Gradients boundary is active; Grad-CAM remains
+exploratory because its calibration distribution did not yield a useful
+positive lower-tail boundary.
+
 Measure how the lightweight CIFAR-10 demo scales from 1,000 to 5,000 training
 images while retaining the same official test sample:
 

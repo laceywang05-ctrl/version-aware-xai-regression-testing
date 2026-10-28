@@ -78,6 +78,13 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertIn("not calibrated for grad_cam", source)
         self.assertFalse(calibrated)
 
+        ig_threshold, ig_source, ig_calibrated = _explanation_threshold(
+            manifest, ("integrated_gradients", "integrated_gradients")
+        )
+        self.assertAlmostEqual(ig_threshold, 0.827263246956751)
+        self.assertIn("Integrated Gradients", ig_source)
+        self.assertTrue(ig_calibrated)
+
     def test_exact_mcnemar_uses_only_discordant_correctness_pairs(self):
         self.assertEqual(_exact_mcnemar_p(0, 0), 1.0)
         self.assertEqual(_exact_mcnemar_p(1, 1), 1.0)
