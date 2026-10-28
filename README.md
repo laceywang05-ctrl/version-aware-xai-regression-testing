@@ -18,7 +18,7 @@ PYTHONPATH=src python -m unittest discover -s tests -q
 
 When a model changes from version `v1` to `v2`, prediction accuracy may remain acceptable while the model changes which features it relies on. This project investigates how to identify those changes reliably and distinguish them from normal variation in the explanation method.
 
-## Initial scope
+## Initial scope and implemented extensions
 
 - Tabular classification
 - Two model versions: an accepted baseline and a candidate
@@ -26,8 +26,14 @@ When a model changes from version `v1` to `v2`, prediction accuracy may remain a
 - SHAP and LIME explanations
 - Same-model repeated runs to estimate natural explainer variance
 - Cross-version comparison using explanation-similarity metrics
+- Image classification with Integrated Gradients and Grad-CAM
+- Uploaded collections of two to five classification or regression models
+- Sample-level prediction, confidence and explanation diagnostics
 
-Integrated Gradients and Grad-CAM are included in the literature review and remain possible later extensions for differentiable and image models.
+Integrated Gradients and Grad-CAM are now implemented for trusted PyTorch image
+models. MNIST Integrated Gradients uses a held-out benign-retraining threshold;
+Grad-CAM remains explicitly exploratory because its benign calibration did not
+produce a useful confirmatory lower-tail boundary.
 
 ## Proposed workflow
 
@@ -59,7 +65,9 @@ The literature review identifies several candidate metrics for later evaluation:
 - top-k feature overlap;
 - contribution-direction flip rate.
 
-Possible later metrics include distribution divergence for aggregate explanations and heatmap similarity for Grad-CAM.
+The image workflow also reports cosine similarity between spatial heatmaps.
+Its interpretation remains method- and dataset-specific rather than sharing a
+universal threshold with tabular attribution vectors.
 
 The final metric set and thresholds will be selected after the initial scope is confirmed with the supervisor.
 
@@ -78,11 +86,17 @@ The final metric set and thresholds will be selected after the initial scope is 
 
 ## Current status
 
-The repository now contains a working Tree SHAP proof of concept. It logs and
-compares two model versions on a fixed probe dataset, verifies deterministic
-same-model repeatability, estimates normal explanation variation across ten
-benign retraining seeds, and applies a provisional review policy. Initial results
-are summarised in [`docs/INITIAL_EXPERIMENT_RESULTS.md`](docs/INITIAL_EXPERIMENT_RESULTS.md).
+The repository now contains an end-to-end local comparison system rather than
+only the original Tree SHAP proof of concept. Users can upload two to five
+trusted models with labelled tabular or image data, rank the full collection,
+select a baseline and candidate, inspect aggregate and sample-level changes,
+compare explanation maps, and export an auditable report. The automated suite
+currently contains 135 passing tests across Python 3.11 and 3.13 CI.
+
+The original proof of concept verifies deterministic same-model repeatability,
+estimates normal explanation variation across benign retraining seeds, and
+applies a review policy. Initial results are summarised in
+[`docs/INITIAL_EXPERIMENT_RESULTS.md`](docs/INITIAL_EXPERIMENT_RESULTS.md).
 
 The same workflow has also been validated on the real Breast Cancer Wisconsin
 Diagnostic dataset. The reference and candidate agree on 99% of probe

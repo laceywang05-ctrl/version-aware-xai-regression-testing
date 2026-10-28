@@ -14,9 +14,12 @@ The final prototype supports:
 - tabular, grayscale-image and RGB-image inputs;
 - two to five uploaded scikit-learn-compatible model artifacts;
 - aggregate, class-level and sample-level predictive diagnostics;
-- Tree SHAP, LIME, pixel-occlusion and permutation-based explanation evidence;
+- Tree SHAP, LIME, pixel occlusion, permutation importance, Integrated
+  Gradients and Grad-CAM explanation evidence;
 - calibrated dataset-specific explanation review thresholds for MNIST and
   CIFAR-10 RGB comparisons;
+- a separately calibrated MNIST Integrated Gradients threshold, while Grad-CAM
+  is deliberately retained as visual-only exploratory evidence;
 - downloadable JSON, readable summaries and sample-level CSV files; and
 - SHA-256 fingerprints for model, dataset and manifest traceability.
 
@@ -61,9 +64,23 @@ fifth-percentile thresholds of 0.486 for MNIST and 0.047 for CIFAR-10. Their
 held-out benign flag rates were 6.89% and 6.9%, close to the intended 5% review
 workload.
 
+The same limitation also appeared across neural explanation methods. An
+expanded MNIST experiment used 3,000 training images, five epochs, 50
+explanation images per seed, three calibration seeds and two disjoint held-out
+seeds. Integrated Gradients achieved 100% informative coverage, a
+fifth-percentile boundary of `0.896604`, and a 7.0% held-out review rate. This
+threshold is active only when both compared MNIST models use Integrated
+Gradients. Grad-CAM also reached 100% informative coverage, but its benign
+similarities remained unstable: the fifth percentile was `0.009905` and the
+median was `0.314381`. A threshold near zero would detect only almost-disjoint
+maps, so Grad-CAM remains available for visual sample review without an
+automatic confirmatory drift decision.
+
 **Answer:** the overall workflow transfers, but numerical thresholds do not.
 Thresholds must be calibrated for the dataset, representation, model family and
-explanation method rather than treated as universal constants.
+explanation method rather than treated as universal constants. Some methods may
+fail to yield a useful automatic threshold even when their maps can still be
+displayed and compared.
 
 ### RQ3 — Can the prototype make model-version differences concrete and auditable?
 
@@ -107,7 +124,10 @@ supports human review rather than automatic deployment approval.
    small average improvement.
 5. Explanation thresholds are context-specific. Transferring 0.80 from one
    setting to MNIST or CIFAR-10 created unusably large review queues.
-6. Reproducibility requires artifact identity as well as parameters. SHA-256
+6. Explanation availability is not equivalent to policy readiness. Integrated
+   Gradients produced a usable MNIST benign-retraining boundary, whereas
+   Grad-CAM remained too variable for confirmatory automatic review.
+7. Reproducibility requires artifact identity as well as parameters. SHA-256
    fingerprints connect exported evidence to the exact uploaded bytes.
 
 ## 4. Evidence boundaries
@@ -117,10 +137,12 @@ release gate. In particular:
 
 - review flags indicate statistical or threshold-based separation, not model
   harm, unfairness, causality or deployment unsafety;
-- Tree SHAP, LIME, pixel occlusion and permutation importance have different
-  semantics and their raw scores are not interchangeable;
-- image experiments use lightweight scikit-learn models rather than modern
-  convolutional architectures;
+- Tree SHAP, LIME, pixel occlusion, permutation importance, Integrated
+  Gradients and Grad-CAM have different semantics and their raw scores are not
+  interchangeable;
+- the main MNIST/CIFAR-10 ranking experiments use lightweight scikit-learn
+  models, while the neural extension uses small research MLP/CNN architectures
+  rather than production-scale image networks;
 - MNIST and CIFAR-10 thresholds are empirical workload controls estimated from
   small benign-retraining samples;
 - user-uploaded `.joblib` models and CIFAR pickle archives must come from trusted
@@ -130,7 +152,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **127 tests passed** at the time of this summary.
+- Automated test suite: **135 tests passed** at the time of this summary.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.
@@ -161,3 +183,6 @@ artifact identities while keeping the final decision with the reviewer.
 - [`CIFAR10_MULTIMODEL_RESULT.md`](CIFAR10_MULTIMODEL_RESULT.md)
 - [`CIFAR10_EXPLANATION_CALIBRATION_RESULT.md`](CIFAR10_EXPLANATION_CALIBRATION_RESULT.md)
 - [`CIFAR10_TRAINING_SCALE_RESULT.md`](CIFAR10_TRAINING_SCALE_RESULT.md)
+- [`MNIST_NEURAL_EXPLANATION_RESULT.md`](MNIST_NEURAL_EXPLANATION_RESULT.md)
+- [`MNIST_NEURAL_CALIBRATION_RESULT.md`](MNIST_NEURAL_CALIBRATION_RESULT.md)
+- [`GRADCAM_CALIBRATION_REFINEMENT_RESULT.md`](GRADCAM_CALIBRATION_REFINEMENT_RESULT.md)
