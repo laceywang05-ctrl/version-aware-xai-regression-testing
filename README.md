@@ -747,6 +747,10 @@ The resulting MNIST Integrated Gradients boundary is active; Grad-CAM remains
 exploratory because its calibration distribution did not yield a useful
 positive lower-tail boundary.
 
+The expanded calibration and the decision to keep Grad-CAM visual-only are
+documented in
+[`docs/GRADCAM_CALIBRATION_REFINEMENT_RESULT.md`](docs/GRADCAM_CALIBRATION_REFINEMENT_RESULT.md).
+
 Measure how the lightweight CIFAR-10 demo scales from 1,000 to 5,000 training
 images while retaining the same official test sample:
 

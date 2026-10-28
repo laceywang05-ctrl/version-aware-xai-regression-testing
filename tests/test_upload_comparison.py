@@ -81,7 +81,7 @@ class UploadComparisonTests(unittest.TestCase):
         ig_threshold, ig_source, ig_calibrated = _explanation_threshold(
             manifest, ("integrated_gradients", "integrated_gradients")
         )
-        self.assertAlmostEqual(ig_threshold, 0.827263246956751)
+        self.assertAlmostEqual(ig_threshold, 0.8966041734445976)
         self.assertIn("Integrated Gradients", ig_source)
         self.assertTrue(ig_calibrated)
 
