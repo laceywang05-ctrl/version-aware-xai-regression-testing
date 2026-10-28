@@ -30,6 +30,7 @@ from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
 from xai_regression.mnist_calibration import run_mnist_explanation_calibration
 from xai_regression.neural_image_demo import build_neural_image_demo
+from xai_regression.neural_calibration import run_neural_explanation_calibration
 from xai_regression.pipeline import run_pipeline
 from xai_regression.portfolio import run_cross_dataset_summary
 from xai_regression.runner import run_validation
@@ -296,6 +297,15 @@ def build_parser() -> argparse.ArgumentParser:
     neural_image_demo_parser.add_argument("--limit", type=int, default=1000)
     neural_image_demo_parser.add_argument("--test-limit", type=int, default=500)
     neural_image_demo_parser.add_argument("--epochs", type=int, default=3)
+    neural_calibration_parser = subparsers.add_parser(
+        "neural-explanation-calibration",
+        help="Calibrate MNIST IG and Grad-CAM similarity under benign retraining.",
+    )
+    neural_calibration_parser.add_argument("--input", required=True)
+    neural_calibration_parser.add_argument("--output-dir", default="artifacts/mnist_neural_calibration")
+    neural_calibration_parser.add_argument("--train-limit", type=int, default=1000)
+    neural_calibration_parser.add_argument("--sample-limit", type=int, default=30)
+    neural_calibration_parser.add_argument("--epochs", type=int, default=2)
     mnist_calibration_parser = subparsers.add_parser(
         "mnist-explanation-calibration",
         help="Calibrate MNIST explanation similarity under benign retraining.",
@@ -970,6 +980,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_image_model_demo(args.input, args.output_dir, args.limit)
         if args.command == "neural-image-demo":
             return run_neural_image_demo(args.input, args.output_dir, args.limit, args.test_limit, args.epochs)
+        if args.command == "neural-explanation-calibration":
+            result = run_neural_explanation_calibration(
+                _project_path(args.input), _project_path(args.output_dir),
+                train_limit=args.train_limit, sample_limit=args.sample_limit, epochs=args.epochs,
+            )
+            print("MNIST neural explanation calibration", flush=True)
+            for method, row in result["methods"].items():
+                print(
+                    f"{method}: status={row['status']}, "
+                    f"threshold={row['threshold']:.6f}, "
+                    f"held-out review rate={row['heldout_review_rate']:.1%}",
+                    flush=True,
+                )
+            print(f"Reports saved to: {result['output_dir']}", flush=True)
+            return 0
         if args.command == "mnist-explanation-calibration":
             return run_mnist_calibration_experiment(
                 args.input,

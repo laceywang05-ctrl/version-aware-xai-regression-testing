@@ -30,6 +30,7 @@ MAX_NEURAL_EXPLANATION_ROWS = 100
 HIGH_CONFIDENCE_THRESHOLD = 0.80
 EXPLANATION_SIMILARITY_THRESHOLD = 0.80
 MNIST_EXPLANATION_SIMILARITY_THRESHOLD = 0.486
+MNIST_INTEGRATED_GRADIENTS_SIMILARITY_THRESHOLD = 0.827263246956751
 CIFAR10_EXPLANATION_SIMILARITY_THRESHOLD = 0.04665091646
 IMAGE_MEDIA_TYPES = {
     ".png": "image/png",
@@ -60,6 +61,15 @@ def _explanation_threshold(
     methods: tuple[str, str] | None = None,
 ) -> tuple[float, str, bool]:
     """Select a threshold only when calibration matches the explanation method."""
+    if (
+        methods == ("integrated_gradients", "integrated_gradients")
+        and manifest.image_shape in {(28, 28), (28, 28, 1)}
+    ):
+        return (
+            MNIST_INTEGRATED_GRADIENTS_SIMILARITY_THRESHOLD,
+            "MNIST Integrated Gradients benign-retraining calibration",
+            True,
+        )
     if methods != ("tree_shap", "tree_shap"):
         method_label = " / ".join(methods or ("unknown",))
         return (
