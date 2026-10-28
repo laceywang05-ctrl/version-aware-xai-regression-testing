@@ -3,6 +3,8 @@
 The consolidated research questions, evidence, limitations and final prototype
 assessment are available in
 [`docs/FINAL_EVALUATION_SUMMARY.md`](docs/FINAL_EVALUATION_SUMMARY.md).
+Exact files, expected results and click order for a supervisor demonstration
+are recorded in [`docs/LIVE_DEMO_GUIDE.md`](docs/LIVE_DEMO_GUIDE.md).
 
 An FYP project for detecting unexpected changes in model explanations across machine-learning model versions.
 
@@ -91,7 +93,7 @@ only the original Tree SHAP proof of concept. Users can upload two to five
 trusted models with labelled tabular or image data, rank the full collection,
 select a baseline and candidate, inspect aggregate and sample-level changes,
 compare explanation maps, and export an auditable report. The automated suite
-currently contains 135 passing tests across Python 3.11 and 3.13 CI.
+currently contains 137 passing tests across Python 3.11 and 3.13 CI.
 
 The original proof of concept verifies deterministic same-model repeatability,
 estimates normal explanation variation across benign retraining seeds, and
