@@ -782,6 +782,33 @@ function comparisonForExport() {
   };
 }
 
+function explanationPolicyForExport(report = state.uploadComparison) {
+  const summary = report?.summary || {};
+  const v1 = report?.explanations?.v1 || {};
+  const v2 = report?.explanations?.v2 || {};
+  return {
+    baseline: {
+      model: report?.models?.v1?.filename || "Model V1",
+      method: v1.method || null,
+      label: v1.label || "Explanation unavailable",
+      note: v1.note || null,
+    },
+    candidate: {
+      model: report?.models?.v2?.filename || "Model V2",
+      method: v2.method || null,
+      label: v2.label || "Explanation unavailable",
+      note: v2.note || null,
+    },
+    similarity_threshold: summary.explanation_similarity_threshold ?? null,
+    threshold_source: summary.explanation_similarity_threshold_source || null,
+    calibrated: Boolean(summary.explanation_similarity_threshold_calibrated),
+    automatic_review_enabled: Boolean(summary.explanation_similarity_threshold_calibrated),
+    interpretation: summary.explanation_similarity_threshold_calibrated
+      ? "Method-compatible calibrated threshold; explanation drift can enter automatic review."
+      : "Visual comparison only; explanation drift counts are exploratory and do not trigger confirmatory review.",
+  };
+}
+
 function downloadComparisonJson() {
   if (!state.uploadComparison || !state.modelOverview) return;
   const artifact = {
@@ -795,6 +822,7 @@ function downloadComparisonJson() {
       state.uploadComparison.models?.v1?.filename || "Model V1",
       state.uploadComparison.models?.v2?.filename || "Model V2",
     ),
+    explanation_policy: explanationPolicyForExport(),
     comparison: comparisonForExport(),
   };
   downloadLocalFile(
@@ -811,6 +839,7 @@ function downloadComparisonSummary() {
   const v1Name = report.models?.v1?.filename || "Model V1";
   const v2Name = report.models?.v2?.filename || "Model V2";
   const verdict = candidateVerdictData("classification", summary, v1Name, v2Name);
+  const explanationPolicy = explanationPolicyForExport(report);
   const lines = [
     "# Classification model comparison summary",
     "",
@@ -829,6 +858,16 @@ function downloadComparisonSummary() {
     `**${verdict.label}.** ${verdict.message}`,
     "",
     `Exact McNemar p-value: ${formatPValue(summary.mcnemar_exact_p)} (alpha ${summary.mcnemar_alpha}).`,
+    "",
+    "## Explanation method and review policy",
+    "",
+    `- V1 method: ${explanationPolicy.baseline.label}`,
+    `- V2 method: ${explanationPolicy.candidate.label}`,
+    `- Similarity threshold: ${explanationPolicy.similarity_threshold === null ? "Unavailable" : formatSimilarity(explanationPolicy.similarity_threshold)}`,
+    `- Threshold source: ${explanationPolicy.threshold_source || "Not supplied"}`,
+    `- Calibrated: ${explanationPolicy.calibrated ? "Yes" : "No"}`,
+    `- Automatic explanation review: ${explanationPolicy.automatic_review_enabled ? "Enabled" : "Disabled"}`,
+    `- Interpretation: ${explanationPolicy.interpretation}`,
     "",
     "## Sample transitions",
     "",
