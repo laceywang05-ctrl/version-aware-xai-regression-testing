@@ -8,6 +8,7 @@ from typing import Sequence
 
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
+from xai_regression.demo_check import check_demo_bundle
 from xai_regression.cifar10_calibration import run_cifar10_explanation_calibration
 from xai_regression.cifar10_scaling import run_cifar10_training_scale
 from xai_regression.digits_benchmark import (
@@ -343,6 +344,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default="artifacts/demo_regression_upload",
     )
+    demo_check_parser = subparsers.add_parser(
+        "demo-check",
+        help="Validate a generated upload bundle before a live dashboard demo.",
+    )
+    demo_check_parser.add_argument("--bundle-dir", required=True)
     digits_benchmark_parser = subparsers.add_parser(
         "digits-close-benchmark",
         help="Compare four closely matched random-forest digit models.",
@@ -1027,6 +1033,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
+        if args.command == "demo-check":
+            result = check_demo_bundle(_project_path(args.bundle_dir))
+            print("Dashboard demo preflight", flush=True)
+            print("------------------------", flush=True)
+            print(f"Task: {result['task']}", flush=True)
+            print(f"Models: {result['model_count']}", flush=True)
+            print(f"Samples: {result['dataset']['rows']}", flush=True)
+            print(f"Features: {result['dataset']['feature_count']}", flush=True)
+            if result["image_count"] is not None:
+                print(f"Images: {result['image_count']}", flush=True)
+            for model in result["models"]:
+                status = "READY" if model["compatible"] else "FAILED"
+                print(f"{status}: {model['filename']} — {model['message']}", flush=True)
+            print("READY FOR DEMO" if result["ready"] else "NOT READY", flush=True)
+            return 0 if result["ready"] else 1
         if args.command == "digits-close-benchmark":
             return run_digits_benchmark(args.output_dir)
         if args.command == "digits-split-robustness":

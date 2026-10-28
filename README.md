@@ -387,6 +387,20 @@ dataset. The command writes four trusted `.joblib` files, `samples.csv` and
 on the upload page, use two model files as the initial pair, and select the
 remaining two under Additional models.
 
+Before a live demonstration, validate any generated classification or
+regression bundle with one command:
+
+```bash
+PYTHONPATH=src python -m xai_regression demo-check \
+  --bundle-dir artifacts/mnist_model_demo
+```
+
+The preflight checks that `manifest.json`, `samples.csv`, two to five model
+files and any required `images.zip` are present. It then loads every trusted
+model, verifies its prediction shape against the manifest-selected feature
+columns, reports the dataset dimensions and prints `READY FOR DEMO` only when
+the complete bundle is compatible.
+
 When the manifest supplies `image_shape`, each sample row can open a
 contribution comparison. Compatible tree estimators use Tree SHAP. Other
 classifiers exposing `predict_proba()` and `classes_` automatically use pixel
