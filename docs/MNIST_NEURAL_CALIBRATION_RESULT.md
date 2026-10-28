@@ -19,6 +19,10 @@ The Integrated Gradients boundary is now used automatically for MNIST when both
 uploaded models use Integrated Gradients. It is not transferred to other
 datasets or explanation methods.
 
+An expanded follow-up with 3,000 training images and five epochs refined this
+boundary to `0.896604`; see
+[`GRADCAM_CALIBRATION_REFINEMENT_RESULT.md`](GRADCAM_CALIBRATION_REFINEMENT_RESULT.md).
+
 The Grad-CAM experiment produced a fifth percentile of zero even after excluding
 pairs where either heatmap contained no signal. This boundary cannot distinguish
 ordinary retraining variation from severe drift, so the software deliberately
