@@ -55,18 +55,28 @@ class UploadManifest:
     trusted_model_files: bool
 
 
-def _explanation_threshold(manifest: UploadManifest) -> tuple[float, str, bool]:
-    """Select a calibrated threshold when the uploaded image shape is known."""
+def _explanation_threshold(
+    manifest: UploadManifest,
+    methods: tuple[str, str] | None = None,
+) -> tuple[float, str, bool]:
+    """Select a threshold only when calibration matches the explanation method."""
+    if methods != ("tree_shap", "tree_shap"):
+        method_label = " / ".join(methods or ("unknown",))
+        return (
+            EXPLANATION_SIMILARITY_THRESHOLD,
+            f"Exploratory default (not calibrated for {method_label})",
+            False,
+        )
     if manifest.image_shape in {(28, 28), (28, 28, 1)}:
         return (
             MNIST_EXPLANATION_SIMILARITY_THRESHOLD,
-            "MNIST benign-retraining calibration",
+            "MNIST Tree SHAP benign-retraining calibration",
             True,
         )
     if manifest.image_shape == (32, 32, 3):
         return (
             CIFAR10_EXPLANATION_SIMILARITY_THRESHOLD,
-            "CIFAR-10 RGB benign-retraining calibration",
+            "CIFAR-10 RGB Tree SHAP benign-retraining calibration",
             True,
         )
     return (
@@ -622,7 +632,13 @@ def compare_classifiers(
         default="both_wrong",
     )
     explanation_threshold, explanation_threshold_source, threshold_calibrated = (
-        _explanation_threshold(manifest)
+        _explanation_threshold(
+            manifest,
+            (
+                explanation_metadata_v1["method"],
+                explanation_metadata_v2["method"],
+            ),
+        )
     )
     samples = []
     for index in range(len(dataset)):

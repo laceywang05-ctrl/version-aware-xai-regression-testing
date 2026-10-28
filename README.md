@@ -737,6 +737,10 @@ PYTHONPATH=src python -m xai_regression neural-image-demo \
   --limit 1000 --test-limit 500 --epochs 3
 ```
 
+The paired Integrated Gradients and Grad-CAM validation results, including the
+method-specific threshold limitation, are documented in
+[`docs/MNIST_NEURAL_EXPLANATION_RESULT.md`](docs/MNIST_NEURAL_EXPLANATION_RESULT.md).
+
 Measure how the lightweight CIFAR-10 demo scales from 1,000 to 5,000 training
 images while retaining the same official test sample:
 

@@ -49,12 +49,34 @@ class UploadComparisonTests(unittest.TestCase):
         cifar = parse_manifest({**base, "image_shape": [32, 32, 3]})
         unknown = parse_manifest(base)
 
-        self.assertEqual(_explanation_threshold(mnist), (0.486, "MNIST benign-retraining calibration", True))
-        self.assertAlmostEqual(_explanation_threshold(cifar)[0], 0.04665091646)
-        self.assertIn("CIFAR-10", _explanation_threshold(cifar)[1])
-        self.assertTrue(_explanation_threshold(cifar)[2])
+        tree_methods = ("tree_shap", "tree_shap")
+        self.assertEqual(
+            _explanation_threshold(mnist, tree_methods),
+            (0.486, "MNIST Tree SHAP benign-retraining calibration", True),
+        )
+        self.assertAlmostEqual(_explanation_threshold(cifar, tree_methods)[0], 0.04665091646)
+        self.assertIn("CIFAR-10", _explanation_threshold(cifar, tree_methods)[1])
+        self.assertTrue(_explanation_threshold(cifar, tree_methods)[2])
         self.assertEqual(_explanation_threshold(unknown)[0], 0.8)
         self.assertFalse(_explanation_threshold(unknown)[2])
+
+    def test_neural_methods_do_not_reuse_tree_shap_calibration(self):
+        manifest = parse_manifest(
+            {
+                "task": "classification",
+                "label_column": "target",
+                "image_shape": [28, 28],
+                "trusted_model_files": True,
+            }
+        )
+
+        threshold, source, calibrated = _explanation_threshold(
+            manifest, ("grad_cam", "grad_cam")
+        )
+
+        self.assertEqual(threshold, 0.8)
+        self.assertIn("not calibrated for grad_cam", source)
+        self.assertFalse(calibrated)
 
     def test_exact_mcnemar_uses_only_discordant_correctness_pairs(self):
         self.assertEqual(_exact_mcnemar_p(0, 0), 1.0)
