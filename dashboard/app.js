@@ -285,6 +285,42 @@ function switchView(view) {
   }
 }
 
+const resultCategories = {
+  classification: {
+    summary: ["model-overview-heading", "upload-results-heading", "paired-evidence-heading", "transition-heading", "upload-boundary-heading"],
+    directions: ["prediction-flow-heading", "class-diagnostics-heading", "confusion-matrix-heading", "confusion-diagnostics-heading"],
+    samples: ["sample-results-heading"],
+    downloads: ["comparison-export-heading"],
+  },
+  regression: {
+    summary: ["regression-overview-heading", "regression-results-heading", "regression-transition-heading"],
+    charts: ["regression-visual-heading"],
+    samples: ["regression-importance-heading", "regression-samples-heading"],
+    downloads: ["regression-export-heading"],
+  },
+};
+
+function selectResultCategory(root, category, scroll = true) {
+  const type = root === elements.uploadResults ? "classification" : "regression";
+  const headings = resultCategories[type][category];
+  if (!headings) return;
+  for (const section of root.querySelectorAll(":scope > section:not(.result-dashboard)")) {
+    section.hidden = !headings.includes(section.querySelector("h2[id]")?.id);
+  }
+  for (const button of root.querySelectorAll(".result-tab")) {
+    const active = button.dataset.resultCategory === category;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+  if (scroll) root.querySelector(".results-index").scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+for (const root of [elements.uploadResults, elements.regressionResults]) {
+  for (const button of root.querySelectorAll(".result-tab")) {
+    button.addEventListener("click", () => selectResultCategory(root, button.dataset.resultCategory));
+  }
+}
+
 const transitionLabels = {
   both_correct: "Both correct",
   v1_correct_v2_wrong: "Correct → wrong",
@@ -1220,6 +1256,7 @@ function renderPredictionFlows() {
       elements.uploadTransitionFilter.value = "all";
       renderPredictionFlows();
       renderUploadSamples();
+      selectResultCategory(elements.uploadResults, "samples", false);
       document.querySelector("#sample-results-heading").scrollIntoView({behavior: "smooth", block: "start"});
     });
     elements.predictionFlowList.append(button);
@@ -1310,6 +1347,14 @@ function renderUploadComparison(report) {
   const v1Name = report.models?.v1?.filename || "Model V1";
   const v2Name = report.models?.v2?.filename || "Model V2";
   elements.uploadTotal.textContent = summary.total_samples;
+  document.querySelector("#classification-glance-pair").textContent = `${v1Name} → ${v2Name}`;
+  document.querySelector("#classification-glance-accuracy").textContent = `${formatPercent(summary.v1_accuracy)} → ${formatPercent(summary.v2_accuracy)}`;
+  document.querySelector("#classification-glance-accuracy-note").textContent = `${summary.total_samples} labelled samples`;
+  document.querySelector("#classification-glance-change").textContent = `${summary.accuracy_change > 0 ? "+" : ""}${formatPercent(summary.accuracy_change)}`;
+  document.querySelector("#classification-glance-evidence").textContent = summary.mcnemar_significant ? "Paired change supported at α=0.05" : "Observed change is exploratory";
+  document.querySelector("#classification-glance-fixed").textContent = `${summary.v1_wrong_v2_correct} fixed`;
+  document.querySelector("#classification-glance-regressed").textContent = `${summary.v1_correct_v2_wrong} became wrong`;
+  document.querySelector("#classification-glance-scale").textContent = `${state.modelOverview?.models.length || 2} models · ${summary.total_samples} samples`;
   elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
   elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
   elements.uploadV1F1.textContent = formatPercent(summary.v1_macro_f1);
@@ -1499,6 +1544,7 @@ function renderUploadComparison(report) {
   elements.uploadTransitionFilter.value = "all";
   renderUploadSamples();
   elements.uploadResults.hidden = false;
+  selectResultCategory(elements.uploadResults, "summary", false);
   elements.uploadResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1655,6 +1701,14 @@ function renderRegressionComparison(report) {
   const summary = report.summary;
   const v1Name = report.models?.v1?.filename || "Model V1";
   const v2Name = report.models?.v2?.filename || "Model V2";
+  document.querySelector("#regression-glance-pair").textContent = `${v1Name} → ${v2Name}`;
+  document.querySelector("#regression-glance-mae").textContent = `${formatNumber(summary.v1.mae)} → ${formatNumber(summary.v2.mae)}`;
+  document.querySelector("#regression-glance-change").textContent = `${summary.mae_change > 0 ? "+" : ""}${formatNumber(summary.mae_change)}`;
+  document.querySelector("#regression-glance-evidence").textContent = summary.mae_change_ci_95.upper < 0
+    ? "Paired interval favors V2" : summary.mae_change_ci_95.lower > 0 ? "Paired interval favors V1" : "Paired interval crosses zero";
+  document.querySelector("#regression-glance-improved").textContent = `${summary.improved_count} improved`;
+  document.querySelector("#regression-glance-worsened").textContent = `${summary.worsened_count} worsened`;
+  document.querySelector("#regression-glance-scale").textContent = `${state.regressionOverview?.models.length || 2} models · ${summary.total_samples} samples`;
   elements.regressionV1Name.textContent = v1Name;
   elements.regressionV2Name.textContent = v2Name;
   elements.regressionLegendV1.textContent = `V1 · ${v1Name}`;
@@ -1705,6 +1759,7 @@ function renderRegressionComparison(report) {
   renderRegressionCharts(report.samples);
   renderRegressionImportance(report);
   renderRegressionSamples();
+  selectResultCategory(elements.regressionResults, "summary", false);
   elements.regressionResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
