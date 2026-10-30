@@ -840,3 +840,6 @@ each path to its underlying examples.
 The completed width-change study, including official-test class transitions,
 paired results, explanation-map audit and the ready-to-upload bundle, is in
 [`docs/CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md`](docs/CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md).
+The width change was repeated with a matched seed 43 pair; its prediction
+transitions and full 1,000-image explanation audit are documented in
+[`docs/CIFAR10_WIDTH_REPEAT_RESULT.md`](docs/CIFAR10_WIDTH_REPEAT_RESULT.md).
