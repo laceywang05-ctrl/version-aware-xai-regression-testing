@@ -364,24 +364,16 @@
         </section>
 
         <div id="upload-results" hidden>
-          <section class="result-dashboard" aria-labelledby="classification-glance-heading">
-            <p class="eyebrow">Your comparison</p>
-            <h2 id="classification-glance-heading">Results at a glance</h2>
-            <p id="classification-glance-pair" class="result-pair-label"></p>
-            <div class="result-snapshot-grid">
-              <article><span>Accuracy · V1 → V2</span><strong id="classification-glance-accuracy">—</strong><small id="classification-glance-accuracy-note"></small></article>
-              <article><span>Paired accuracy change</span><strong id="classification-glance-change">—</strong><small id="classification-glance-evidence"></small></article>
-              <article><span>Individual outcomes</span><strong id="classification-glance-fixed">—</strong><small id="classification-glance-regressed"></small></article>
-              <article><span>Models and samples</span><strong id="classification-glance-scale">—</strong><small>Compared on the same labelled data</small></article>
-            </div>
-          </section>
-          <nav class="results-index" aria-label="Classification result details">
-            <div class="results-index-heading"><strong>Explore the details</strong><span>Choose a topic to see its charts and tables.</span></div>
+          <nav class="results-index" aria-label="Classification result sections">
+            <strong>Jump to result</strong>
             <div class="results-index-links">
-              <button class="result-tab active" type="button" data-result-category="summary" aria-pressed="true"><strong>Overview</strong><small>Models, evidence, transitions</small></button>
-              <button class="result-tab" type="button" data-result-category="directions" aria-pressed="false"><strong>Prediction changes</strong><small>Class paths and confusion</small></button>
-              <button class="result-tab" type="button" data-result-category="samples" aria-pressed="false"><strong>Images &amp; explanations</strong><small>Individual cases and maps</small></button>
-              <button class="result-tab" type="button" data-result-category="downloads" aria-pressed="false"><strong>Downloads</strong><small>Reports and sample CSV</small></button>
+              <a href="#model-overview-heading">All models</a>
+              <a href="#upload-results-heading">V1 vs V2</a>
+              <a href="#paired-evidence-heading">Paired evidence</a>
+              <a href="#prediction-flow-heading">Prediction direction</a>
+              <a href="#class-diagnostics-heading">Class changes</a>
+              <a href="#sample-results-heading">Images and explanations</a>
+              <a href="#comparison-export-heading">Downloads</a>
             </div>
           </nav>
           <section class="content-section" aria-labelledby="model-overview-heading">
@@ -594,24 +586,16 @@
         </div>
 
         <div id="regression-results" hidden>
-          <section class="result-dashboard" aria-labelledby="regression-glance-heading">
-            <p class="eyebrow">Your comparison</p>
-            <h2 id="regression-glance-heading">Results at a glance</h2>
-            <p id="regression-glance-pair" class="result-pair-label"></p>
-            <div class="result-snapshot-grid">
-              <article><span>MAE · V1 → V2</span><strong id="regression-glance-mae">—</strong><small>Lower error is better</small></article>
-              <article><span>Paired MAE change</span><strong id="regression-glance-change">—</strong><small id="regression-glance-evidence"></small></article>
-              <article><span>Individual outcomes</span><strong id="regression-glance-improved">—</strong><small id="regression-glance-worsened"></small></article>
-              <article><span>Models and samples</span><strong id="regression-glance-scale">—</strong><small>Compared on the same labelled data</small></article>
-            </div>
-          </section>
-          <nav class="results-index" aria-label="Regression result details">
-            <div class="results-index-heading"><strong>Explore the details</strong><span>Choose a topic to see its charts and tables.</span></div>
+          <nav class="results-index" aria-label="Regression result sections">
+            <strong>Jump to result</strong>
             <div class="results-index-links">
-              <button class="result-tab active" type="button" data-result-category="summary" aria-pressed="true"><strong>Overview</strong><small>Models and error changes</small></button>
-              <button class="result-tab" type="button" data-result-category="charts" aria-pressed="false"><strong>Charts</strong><small>Actual versus predicted</small></button>
-              <button class="result-tab" type="button" data-result-category="samples" aria-pressed="false"><strong>Samples &amp; explanations</strong><small>Errors and feature importance</small></button>
-              <button class="result-tab" type="button" data-result-category="downloads" aria-pressed="false"><strong>Downloads</strong><small>Reports and CSV files</small></button>
+              <a href="#regression-overview-heading">All models</a>
+              <a href="#regression-results-heading">V1 vs V2</a>
+              <a href="#regression-transition-heading">Error changes</a>
+              <a href="#regression-visual-heading">Charts</a>
+              <a href="#regression-importance-heading">Feature importance</a>
+              <a href="#regression-samples-heading">Samples</a>
+              <a href="#regression-export-heading">Downloads</a>
             </div>
           </nav>
           <section class="content-section" aria-labelledby="regression-overview-heading">
