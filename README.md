@@ -793,3 +793,34 @@ PYTHONPATH=src python -m xai_regression cifar10-training-scale \
 The result separates the effect of additional training data from the known
 limitation of using flattened pixels with shallow tree ensembles. See
 [`docs/CIFAR10_TRAINING_SCALE_RESULT.md`](docs/CIFAR10_TRAINING_SCALE_RESULT.md).
+
+### Full CIFAR-10 CNN training
+
+Train a six-convolution-layer CNN on the official CIFAR-10 training pool. A
+stratified 45,000/5,000 training/validation split selects the final checkpoint;
+the complete 10,000-image official test set is evaluated only afterward. The
+fixed epoch-5 checkpoint is V1 and the best validation checkpoint is V2. This
+is one model family and one random seed, so the V1/V2 comparison measures the
+effect of additional training within that run.
+
+Install the optional neural dependency with `python -m pip install -e '.[neural]'`
+if it is not already present in the project's virtual environment.
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src .venv/bin/python -m xai_regression cifar10-cnn-train \
+  --input cifar-10-python.tar.gz \
+  --output-dir artifacts/cifar10_cnn_full_2026-10-29 \
+  --epochs 80 --min-epochs 30 --patience 15 --batch-size 256
+```
+
+The command uses the Mac GPU when PyTorch MPS is available, or a CUDA GPU/CPU
+elsewhere. Each epoch saves a resumable checkpoint, `history.json` and
+`progress.json`. If interrupted, repeat the command with `--resume`. The
+finished folder contains full-test metrics and predictions, training curves,
+and `upload_bundle/` with two trusted `.joblib` models plus a 1,000-image
+dashboard sample (`samples.csv`, `images.zip`, `manifest.json`). The website
+can compare these two models with Grad-CAM maps; those maps remain exploratory.
+The completed protocol, full-test results, paired comparison, and upload-bundle
+verification are recorded in
+[`docs/CIFAR10_FULL_CNN_RESULT.md`](docs/CIFAR10_FULL_CNN_RESULT.md).
