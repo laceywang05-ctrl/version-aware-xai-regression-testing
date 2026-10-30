@@ -9,6 +9,8 @@ try:
     from xai_regression.cifar10_cnn_training import (
         _augment,
         _normalization_stats,
+        _random_state,
+        _restore_random_state,
         build_cnn,
         split_training_indices,
     )
@@ -18,6 +20,25 @@ except ImportError:  # optional dependency in minimal CI
 
 @unittest.skipIf(torch is None, "PyTorch neural extra is not installed")
 class Cifar10CnnTrainingTests(unittest.TestCase):
+    def test_restored_random_state_repeats_augmentation_stream(self):
+        original = _random_state(torch.device("cpu"))
+        try:
+            torch.manual_seed(914)
+            np.random.seed(914)
+            saved = _random_state(torch.device("cpu"))
+            expected_torch = torch.rand(4)
+            expected_numpy = np.random.rand(4)
+            image = torch.arange(2 * 3 * 32 * 32, dtype=torch.float32).reshape(2, 3, 32, 32)
+            expected_augmentation = _augment(image)
+            torch.rand(8)
+            np.random.rand(8)
+            _restore_random_state(saved, torch.device("cpu"))
+            self.assertTrue(torch.equal(torch.rand(4), expected_torch))
+            np.testing.assert_array_equal(np.random.rand(4), expected_numpy)
+            self.assertTrue(torch.equal(_augment(image), expected_augmentation))
+        finally:
+            _restore_random_state(original, torch.device("cpu"))
+
     def test_stratified_split_is_disjoint_and_reproducible(self):
         labels = np.tile(np.arange(10), 20)
         train, validation = split_training_indices(labels, validation_size=40, seed=42)

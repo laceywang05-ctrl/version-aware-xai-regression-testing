@@ -815,8 +815,10 @@ PYTHONPATH=src .venv/bin/python -m xai_regression cifar10-cnn-train \
 ```
 
 The command uses the Mac GPU when PyTorch MPS is available, or a CUDA GPU/CPU
-elsewhere. Each epoch saves a resumable checkpoint, `history.json` and
-`progress.json`. If interrupted, repeat the command with `--resume`. The
+elsewhere. Each epoch saves a checkpoint with training and random states,
+`history.json` and `progress.json`. If interrupted, repeat the command with
+`--resume`; checkpoints made before random-state capture was added cannot be
+resumed reproducibly by this version. The
 finished folder contains full-test metrics and predictions, training curves,
 and `upload_bundle/` with two trusted `.joblib` models plus a 1,000-image
 dashboard sample (`samples.csv`, `images.zip`, `manifest.json`). The website
@@ -843,3 +845,6 @@ paired results, explanation-map audit and the ready-to-upload bundle, is in
 The width change was repeated with a matched seed 43 pair; its prediction
 transitions and full 1,000-image explanation audit are documented in
 [`docs/CIFAR10_WIDTH_REPEAT_RESULT.md`](docs/CIFAR10_WIDTH_REPEAT_RESULT.md).
+A third matched pair with seed 44, its official-test prediction changes, and
+its upload-bundle audit are documented in
+[`docs/CIFAR10_WIDTH_THIRD_SEED_RESULT.md`](docs/CIFAR10_WIDTH_THIRD_SEED_RESULT.md).
