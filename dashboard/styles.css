@@ -259,6 +259,14 @@ main { display: grid; gap: 24px; }
 .robustness-ranges strong { display: block; margin-top: 5px; color: var(--navy); font-size: 1.05rem; }
 .warning-boundary { border-left-color: var(--orange); }
 .local-warning { padding: 14px 16px; border: 1px solid #f2cfb9; border-radius: 12px; background: var(--orange-soft); color: #784125; font-size: .78rem; line-height: 1.5; }
+.upload-method-note { margin: 14px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.55; }
+#upload-results:not([hidden]), #regression-results:not([hidden]) { display: grid; gap: 24px; }
+.results-index { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, .97); box-shadow: var(--shadow); }
+.results-index > strong { flex: 0 0 auto; color: var(--navy); font-size: .76rem; }
+.results-index-links { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.results-index a { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; color: var(--blue); font-size: .74rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.results-index a:hover, .results-index a:focus-visible { background: #e8f5f8; text-decoration: underline; }
+#upload-results h2[id], #regression-results h2[id] { scroll-margin-top: 90px; }
 .comparison-upload-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .file-field { display: grid; gap: 6px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfc; }
 .file-field span { color: var(--navy); font-weight: 800; }
@@ -517,6 +525,8 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
 }
 
 @media (max-width: 560px) {
+  .results-index { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .results-index-links { width: 100%; }
   .site-header { grid-template-columns: auto 1fr; }
   .upload-area { grid-column: 1 / -1; width: 100%; justify-items: stretch; }
   .upload-button { justify-content: center; }
