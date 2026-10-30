@@ -436,6 +436,23 @@
             <div id="upload-transition-grid" class="transition-grid"></div>
           </section>
 
+          <section class="content-section" aria-labelledby="prediction-flow-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Prediction direction</p>
+                <h2 id="prediction-flow-heading">Where predictions moved</h2>
+              </div>
+              <p>Each path groups images by V1 and V2 predicted class. Select a path to inspect its images below.</p>
+            </div>
+            <p id="prediction-flow-summary" class="prediction-flow-summary"></p>
+            <p class="prediction-flow-legend"><span class="improved">Fixed</span><span class="regressed">Regressed</span><span class="changed-wrong">Changed between wrong classes</span></p>
+            <div id="prediction-flow-list" class="prediction-flow-list"></div>
+            <div class="prediction-flow-actions">
+              <button id="prediction-flow-show-all" class="secondary-action" type="button" hidden>Show all paths</button>
+              <button id="prediction-flow-clear" class="secondary-action" type="button" hidden>Clear selected path</button>
+            </div>
+          </section>
+
           <section class="content-section" aria-labelledby="class-diagnostics-heading">
             <div class="section-heading">
               <div>

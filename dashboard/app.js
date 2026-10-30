@@ -6,6 +6,8 @@ const state = {
   portfolio: null,
   robustness: null,
   uploadComparison: null,
+  selectedPredictionFlow: null,
+  showAllPredictionFlows: false,
   modelOverview: null,
   uploadValidation: null,
   regressionComparison: null,
@@ -138,6 +140,10 @@ const elements = {
   v2ConfidenceHeading: document.querySelector("#v2-confidence-heading"),
   uploadScopeNote: document.querySelector("#upload-scope-note"),
   uploadTransitionGrid: document.querySelector("#upload-transition-grid"),
+  predictionFlowSummary: document.querySelector("#prediction-flow-summary"),
+  predictionFlowList: document.querySelector("#prediction-flow-list"),
+  predictionFlowShowAll: document.querySelector("#prediction-flow-show-all"),
+  predictionFlowClear: document.querySelector("#prediction-flow-clear"),
   classDiagnosticsResults: document.querySelector("#class-diagnostics-results"),
   classV1Heading: document.querySelector("#class-v1-heading"),
   classV2Heading: document.querySelector("#class-v2-heading"),
@@ -1076,6 +1082,10 @@ function renderUploadSamples() {
   if (!report) return;
   const selected = elements.uploadTransitionFilter.value;
   const matching = report.samples.filter((sample) => {
+    if (state.selectedPredictionFlow && (
+      sample.v1_prediction !== state.selectedPredictionFlow.from
+      || sample.v2_prediction !== state.selectedPredictionFlow.to
+    )) return false;
     const triage = sampleTriage(sample);
     if (selected === "all") return true;
     if (selected === "v2_high_confidence_wrong") return triage.v2_high_confidence_wrong;
@@ -1142,9 +1152,76 @@ function renderUploadSamples() {
     row.append(explanationCell);
     elements.uploadSampleResults.append(row);
   }
-  elements.uploadTableNote.textContent = matching.length > displayed.length
+  const pathPrefix = state.selectedPredictionFlow
+    ? `${state.selectedPredictionFlow.from} → ${state.selectedPredictionFlow.to}: ` : "";
+  elements.uploadTableNote.textContent = pathPrefix + (matching.length > displayed.length
     ? `Showing the first ${displayed.length} of ${matching.length} matching samples.`
-    : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`;
+    : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`);
+}
+
+function renderPredictionFlows() {
+  const report = state.uploadComparison;
+  if (!report) return;
+  const groups = new Map();
+  for (const sample of report.samples) {
+    if (sample.v1_prediction === sample.v2_prediction) continue;
+    const key = JSON.stringify([sample.v1_prediction, sample.v2_prediction]);
+    if (!groups.has(key)) groups.set(key, {
+      from: sample.v1_prediction, to: sample.v2_prediction,
+      improved: 0, regressed: 0, changedWrongClass: 0, count: 0,
+    });
+    const group = groups.get(key);
+    group.count += 1;
+    if (sample.transition === "v1_wrong_v2_correct") group.improved += 1;
+    else if (sample.transition === "v1_correct_v2_wrong") group.regressed += 1;
+    else group.changedWrongClass += 1;
+  }
+  const paths = [...groups.values()].sort((a, b) => b.count - a.count ||
+    String(a.from).localeCompare(String(b.from)) || String(a.to).localeCompare(String(b.to)));
+  const changed = paths.reduce((sum, path) => sum + path.count, 0);
+  const improved = paths.reduce((sum, path) => sum + path.improved, 0);
+  const regressed = paths.reduce((sum, path) => sum + path.regressed, 0);
+  const changedWrongClass = changed - improved - regressed;
+  elements.predictionFlowSummary.textContent = `${changed} of ${report.samples.length} images changed predicted class · ${improved} became correct · ${regressed} became wrong · ${changedWrongClass} changed between wrong classes.`;
+  elements.predictionFlowList.replaceChildren();
+  for (const path of (state.showAllPredictionFlows ? paths : paths.slice(0, 12))) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "prediction-flow-row";
+    if (state.selectedPredictionFlow?.from === path.from && state.selectedPredictionFlow?.to === path.to) {
+      button.classList.add("selected");
+    }
+    const imageCount = `${path.count} image${path.count === 1 ? "" : "s"}`;
+    button.setAttribute("aria-label", `${path.from} to ${path.to}, ${imageCount}; inspect samples`);
+    const label = document.createElement("strong");
+    label.textContent = `${path.from} → ${path.to}`;
+    const count = document.createElement("span");
+    count.className = "prediction-flow-count";
+    count.textContent = imageCount;
+    const track = document.createElement("span");
+    track.className = "prediction-flow-track";
+    for (const [kind, value] of [["improved", path.improved], ["regressed", path.regressed], ["changed-wrong", path.changedWrongClass]]) {
+      if (!value) continue;
+      const segment = document.createElement("i");
+      segment.className = kind;
+      segment.style.width = `${100 * value / path.count}%`;
+      track.append(segment);
+    }
+    const detail = document.createElement("small");
+    detail.textContent = `${path.improved} fixed · ${path.regressed} regressed · ${path.changedWrongClass} wrong class changed`;
+    button.append(label, count, track, detail);
+    button.addEventListener("click", () => {
+      state.selectedPredictionFlow = {from: path.from, to: path.to};
+      elements.uploadTransitionFilter.value = "all";
+      renderPredictionFlows();
+      renderUploadSamples();
+      document.querySelector("#sample-results-heading").scrollIntoView({behavior: "smooth", block: "start"});
+    });
+    elements.predictionFlowList.append(button);
+  }
+  elements.predictionFlowShowAll.hidden = paths.length <= 12;
+  elements.predictionFlowShowAll.textContent = state.showAllPredictionFlows ? "Show top 12 paths" : `Show all ${paths.length} paths`;
+  elements.predictionFlowClear.hidden = !state.selectedPredictionFlow;
 }
 
 function renderDriftGallery() {
@@ -1305,6 +1382,9 @@ function renderUploadComparison(report) {
     card.append(name, value);
     elements.uploadTransitionGrid.append(card);
   }
+  state.selectedPredictionFlow = null;
+  state.showAllPredictionFlows = false;
+  renderPredictionFlows();
 
   elements.classDiagnosticsResults.replaceChildren();
   const classDiagnostics = [...(report.class_diagnostics || [])].sort(
@@ -2024,7 +2104,20 @@ elements.benchmarkSelector.addEventListener("change", (event) => {
   renderBenchmark();
 });
 
-elements.uploadTransitionFilter.addEventListener("change", renderUploadSamples);
+elements.uploadTransitionFilter.addEventListener("change", () => {
+  state.selectedPredictionFlow = null;
+  renderPredictionFlows();
+  renderUploadSamples();
+});
+elements.predictionFlowShowAll.addEventListener("click", () => {
+  state.showAllPredictionFlows = !state.showAllPredictionFlows;
+  renderPredictionFlows();
+});
+elements.predictionFlowClear.addEventListener("click", () => {
+  state.selectedPredictionFlow = null;
+  renderPredictionFlows();
+  renderUploadSamples();
+});
 for (const input of [elements.confidenceThresholdInput, elements.explanationThresholdInput]) {
   input.addEventListener("change", () => {
     renderTriageSummary();

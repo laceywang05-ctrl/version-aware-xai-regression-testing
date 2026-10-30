@@ -55,6 +55,17 @@ trusted `.joblib` models were compatible with its 1,000-row, 3,072-feature
 CSV, and the ZIP contained 1,000 matching images. Generated artifacts are
 Git-ignored and remain local.
 
+For a concrete dashboard demonstration, the bundle's first 1,000 official
+test images have V1 accuracy **71.6%** and V2 accuracy **90.1%**. Among these
+images, **201** changed from wrong to correct and **16** from correct to
+wrong. For `image-00003` (true class **airplane**), V1 predicted **ship**
+with 74.2% confidence; V2 predicted **airplane** with 98.0% confidence.
+This is a clear individual improvement. For `image-00032` (true class
+**deer**), V1 predicted **deer** with 52.9% confidence, while V2 predicted
+**bird** with 47.3% confidence. This counterexample shows why an aggregate
+gain does not remove the need to inspect regressions. The dashboard can show
+both images from `images.zip` alongside their predictions and explanations.
+
 ## Interpretation
 
 The substantial V1-to-V2 predictive gain appeared in both seeds, while their

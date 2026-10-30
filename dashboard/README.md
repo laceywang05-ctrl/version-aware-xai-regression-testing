@@ -114,6 +114,13 @@ For the selected pair, the class-diagnostics table groups results by true label
 and reports each model's accuracy plus the signed candidate-minus-baseline
 change. Positive rows are improvements; negative rows are regressions.
 
+The **Where predictions moved** panel groups images by V1 predicted class →
+V2 predicted class. Each path shows how many images were fixed, regressed, or
+merely moved between two wrong classes. Select a path to inspect only its
+images in the sample table; **Show all paths** expands beyond the 12 largest
+flows. This summary includes every uploaded sample, while the table initially
+displays at most 500 rows.
+
 The following misclassification-path table explains where those errors went,
 for example `8 → 3`, and compares the number of occurrences in the baseline and
 candidate. A negative error-count change indicates fewer candidate mistakes.

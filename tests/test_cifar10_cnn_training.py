@@ -44,6 +44,15 @@ class Cifar10CnnTrainingTests(unittest.TestCase):
         self.assertEqual(tuple(augmented.shape), (2, 3, 32, 32))
         self.assertEqual(tuple(network(augmented).shape), (2, 10))
 
+    def test_wider_version_changes_capacity_without_changing_output_contract(self):
+        baseline = build_cnn([0.5] * 3, [0.25] * 3)
+        candidate = build_cnn([0.5] * 3, [0.25] * 3, widths=(40, 80, 160))
+        self.assertGreater(
+            sum(parameter.numel() for parameter in candidate.parameters()),
+            sum(parameter.numel() for parameter in baseline.parameters()),
+        )
+        self.assertEqual(tuple(candidate(torch.rand(2, 3, 32, 32)).shape), (2, 10))
+
 
 if __name__ == "__main__":
     unittest.main()

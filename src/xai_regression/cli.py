@@ -308,6 +308,10 @@ def build_parser() -> argparse.ArgumentParser:
     cifar10_cnn_parser.add_argument("--patience", type=int, default=15)
     cifar10_cnn_parser.add_argument("--batch-size", type=int, default=256)
     cifar10_cnn_parser.add_argument("--seed", type=int, default=42)
+    cifar10_cnn_parser.add_argument(
+        "--widths", type=int, nargs=3, metavar=("STAGE1", "STAGE2", "STAGE3"),
+        default=(32, 64, 128), help="Channel counts for the three convolution stages.",
+    )
     cifar10_cnn_parser.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     cifar10_cnn_parser.add_argument("--resume", action="store_true")
     neural_calibration_parser = subparsers.add_parser(
@@ -1004,6 +1008,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 _project_path(args.input), _project_path(args.output_dir),
                 epochs=args.epochs, min_epochs=args.min_epochs, patience=args.patience,
                 batch_size=args.batch_size, seed=args.seed, device=args.device, resume=args.resume,
+                widths=args.widths,
             )
             print(f"Full CIFAR-10 CNN results saved to: {result['upload_bundle']}", flush=True)
             return 0
