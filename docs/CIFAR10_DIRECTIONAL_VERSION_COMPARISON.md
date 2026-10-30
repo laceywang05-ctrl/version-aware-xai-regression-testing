@@ -77,18 +77,21 @@ experiment figures above use all 10,000 test images.
 ## Explanation changes
 
 For an apples-to-apples exploratory comparison, the analysis script computes
-Grad-CAM maps for the **same true-class logit** in both models. It uses the
-first 20 changed and first 20 unchanged images among the dashboard's first
-1,000 images. Cosine similarity of the normalized maps averaged **0.819**
-for changed predictions and **0.935** for unchanged predictions (medians
-0.849 and 0.943). One changed image, test index **128**, had similarity
-**0.518**; both versions were wrong, changing from cat to frog for a dog
-image. Test index **162** changed from cat to the correct frog prediction and
-had map similarity **0.712**. These are descriptive examples from a small,
-order-selected subset, **not** a calibrated drift threshold or a claim that
-one model's explanation is better. The website's map viewer targets each
-model's **predicted** class and should be interpreted differently when the
-two predicted classes differ.
+Grad-CAM maps for the **same true-class logit** in both models on **all 1,000
+dashboard images**. For the **98** changed predictions, cosine similarity of
+normalized maps averaged **0.841** (median **0.865**; middle 50% **0.783 to
+0.909**). For the **902** unchanged predictions, it averaged **0.932**
+(median **0.950**; middle 50% **0.915 to 0.969**). This is a descriptive
+association, not evidence that explanation change caused the prediction
+change. Test index **128** changed from cat to frog for a dog image and had
+similarity **0.518**; both versions were wrong. Test index **162** changed
+from cat to the correct frog prediction and had similarity **0.712**. A
+different pattern appears at index **551**: both versions still predicted cat
+for a dog, but same-target map similarity was only **0.501**. A stable
+prediction can therefore conceal a changed explanation. These values are
+**not** a calibrated drift threshold or a claim that one model's explanation
+is better. The website's map viewer targets each model's **predicted** class
+and should be interpreted differently when the two predicted classes differ.
 
 ## Reproduce and inspect
 
@@ -108,7 +111,7 @@ MPLCONFIGDIR=/tmp/xai-matplotlib-cache PYTHONPATH=src \
 ```
 
 The ignored local output contains `directional_comparison.json` with the
-10,000-image counts, class flows, paired interval and 40-map explanation
+10,000-image counts, class flows, paired interval and 1,000-map explanation
 audit. To reproduce the website display, upload both `.joblib` files,
 `samples.csv`, `manifest.json`, and `images.zip` from
 `artifacts/cifar10_directional_version_comparison/upload_bundle/`. The

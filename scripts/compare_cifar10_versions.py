@@ -31,6 +31,8 @@ def compare(baseline_run: Path, candidate_run: Path, output: Path) -> dict:
     a, b = baseline["config"], candidate["config"]
     if tuple(a.get("widths", (32, 64, 128))) != (32, 64, 128) or tuple(b.get("widths", ())) != (40, 80, 160):
         raise ValueError("Expected original 32/64/128 and candidate 40/80/160 channel widths.")
+    if a["seed"] != b["seed"]:
+        raise ValueError("A width comparison must use the same seed for both models.")
     allowed_changes = {"architecture", "widths", "device", "torch_version"}
     for key in (set(a) & set(b)) - allowed_changes:
         if a[key] != b[key]:
@@ -100,12 +102,11 @@ def compare(baseline_run: Path, candidate_run: Path, output: Path) -> dict:
     (bundle / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     # Compare maps for a fixed target (the true class), so both models explain
     # the same logit even when their predicted classes differ.
-    sample_indices = list(np.flatnonzero(changed[:1000])[:20]) + list(np.flatnonzero(~changed[:1000])[:20])
     frame = pd.read_csv(bundle / "samples.csv")
     features = frame[manifest["feature_columns"]]
     model1, model2 = joblib.load(bundle / first_name), joblib.load(bundle / second_name)
     explanation_rows = []
-    for index in sample_indices:
+    for index in range(len(frame)):
         sample = features.iloc[[int(index)]]
         target = np.array([int(actual[index])])
         map1 = model1.grad_cam(sample, target)[0]
@@ -116,8 +117,22 @@ def compare(baseline_run: Path, candidate_run: Path, output: Path) -> dict:
             "prediction_changed": bool(changed[index]),
             "same_target_gradcam_cosine": _explanation_similarity(map1, map2),
         })
+    explanation_summary = {}
+    for key, predicate in (("changed_prediction", True), ("unchanged_prediction", False)):
+        values = np.asarray([
+            row["same_target_gradcam_cosine"] for row in explanation_rows
+            if row["prediction_changed"] is predicate and row["same_target_gradcam_cosine"] is not None
+        ], dtype=float)
+        explanation_summary[key] = {
+            "count": int(values.size),
+            "mean": float(np.mean(values)) if values.size else None,
+            "median": float(np.median(values)) if values.size else None,
+            "quartiles": np.quantile(values, [0.25, 0.75]).tolist() if values.size else None,
+        }
     result = {
-        "protocol": "Same 45k/5k stratified split, nominal seed 42, training settings and official 10k test set; convolution widths are the sole intentional design change. The original run resumed after epoch 50 without restoring augmentation RNG, and architecture-dependent initialization can also change RNG streams, so observed differences cannot be attributed solely to width.",
+        "protocol": (f"Same 45k/5k stratified split, nominal seed {a['seed']}, training settings and official 10k test set; "
+            "convolution widths are the sole intentional design change. Architecture-dependent initialization can change "
+            "RNG streams. Check each run's history for interruptions or resumes before attributing differences solely to width."),
         "v1": {"widths": [32, 64, 128], "parameters": baseline["parameters"], "best_epoch": baseline["best_epoch"], "validation_accuracy": baseline["best_validation_accuracy"], "test": baseline["models"]["v2"]["test"]},
         "v2": {"widths": [40, 80, 160], "parameters": candidate["parameters"], "best_epoch": candidate["best_epoch"], "validation_accuracy": candidate["best_validation_accuracy"], "test": candidate["models"]["v2"]["test"]},
         "prediction_changes": {"changed_class": int(changed.sum()), "agreement": float(np.mean(~changed)),
@@ -129,7 +144,8 @@ def compare(baseline_run: Path, candidate_run: Path, output: Path) -> dict:
             "exact_mcnemar_p": _exact_mcnemar_p(int(counts[2]), int(counts[1]))},
         "class_recall": classes, "prediction_flows": flow,
         "explanations": {"method": "Grad-CAM", "target": "same true-class logit in both models",
-            "scope": "first 20 changed and first 20 unchanged images among dashboard's first 1,000; exploratory, no calibrated threshold",
+            "scope": "all 1,000 images in the dashboard upload bundle; exploratory, no calibrated threshold",
+            "summary_by_prediction_change": explanation_summary,
             "samples": explanation_rows},
         "upload_bundle": str(bundle.resolve()),
     }
