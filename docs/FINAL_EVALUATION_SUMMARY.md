@@ -99,6 +99,16 @@ not remove the limitation of feeding flattened raw pixels to lightweight tree
 models. The experiment validates the workflow, not competitive CIFAR-10 model
 performance.
 
+A later full-training CNN extension used all 50,000 official training images
+for a 45,000/5,000 training/validation split and kept the 10,000-image
+official test set separate. Across two random seeds, validation-selected CNN
+checkpoints reached 88.54% and 88.83% test accuracy. Their respective
+epoch-5 baselines reached 70.50% and 71.29%, yielding gains of 18.04 and
+17.54 percentage points. The two final CNNs had 90.92% prediction agreement
+on the same test images. See
+[`CIFAR10_FULL_CNN_RESULT.md`](CIFAR10_FULL_CNN_RESULT.md) and
+[`CIFAR10_CNN_SEED_REPEAT_RESULT.md`](CIFAR10_CNN_SEED_REPEAT_RESULT.md).
+
 For every completed comparison, the dashboard can export matched predictions,
 confidence, transitions, explanation similarity, compatibility results and
 full SHA-256 artifact fingerprints. These records distinguish exact model
@@ -141,8 +151,9 @@ release gate. In particular:
   Gradients and Grad-CAM have different semantics and their raw scores are not
   interchangeable;
 - the main MNIST/CIFAR-10 ranking experiments use lightweight scikit-learn
-  models, while the neural extension uses small research MLP/CNN architectures
-  rather than production-scale image networks;
+  models, while the neural extension uses research MLP/CNN architectures
+  rather than production-scale image networks; the full CIFAR-10 CNN result
+  has only two training seeds;
 - MNIST and CIFAR-10 thresholds are empirical workload controls estimated from
   small benign-retraining samples;
 - user-uploaded `.joblib` models and CIFAR pickle archives must come from trusted
@@ -152,7 +163,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **137 tests passed** at the time of this summary.
+- Automated test suite: **140 tests passed** after the full CIFAR-10 CNN extension.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.

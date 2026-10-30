@@ -824,3 +824,6 @@ can compare these two models with Grad-CAM maps; those maps remain exploratory.
 The completed protocol, full-test results, paired comparison, and upload-bundle
 verification are recorded in
 [`docs/CIFAR10_FULL_CNN_RESULT.md`](docs/CIFAR10_FULL_CNN_RESULT.md).
+A second full run with a different seed and a paired comparison of the two
+validation-selected checkpoints are documented in
+[`docs/CIFAR10_CNN_SEED_REPEAT_RESULT.md`](docs/CIFAR10_CNN_SEED_REPEAT_RESULT.md).
