@@ -38,11 +38,13 @@ class NormalizeRGB(nn.Module):
         return (images - self.mean) / self.std
 
 
-def build_cnn(mean, std):
+def build_cnn(mean, std, *, widths=(32, 64, 128)):
     """Six convolutional layers, three pooling stages and a linear head."""
+    if len(widths) != 3 or any(width < 1 for width in widths):
+        raise ValueError("widths must contain three positive channel counts.")
     layers = [NormalizeRGB(mean, std)]
     channels = 3
-    for width, dropout in ((32, 0.10), (64, 0.15), (128, 0.20)):
+    for width, dropout in zip(widths, (0.10, 0.15, 0.20)):
         for _ in range(2):
             layers.extend([
                 nn.Conv2d(channels, width, 3, padding=1, bias=False),
@@ -51,7 +53,7 @@ def build_cnn(mean, std):
             ])
             channels = width
         layers.extend([nn.MaxPool2d(2), nn.Dropout2d(dropout)])
-    layers.extend([nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(128, 10)])
+    layers.extend([nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(widths[-1], 10)])
     return nn.Sequential(*layers)
 
 
@@ -173,6 +175,7 @@ def train_cifar10_cnn(
     input_path, output_dir, *, epochs=80, batch_size=256, patience=15,
     min_epochs=30, baseline_epoch=5, seed=42, device="auto", resume=False,
     train_limit=50000, validation_size=5000, demo_limit=1000,
+    widths=(32, 64, 128),
 ):
     if not 1 <= baseline_epoch <= min_epochs <= epochs:
         raise ValueError("Require 1 <= baseline_epoch <= min_epochs <= epochs.")
@@ -180,6 +183,9 @@ def train_cifar10_cnn(
         raise ValueError("Batch size/patience must be positive; demo_limit must be 1..1000.")
     if not 100 <= train_limit <= 50000 or not 10 <= validation_size < train_limit:
         raise ValueError("Require 100 <= train_limit <= 50000 and a smaller validation size.")
+    widths = tuple(widths)
+    if len(widths) != 3 or any(width < 1 for width in widths):
+        raise ValueError("widths must contain three positive channel counts.")
     destination = Path(output_dir)
     if destination.exists() and any(destination.iterdir()) and not resume:
         raise ValueError("Output folder is not empty. Use --resume for this run or a new folder.")
@@ -213,7 +219,8 @@ def train_cifar10_cnn(
         "selection": "highest validation accuracy, lower validation loss breaks ties",
         "device": str(selected_device), "torch_version": torch.__version__, "demo_samples": demo_limit,
         "test_policy": "test data evaluated only after validation-based checkpoint selection",
-        "architecture": "6 convolutional layers (32/32/64/64/128/128), batch norm, pooling, dropout, global average pooling, 10 outputs",
+        "architecture": f"6 convolutional layers ({widths[0]}/{widths[0]}/{widths[1]}/{widths[1]}/{widths[2]}/{widths[2]}), batch norm, pooling, dropout, global average pooling, 10 outputs",
+        "widths": list(widths),
     }
     config_path = destination / "config.json"
     if resume and config_path.exists():
@@ -223,7 +230,7 @@ def train_cifar10_cnn(
                 raise ValueError(f"Resume configuration changed: {key}.")
     _write_json(config_path, config)
     np.savez(destination / "split_indices.npz", train=training, validation=validation)
-    network = build_cnn(mean, std).to(selected_device)
+    network = build_cnn(mean, std, widths=widths).to(selected_device)
     optimizer = torch.optim.AdamW(network.parameters(), lr=0.001, weight_decay=0.0005)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=0.00001)
     history = []
@@ -305,7 +312,7 @@ def train_cifar10_cnn(
         metrics, probabilities = evaluate(network, test_tensor, test_targets, np.arange(10000), selected_device, batch_size=batch_size)
         results[role] = {"filename": filename, "epoch": saved["epoch"], "validation": saved["validation"], "test": metrics}
         probability_rows[role] = probabilities
-        cpu_network = build_cnn(mean, std)
+        cpu_network = build_cnn(mean, std, widths=widths)
         cpu_network.load_state_dict(saved["model"])
         cpu_network.eval()
         wrapper = TorchImageClassifier(cpu_network, (32, 32, 3), list(range(10)))

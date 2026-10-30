@@ -827,3 +827,16 @@ verification are recorded in
 A second full run with a different seed and a paired comparison of the two
 validation-selected checkpoints are documented in
 [`docs/CIFAR10_CNN_SEED_REPEAT_RESULT.md`](docs/CIFAR10_CNN_SEED_REPEAT_RESULT.md).
+
+For a genuine model-version change, the same training command accepts
+`--widths 40 80 160` (default: `32 64 128`). This changes the three CNN
+channel widths while retaining the six-layer layout and ten-class output.
+After both runs complete, `scripts/compare_cifar10_versions.py` compares
+their validation-selected checkpoints on all 10,000 official test images,
+summarizes prediction paths, compares same-target Grad-CAM maps on a fixed
+subset, and creates a ready-to-upload V1/V2 bundle. The prediction-direction
+panel in the dashboard groups all uploaded images by V1 → V2 class and links
+each path to its underlying examples.
+The completed width-change study, including official-test class transitions,
+paired results, explanation-map audit and the ready-to-upload bundle, is in
+[`docs/CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md`](docs/CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md).

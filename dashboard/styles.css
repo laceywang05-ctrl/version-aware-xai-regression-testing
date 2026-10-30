@@ -345,6 +345,24 @@ main { display: grid; gap: 24px; }
 .transition-card strong { color: var(--navy); font-size: 1.35rem; }
 .transition-card.v1_wrong_v2_correct { border-top: 4px solid var(--green); }
 .transition-card.v1_correct_v2_wrong { border-top: 4px solid var(--orange); }
+.prediction-flow-summary { margin: 0 0 18px; color: var(--muted); font-size: .79rem; line-height: 1.5; }
+.prediction-flow-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: -8px 0 16px; color: var(--muted); font-size: .68rem; }
+.prediction-flow-legend span::before { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; content: ""; }
+.prediction-flow-legend .improved::before { background: var(--green); }
+.prediction-flow-legend .regressed::before { background: var(--orange); }
+.prediction-flow-legend .changed-wrong::before { background: #8b98a1; }
+.prediction-flow-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.prediction-flow-row { display: grid; grid-template-columns: 1fr auto; gap: 9px 12px; align-items: center; width: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: 13px; background: #fbfcfc; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.prediction-flow-row:hover, .prediction-flow-row:focus-visible, .prediction-flow-row.selected { border-color: var(--blue); background: #f0f9fb; }
+.prediction-flow-row strong { overflow-wrap: anywhere; color: var(--navy); font-size: .8rem; }
+.prediction-flow-count { color: var(--blue); font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.prediction-flow-track { display: flex; grid-column: 1 / -1; height: 9px; overflow: hidden; border-radius: 99px; background: #e5ecee; }
+.prediction-flow-track i { display: block; height: 100%; }
+.prediction-flow-track .improved { background: var(--green); }
+.prediction-flow-track .regressed { background: var(--orange); }
+.prediction-flow-track .changed-wrong { background: #8b98a1; }
+.prediction-flow-row small { grid-column: 1 / -1; color: var(--muted); font-size: .66rem; }
+.prediction-flow-actions { display: flex; gap: 10px; margin-top: 14px; }
 .transition-pill { display: inline-flex; padding: 5px 9px; border-radius: 99px; white-space: nowrap; font-size: .68rem; font-weight: 800; }
 .transition-pill.both_correct { background: #e5f5ef; color: var(--green); }
 .transition-pill.v1_wrong_v2_correct { background: #def3f4; color: var(--blue); }
