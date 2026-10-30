@@ -109,6 +109,28 @@ on the same test images. See
 [`CIFAR10_FULL_CNN_RESULT.md`](CIFAR10_FULL_CNN_RESULT.md) and
 [`CIFAR10_CNN_SEED_REPEAT_RESULT.md`](CIFAR10_CNN_SEED_REPEAT_RESULT.md).
 
+A subsequent version-change experiment compared those original CNNs with
+**wider six-layer CNNs**, increasing stage widths from 32/64/128 to
+40/80/160 and trainable parameters from 288,746 to 450,210. The architecture
+change was repeated within matched seed 42 and seed 43 pairs. On the full
+official test set, accuracy changed from **88.54% to 90.11%** and from
+**88.83% to 89.94%**, respectively. The two pairs changed **891** and
+**880** individual class predictions: 442 versus 285 and 417 versus 306
+wrong-to-correct versus correct-to-wrong transitions. Thus a roughly
+1–1.6 percentage-point net gain coexisted with substantial changes in which
+images were classified correctly. On the seed 43 dashboard subset of 1,000
+images, accuracy changed only **90.1% to 90.4%** while **77** predictions
+changed class. The new prediction-direction panel groups these changes by
+V1-predicted → V2-predicted class and links each path to its images.
+
+Same-true-class Grad-CAM comparisons on all 1,000 dashboard images found
+lower average map cosine similarity when predictions changed than when they
+did not: **0.841 versus 0.932** for seed 42 and **0.835 versus 0.927** for
+seed 43. Some unchanged predictions also had changed maps. These values are
+exploratory and do not make Grad-CAM an automatic quality or release gate.
+See [`CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md`](CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md)
+and [`CIFAR10_WIDTH_REPEAT_RESULT.md`](CIFAR10_WIDTH_REPEAT_RESULT.md).
+
 For every completed comparison, the dashboard can export matched predictions,
 confidence, transitions, explanation similarity, compatibility results and
 full SHA-256 artifact fingerprints. These records distinguish exact model
@@ -139,6 +161,9 @@ supports human review rather than automatic deployment approval.
    Grad-CAM remained too variable for confirmatory automatic review.
 7. Reproducibility requires artifact identity as well as parameters. SHA-256
    fingerprints connect exported evidence to the exact uploaded bytes.
+8. A genuine CNN width change improved full-test accuracy in two matched
+   runs, but changed roughly 9% of individual class predictions. Small net
+   score changes can therefore conceal both fixes and regressions.
 
 ## 4. Evidence boundaries
 
@@ -152,8 +177,9 @@ release gate. In particular:
   interchangeable;
 - the main MNIST/CIFAR-10 ranking experiments use lightweight scikit-learn
   models, while the neural extension uses research MLP/CNN architectures
-  rather than production-scale image networks; the full CIFAR-10 CNN result
-  has only two training seeds;
+  rather than production-scale image networks; the full CIFAR-10 width-change
+  comparison has only two matched training seeds, and the original seed 42
+  run was resumed without restoring augmentation RNG state;
 - MNIST and CIFAR-10 thresholds are empirical workload controls estimated from
   small benign-retraining samples;
 - user-uploaded `.joblib` models and CIFAR pickle archives must come from trusted
@@ -163,7 +189,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **140 tests passed** after the full CIFAR-10 CNN extension.
+- Automated test suite: **141 tests passed** after the CIFAR-10 width-change repeat.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.
@@ -197,3 +223,7 @@ artifact identities while keeping the final decision with the reviewer.
 - [`MNIST_NEURAL_EXPLANATION_RESULT.md`](MNIST_NEURAL_EXPLANATION_RESULT.md)
 - [`MNIST_NEURAL_CALIBRATION_RESULT.md`](MNIST_NEURAL_CALIBRATION_RESULT.md)
 - [`GRADCAM_CALIBRATION_REFINEMENT_RESULT.md`](GRADCAM_CALIBRATION_REFINEMENT_RESULT.md)
+- [`CIFAR10_FULL_CNN_RESULT.md`](CIFAR10_FULL_CNN_RESULT.md)
+- [`CIFAR10_CNN_SEED_REPEAT_RESULT.md`](CIFAR10_CNN_SEED_REPEAT_RESULT.md)
+- [`CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md`](CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md)
+- [`CIFAR10_WIDTH_REPEAT_RESULT.md`](CIFAR10_WIDTH_REPEAT_RESULT.md)
