@@ -241,6 +241,7 @@
           <div class="local-warning">
             <strong>Local prototype:</strong> only load <code>.joblib</code> files that you trust. Files are processed in memory by the local server and are not saved.
           </div>
+          <p class="upload-method-note">The other dashboard tabs show built-in SHAP/LIME research results. This upload workflow chooses an explanation method from the model's capabilities; adding sample images lets you inspect spatial maps but does not determine the method by itself.</p>
         </section>
 
         <section class="content-section" aria-labelledby="upload-files-heading">
@@ -361,6 +362,18 @@
         </section>
 
         <div id="upload-results" hidden>
+          <nav class="results-index" aria-label="Classification result sections">
+            <strong>Jump to result</strong>
+            <div class="results-index-links">
+              <a href="#model-overview-heading">All models</a>
+              <a href="#upload-results-heading">V1 vs V2</a>
+              <a href="#paired-evidence-heading">Paired evidence</a>
+              <a href="#prediction-flow-heading">Prediction direction</a>
+              <a href="#class-diagnostics-heading">Class changes</a>
+              <a href="#sample-results-heading">Images and explanations</a>
+              <a href="#comparison-export-heading">Downloads</a>
+            </div>
+          </nav>
           <section class="content-section" aria-labelledby="model-overview-heading">
             <div class="section-heading">
               <div>
@@ -571,6 +584,18 @@
         </div>
 
         <div id="regression-results" hidden>
+          <nav class="results-index" aria-label="Regression result sections">
+            <strong>Jump to result</strong>
+            <div class="results-index-links">
+              <a href="#regression-overview-heading">All models</a>
+              <a href="#regression-results-heading">V1 vs V2</a>
+              <a href="#regression-transition-heading">Error changes</a>
+              <a href="#regression-visual-heading">Charts</a>
+              <a href="#regression-importance-heading">Feature importance</a>
+              <a href="#regression-samples-heading">Samples</a>
+              <a href="#regression-export-heading">Downloads</a>
+            </div>
+          </nav>
           <section class="content-section" aria-labelledby="regression-overview-heading">
             <div class="section-heading">
               <div><p class="eyebrow">All uploaded regressors</p><h2 id="regression-overview-heading">Regression model overview</h2></div>
