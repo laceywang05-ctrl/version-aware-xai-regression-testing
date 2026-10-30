@@ -298,6 +298,18 @@ def build_parser() -> argparse.ArgumentParser:
     neural_image_demo_parser.add_argument("--limit", type=int, default=1000)
     neural_image_demo_parser.add_argument("--test-limit", type=int, default=500)
     neural_image_demo_parser.add_argument("--epochs", type=int, default=3)
+    cifar10_cnn_parser = subparsers.add_parser(
+        "cifar10-cnn-train", help="Train a validation-selected CIFAR-10 CNN on the official training pool.",
+    )
+    cifar10_cnn_parser.add_argument("--input", required=True)
+    cifar10_cnn_parser.add_argument("--output-dir", default="artifacts/cifar10_cnn_full")
+    cifar10_cnn_parser.add_argument("--epochs", type=int, default=80)
+    cifar10_cnn_parser.add_argument("--min-epochs", type=int, default=30)
+    cifar10_cnn_parser.add_argument("--patience", type=int, default=15)
+    cifar10_cnn_parser.add_argument("--batch-size", type=int, default=256)
+    cifar10_cnn_parser.add_argument("--seed", type=int, default=42)
+    cifar10_cnn_parser.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
+    cifar10_cnn_parser.add_argument("--resume", action="store_true")
     neural_calibration_parser = subparsers.add_parser(
         "neural-explanation-calibration",
         help="Calibrate MNIST IG and Grad-CAM similarity under benign retraining.",
@@ -986,6 +998,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_image_model_demo(args.input, args.output_dir, args.limit)
         if args.command == "neural-image-demo":
             return run_neural_image_demo(args.input, args.output_dir, args.limit, args.test_limit, args.epochs)
+        if args.command == "cifar10-cnn-train":
+            from xai_regression.cifar10_cnn_training import train_cifar10_cnn
+            result = train_cifar10_cnn(
+                _project_path(args.input), _project_path(args.output_dir),
+                epochs=args.epochs, min_epochs=args.min_epochs, patience=args.patience,
+                batch_size=args.batch_size, seed=args.seed, device=args.device, resume=args.resume,
+            )
+            print(f"Full CIFAR-10 CNN results saved to: {result['upload_bundle']}", flush=True)
+            return 0
         if args.command == "neural-explanation-calibration":
             result = run_neural_explanation_calibration(
                 _project_path(args.input), _project_path(args.output_dir),
