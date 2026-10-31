@@ -852,3 +852,7 @@ The three pairs were also aligned by official test-image index to inspect
 whether the same examples were fixed or regressed under different training
 seeds. Results and the reproduction command are in
 [`docs/CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md`](docs/CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md).
+An exploratory pixel-masking audit of the same CNNs found that neither
+Integrated Gradients nor Grad-CAM consistently caused a larger target-class
+probability drop than matched-size random masks under mean-pixel replacement.
+See [`docs/CIFAR10_MAP_PERTURBATION_AUDIT.md`](docs/CIFAR10_MAP_PERTURBATION_AUDIT.md).
