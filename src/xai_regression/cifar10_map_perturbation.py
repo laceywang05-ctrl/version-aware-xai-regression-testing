@@ -11,6 +11,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+from scipy.ndimage import gaussian_filter
 
 
 def _sha256(path: Path) -> str:
@@ -23,8 +24,23 @@ def _sha256(path: Path) -> str:
 
 def _masked(image: np.ndarray, pixel_indices: np.ndarray, replacement: np.ndarray) -> np.ndarray:
     result = image.reshape(32, 32, 3).copy()
-    result.reshape(-1, 3)[pixel_indices] = replacement
+    pixels = result.reshape(-1, 3)
+    values = np.asarray(replacement, dtype=np.float32)
+    if values.shape == (3,):
+        pixels[pixel_indices] = values
+    elif values.shape == (32, 32, 3):
+        pixels[pixel_indices] = values.reshape(-1, 3)[pixel_indices]
+    else:
+        raise ValueError("Replacement must be RGB mean or a 32x32 RGB image.")
     return result.reshape(-1)
+
+
+def _replacement(image: np.ndarray, mean: np.ndarray, mode: str) -> np.ndarray:
+    if mode == "mean":
+        return mean
+    if mode == "blur":
+        return gaussian_filter(image.reshape(32, 32, 3), sigma=(2.0, 2.0, 0.0), mode="reflect")
+    raise ValueError("Replacement mode must be 'mean' or 'blur'.")
 
 
 def _selected_indices(labels: np.ndarray, first: np.ndarray, second: np.ndarray,
@@ -47,9 +63,11 @@ def _mean(values: list[float]) -> float | None:
 
 def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class: int = 3,
             fractions: tuple[float, ...] = (0.1, 0.2), random_repeats: int = 3,
-            seed: int = 20261031) -> dict:
+            seed: int = 20261031, replacement_mode: str = "mean") -> dict:
     if random_repeats < 1 or any(not 0 < fraction < 1 for fraction in fractions):
         raise ValueError("Require positive random repeats and fractions between 0 and 1.")
+    if replacement_mode not in {"mean", "blur"}:
+        raise ValueError("Replacement mode must be 'mean' or 'blur'.")
     from xai_regression.neural_explanations import TorchImageClassifier, _torch
 
     torch = _torch()
@@ -90,11 +108,12 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
         if predicted.tolist() != expected:
             raise ValueError(f"Uploaded model predictions do not match {run_path}.")
     selected = _selected_indices(labels, *predictions, per_class, seed)
-    replacement = np.asarray(configs[0]["mean"], dtype=np.float32) * 255.0
+    mean_pixels = np.asarray(configs[0]["mean"], dtype=np.float32) * 255.0
     rng = np.random.default_rng(seed + 1)
     rows = []
     for index in selected:
         image = images[index]
+        replacement = _replacement(image, mean_pixels, replacement_mode)
         target = int(labels[index])
         random_masks = {
             str(fraction): [rng.choice(1024, int(np.ceil(1024 * fraction)), replace=False)
@@ -143,10 +162,11 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
                     "positive_top_minus_random": sum(value > 0 for value in differences),
                 })
     return {
-        "protocol": "Prediction-conditioned, jointly correct CIFAR-10 images; target true-class probability; per-image RGB-mean replacement",
+        "protocol": "Prediction-conditioned, jointly correct CIFAR-10 images; target true-class probability; fixed-size pixel masking",
         "seed": configs[0]["seed"], "selected_indices": selected,
         "per_class": per_class, "fractions": list(fractions), "random_repeats": random_repeats,
-        "random_seed": seed, "model_sha256": {name: _sha256(path) for name, path in zip(("V1", "V2"), model_paths)},
+        "random_seed": seed, "replacement_mode": replacement_mode,
+        "model_sha256": {name: _sha256(path) for name, path in zip(("V1", "V2"), model_paths)},
         "source_archive_sha256": configs[0]["archive_sha256"],
         "summary": summary, "rows": rows,
     }
@@ -159,10 +179,12 @@ def main() -> None:
     parser.add_argument("--candidate-run", type=Path, required=True)
     parser.add_argument("--per-class", type=int, default=3)
     parser.add_argument("--random-repeats", type=int, default=3)
+    parser.add_argument("--replacement", choices=("mean", "blur"), default="mean")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = analyze(args.bundle, args.baseline_run, args.candidate_run,
-                     per_class=args.per_class, random_repeats=args.random_repeats)
+                     per_class=args.per_class, random_repeats=args.random_repeats,
+                     replacement_mode=args.replacement)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     for item in result["summary"]:
