@@ -134,6 +134,14 @@ See [`CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md`](CIFAR10_DIRECTIONAL_VERSION_CO
 [`CIFAR10_WIDTH_REPEAT_RESULT.md`](CIFAR10_WIDTH_REPEAT_RESULT.md), and
 [`CIFAR10_WIDTH_THIRD_SEED_RESULT.md`](CIFAR10_WIDTH_THIRD_SEED_RESULT.md).
 
+A matched-index audit across all three seeds found that only **185** official
+test images changed predicted class in every run, while **1,701** changed in
+at least one. Only **23** images were fixed and **10** regressed in all three;
+**255** images were fixed under one seed but regressed under another. The
+aggregate gain was repeatable in direction across these three runs, whereas
+individual image outcomes were less consistent. See
+[`CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md`](CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md).
+
 For every completed comparison, the dashboard can export matched predictions,
 confidence, transitions, explanation similarity, compatibility results and
 full SHA-256 artifact fingerprints. These records distinguish exact model
@@ -193,7 +201,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **142 tests passed** after the third CIFAR-10 width-change run and RNG-state checkpoint update.
+- Automated test suite: **143 tests passed** after the cross-seed image-consistency audit.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.

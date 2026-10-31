@@ -848,3 +848,7 @@ transitions and full 1,000-image explanation audit are documented in
 A third matched pair with seed 44, its official-test prediction changes, and
 its upload-bundle audit are documented in
 [`docs/CIFAR10_WIDTH_THIRD_SEED_RESULT.md`](docs/CIFAR10_WIDTH_THIRD_SEED_RESULT.md).
+The three pairs were also aligned by official test-image index to inspect
+whether the same examples were fixed or regressed under different training
+seeds. Results and the reproduction command are in
+[`docs/CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md`](docs/CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md).
