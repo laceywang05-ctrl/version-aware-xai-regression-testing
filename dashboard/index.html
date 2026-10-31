@@ -28,14 +28,16 @@
 
     <main>
       <nav class="view-tabs" aria-label="Dashboard view">
-        <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
-        <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
-        <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
-        <button class="view-tab" data-view="robustness" type="button">Split robustness</button>
-        <button class="view-tab" data-view="upload" type="button">Compare uploaded models</button>
+        <p class="nav-group-label">Your workspace</p>
+        <button class="view-tab active" data-view="upload" type="button"><span>Upload &amp; compare models</span><small>Run your own V1 and V2</small></button>
+        <p class="nav-group-label">Built-in experiment results</p>
+        <button class="view-tab" data-view="comparison" type="button"><span>SHAP / LIME report</span><small>Latest explanation comparison</small></button>
+        <button class="view-tab" data-view="benchmark" type="button"><span>Benchmark validation</span><small>Repeated model tests</small></button>
+        <button class="view-tab" data-view="portfolio" type="button"><span>Cross-dataset results</span><small>Breast cancer and Wine</small></button>
+        <button class="view-tab" data-view="robustness" type="button"><span>Split robustness</span><small>Results across data splits</small></button>
       </nav>
 
-      <div id="comparison-view" class="dashboard-view">
+      <div id="comparison-view" class="dashboard-view" hidden>
       <section class="status-panel" aria-labelledby="status-heading">
         <div>
           <p class="eyebrow">Current decision</p>
@@ -229,7 +231,7 @@
         </section>
       </div>
 
-      <div id="upload-view" class="dashboard-view" hidden>
+      <div id="upload-view" class="dashboard-view">
         <section class="content-section upload-intro" aria-labelledby="upload-heading">
           <div class="section-heading">
             <div>
