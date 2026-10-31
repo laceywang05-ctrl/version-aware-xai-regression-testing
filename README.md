@@ -855,4 +855,7 @@ seeds. Results and the reproduction command are in
 An exploratory pixel-masking audit of the same CNNs found that neither
 Integrated Gradients nor Grad-CAM consistently caused a larger target-class
 probability drop than matched-size random masks under mean-pixel replacement.
-See [`docs/CIFAR10_MAP_PERTURBATION_AUDIT.md`](docs/CIFAR10_MAP_PERTURBATION_AUDIT.md).
+Replacing selected pixels with values from a blurred image reversed this
+pattern, showing that the diagnostic depends on its intervention. See
+[`docs/CIFAR10_MAP_PERTURBATION_AUDIT.md`](docs/CIFAR10_MAP_PERTURBATION_AUDIT.md)
+and [`docs/CIFAR10_MASK_BASELINE_SENSITIVITY.md`](docs/CIFAR10_MASK_BASELINE_SENSITIVITY.md).
