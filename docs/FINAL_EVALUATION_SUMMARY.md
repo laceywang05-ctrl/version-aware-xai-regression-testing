@@ -87,6 +87,12 @@ results do not rank the methods or prove that either map is faithful or
 unfaithful. See
 [`CIFAR10_MAP_PERTURBATION_AUDIT.md`](CIFAR10_MAP_PERTURBATION_AUDIT.md)
 and [`CIFAR10_MASK_BASELINE_SENSITIVITY.md`](CIFAR10_MASK_BASELINE_SENSITIVITY.md).
+A larger sensitivity check selected 200 jointly correct images per seed pair
+and used 10 random masks per image. All 24 condition means were negative under
+mean-pixel replacement and positive under blur replacement. The result remains
+exploratory because the sample came from the previously examined official-test
+subset and neither replacement is a validated ground-truth intervention. See
+[`CIFAR10_MASK_SAMPLE_ROBUSTNESS.md`](CIFAR10_MASK_SAMPLE_ROBUSTNESS.md).
 
 **Answer:** the overall workflow transfers, but numerical thresholds do not.
 Thresholds must be calibrated for the dataset, representation, model family and

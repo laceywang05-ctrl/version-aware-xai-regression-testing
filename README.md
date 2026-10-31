@@ -859,3 +859,8 @@ Replacing selected pixels with values from a blurred image reversed this
 pattern, showing that the diagnostic depends on its intervention. See
 [`docs/CIFAR10_MAP_PERTURBATION_AUDIT.md`](docs/CIFAR10_MAP_PERTURBATION_AUDIT.md)
 and [`docs/CIFAR10_MASK_BASELINE_SENSITIVITY.md`](docs/CIFAR10_MASK_BASELINE_SENSITIVITY.md).
+A larger-sample check used 200 jointly correct images per seed pair and 10
+random masks per image. All 24 mean-pixel contrasts remained negative and all
+24 blur contrasts positive; this remains an exploratory intervention-dependent
+diagnostic. See
+[`docs/CIFAR10_MASK_SAMPLE_ROBUSTNESS.md`](docs/CIFAR10_MASK_SAMPLE_ROBUSTNESS.md).
