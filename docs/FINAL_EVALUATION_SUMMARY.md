@@ -76,6 +76,14 @@ median was `0.314381`. A threshold near zero would detect only almost-disjoint
 maps, so Grad-CAM remains available for visual sample review without an
 automatic confirmatory drift decision.
 
+An additional exploratory CIFAR-10 CNN pixel-masking audit checked whether
+masking pixels ranked highly by IG or Grad-CAM lowered true-class probability
+more than matched-size random masks. Across three matched width pairs and 50
+jointly correct images per pair, only one of 24 seed × model × method × mask-size
+mean contrasts was positive. This intervention-dependent negative result does
+not rank the methods or prove that either map is unfaithful. See
+[`CIFAR10_MAP_PERTURBATION_AUDIT.md`](CIFAR10_MAP_PERTURBATION_AUDIT.md).
+
 **Answer:** the overall workflow transfers, but numerical thresholds do not.
 Thresholds must be calibrated for the dataset, representation, model family and
 explanation method rather than treated as universal constants. Some methods may
@@ -201,7 +209,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **143 tests passed** after the cross-seed image-consistency audit.
+- Automated test suite: **145 tests passed** after the CIFAR-10 map-perturbation audit.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.
