@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Dashboard for version-aware SHAP and LIME regression testing"
+    />
+    <title>XAI Regression Monitor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="readonly-cifar-demo">
+    <header class="site-header">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <p class="eyebrow">Version-aware evaluation</p>
+        <h1>XAI Regression Monitor</h1>
+      </div>
+      <div class="upload-area"><span class="readonly-badge">CIFAR-10 · READ-ONLY</span><p id="load-message" class="load-message" role="status" aria-live="polite"></p><input id="report-upload" hidden type="file" /></div>
+    </header>
+
+    <main>
+      <nav class="view-tabs" aria-label="Dashboard view">
+        <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
+        <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
+        <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
+        <button class="view-tab" data-view="robustness" type="button">Split robustness</button>
+        <button class="view-tab" data-view="upload" type="button">CIFAR-10 results</button>
+      </nav>
+
+      <div id="comparison-view" class="dashboard-view">
+      <section class="status-panel" aria-labelledby="status-heading">
+        <div>
+          <p class="eyebrow">Current decision</p>
+          <div class="status-title-row">
+            <h2 id="status-heading">Evaluation status</h2>
+            <span id="overall-status" class="status-badge">Loading</span>
+          </div>
+          <p id="status-explanation" class="status-explanation"></p>
+        </div>
+        <div class="summary-grid" aria-label="Report summary">
+          <article><span>Methods</span><strong id="method-count">—</strong></article>
+          <article><span>Review signals</span><strong id="flag-count">—</strong></article>
+          <article><span>Average agreement</span><strong id="agreement-average">—</strong></article>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="methods-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Method overview</p>
+            <h2 id="methods-heading">Explanation methods</h2>
+          </div>
+          <p>Each method is judged against its own natural-variation baseline.</p>
+        </div>
+        <div id="method-cards" class="method-grid"></div>
+      </section>
+
+      <section class="content-section" aria-labelledby="metrics-heading">
+        <div class="section-heading metric-heading">
+          <div>
+            <p class="eyebrow">Detailed evidence</p>
+            <h2 id="metrics-heading">Metric comparison</h2>
+          </div>
+          <div id="method-tabs" class="tabs" role="tablist" aria-label="Explanation method"></div>
+        </div>
+        <div id="metric-grid" class="metric-grid"></div>
+      </section>
+
+      <section class="interpretation-panel" aria-labelledby="interpretation-heading">
+        <div class="interpretation-icon" aria-hidden="true">i</div>
+        <div>
+          <h2 id="interpretation-heading">Interpretation boundary</h2>
+          <p id="interpretation-text"></p>
+          <p>
+            A <strong>REVIEW</strong> signal selects cases for investigation. It is not
+            automatic evidence of a software defect, harmful regression, or concept drift.
+          </p>
+        </div>
+      </section>
+
+      </div>
+
+      <div id="benchmark-view" class="dashboard-view" hidden>
+        <section class="content-section benchmark-intro" aria-labelledby="benchmark-heading">
+          <div class="section-heading benchmark-heading-row">
+            <div>
+              <p class="eyebrow">Repeated held-out evaluation</p>
+              <h2 id="benchmark-heading">Policy validation across model versions</h2>
+            </div>
+            <label class="dataset-picker">
+              Dataset
+              <select id="benchmark-selector"></select>
+            </label>
+          </div>
+          <p id="benchmark-context" class="benchmark-context"></p>
+          <div id="benchmark-summary" class="summary-grid benchmark-summary"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="scenario-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Thirty candidate seeds per scenario</p>
+              <h2 id="scenario-heading">Review-rate comparison</h2>
+            </div>
+            <p>Bars show the proportion of runs selected for review; whiskers show Wilson 95% confidence intervals.</p>
+          </div>
+          <div id="scenario-grid" class="scenario-grid"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="paired-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Paired evidence</p>
+              <h2 id="paired-heading">Comparison with seed-only control</h2>
+            </div>
+            <p>Adjusted p-values below 0.05 indicate separation from the control after correcting three comparisons.</p>
+          </div>
+          <div class="table-scroll">
+            <table class="comparison-table">
+              <thead><tr><th>Candidate</th><th>Rate change</th><th>Adjusted p</th><th>Evidence</th></tr></thead>
+              <tbody id="paired-results"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="interpretation-panel" aria-labelledby="benchmark-interpretation-heading">
+          <div class="interpretation-icon" aria-hidden="true">i</div>
+          <div>
+            <h2 id="benchmark-interpretation-heading">Interpretation boundary</h2>
+            <p id="benchmark-interpretation"></p>
+            <p>A higher review rate means the policy is sensitive to the version change; it does not by itself show that the new model is worse.</p>
+          </div>
+        </section>
+      </div>
+
+      <div id="portfolio-view" class="dashboard-view" hidden>
+        <section class="content-section" aria-labelledby="portfolio-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Two datasets · two explanation methods</p>
+              <h2 id="portfolio-heading">Completed evidence portfolio</h2>
+            </div>
+            <p id="portfolio-coverage"></p>
+          </div>
+          <div id="portfolio-grid" class="portfolio-grid"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="portfolio-table-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Comparable descriptors</p>
+              <h2 id="portfolio-table-heading">Cross-dataset result table</h2>
+            </div>
+            <p>Prediction agreement and cosine similarity are shown consistently; headline rates retain their method-specific meaning.</p>
+          </div>
+          <div class="table-scroll">
+            <table class="comparison-table">
+              <thead><tr><th>Dataset</th><th>Method</th><th>Evidence</th><th>Agreement</th><th>Cosine</th><th>Headline result</th><th>Status</th></tr></thead>
+              <tbody id="portfolio-results"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="interpretation-panel" aria-labelledby="portfolio-interpretation-heading">
+          <div class="interpretation-icon" aria-hidden="true">i</div>
+          <div>
+            <h2 id="portfolio-interpretation-heading">Interpretation boundary</h2>
+            <p id="portfolio-interpretation"></p>
+            <p id="portfolio-comparability"></p>
+          </div>
+        </section>
+      </div>
+
+      <div id="robustness-view" class="dashboard-view" hidden>
+        <section class="status-panel robustness-status" aria-labelledby="robustness-heading">
+          <div>
+            <p class="eyebrow">Final robustness check</p>
+            <div class="status-title-row">
+              <h2 id="robustness-heading">Data-split and probe sensitivity</h2>
+              <span id="robustness-status" class="status-badge">Loading</span>
+            </div>
+            <p id="robustness-explanation" class="status-explanation"></p>
+          </div>
+          <div id="robustness-summary" class="summary-grid"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="robustness-datasets-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Three independently calibrated splits</p>
+              <h2 id="robustness-datasets-heading">Dataset-level consistency</h2>
+            </div>
+            <p>Each split changes the fitted models and the probe population, then recalibrates the same four-metric Bonferroni policy.</p>
+          </div>
+          <div id="robustness-dataset-grid" class="robustness-dataset-grid"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="robustness-table-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Held-out paired evidence</p>
+              <h2 id="robustness-table-heading">Results by dataset split</h2>
+            </div>
+            <p>Review rates are based on 30 held-out explainer seeds per split; exact paired p-values compare candidate and control decisions.</p>
+          </div>
+          <div class="table-scroll">
+            <table class="comparison-table">
+              <thead><tr><th>Dataset</th><th>Split</th><th>Control</th><th>Candidate</th><th>Rate change</th><th>Paired p</th><th>Status</th></tr></thead>
+              <tbody id="robustness-results"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="interpretation-panel warning-boundary" aria-labelledby="robustness-interpretation-heading">
+          <div class="interpretation-icon" aria-hidden="true">i</div>
+          <div>
+            <h2 id="robustness-interpretation-heading">What this result means</h2>
+            <p id="robustness-interpretation"></p>
+            <p>The Wine split-73 result is not a detector failure: the controlled candidate produced little detectable explanation change for that fitted-model and probe combination.</p>
+          </div>
+        </section>
+      </div>
+
+      <div id="upload-view" class="dashboard-view" hidden>
+        <section class="content-section upload-intro" aria-labelledby="upload-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Classification and regression</p>
+              <h2 id="upload-heading">Compare your Model V1 and Model V2</h2>
+            </div>
+            <p>Run trusted model versions on the same labelled samples and inspect exactly which predictions or numeric errors changed.</p>
+          </div>
+          <div class="local-warning">
+            <strong>Local prototype:</strong> only load <code>.joblib</code> files that you trust. Files are processed in memory by the local server and are not saved.
+          </div>
+        </section>
+
+        <section class="content-section" aria-labelledby="upload-files-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Model collection and shared evidence</p>
+              <h2 id="upload-files-heading">Upload comparison inputs</h2>
+            </div>
+            <p>All models must accept the same feature columns. The CSV must include the known label for every sample.</p>
+          </div>
+          <form id="classification-upload-form" class="comparison-upload-form">
+            <label class="file-field task-field">
+              <span>Prediction task</span>
+              <small>Select the model output type</small>
+              <select id="upload-task-selector">
+                <option value="classification">Classification</option>
+                <option value="regression">Regression</option>
+              </select>
+            </label>
+            <label class="file-field">
+              <span>Model file 1</span>
+              <small>Trusted estimator</small>
+              <input id="model-v1-upload" name="model_v1" type="file" accept=".joblib" required />
+            </label>
+            <label class="file-field">
+              <span>Model file 2</span>
+              <small>Trusted estimator</small>
+              <input id="model-v2-upload" name="model_v2" type="file" accept=".joblib" required />
+            </label>
+            <label class="file-field">
+              <span>Labelled dataset</span>
+              <small>CSV, up to 5,000 rows</small>
+              <input id="dataset-upload" name="dataset" type="file" accept=".csv,text/csv" required />
+            </label>
+            <label class="file-field">
+              <span>Manifest <em>optional</em></span>
+              <small>Upload JSON or build it below</small>
+              <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" />
+            </label>
+            <details id="manifest-builder" class="manifest-builder">
+              <summary>Build manifest from CSV columns</summary>
+              <p id="manifest-builder-message">Choose a labelled CSV first.</p>
+              <div class="manifest-builder-grid">
+                <label>Label column <select id="manifest-label-column"><option value="">Choose CSV first</option></select></label>
+                <label>Sample ID <select id="manifest-id-column"><option value="">None</option></select></label>
+                <label class="classification-only">Image filename <select id="manifest-image-column"><option value="">None</option></select></label>
+                <label class="classification-only">Image height <input id="manifest-image-height" type="number" min="1" placeholder="e.g. 28" /></label>
+                <label class="classification-only">Image width <input id="manifest-image-width" type="number" min="1" placeholder="e.g. 28" /></label>
+                <label class="classification-only">Image channels <select id="manifest-image-channels"><option value="1">1 · grayscale</option><option value="3">3 · RGB</option><option value="4">4 · RGBA</option></select></label>
+              </div>
+              <label class="trust-check"><input id="manifest-trust-models" type="checkbox" /> I confirm that these model files come from a trusted source.</label>
+              <p class="table-note">All remaining CSV columns become model features in their existing order.</p>
+            </details>
+            <label class="file-field optional-image-field">
+              <span>Additional models <em>optional</em></span>
+              <small>Select up to three more trusted .joblib models</small>
+              <input id="additional-models-upload" type="file" accept=".joblib" multiple />
+              <div id="additional-model-names" class="selected-file-list" aria-live="polite">
+                <span class="selected-file-empty">No additional models selected</span>
+              </div>
+            </label>
+            <div class="model-pair-picker">
+              <label>Baseline model
+                <select id="baseline-model-selector"></select>
+              </label>
+              <span aria-hidden="true">→</span>
+              <label>Candidate model
+                <select id="candidate-model-selector"></select>
+              </label>
+              <p id="model-collection-message">Upload two to five models, then select the pair to compare.</p>
+            </div>
+            <label class="file-field optional-image-field classification-only">
+              <span>Sample images <em>optional</em></span>
+              <small>ZIP of PNG, JPEG, WebP or GIF files referenced by the CSV</small>
+              <input id="images-upload" name="images" type="file" accept=".zip,application/zip" />
+            </label>
+            <section id="upload-readiness" class="upload-readiness" aria-labelledby="upload-readiness-heading">
+              <div class="upload-readiness-head">
+                <div><span class="eyebrow">Before you run</span><h3 id="upload-readiness-heading">Selection summary</h3></div>
+                <strong id="upload-readiness-status" class="readiness-status incomplete">Incomplete</strong>
+              </div>
+              <dl class="upload-readiness-grid">
+                <div><dt>Task</dt><dd id="readiness-task">Classification</dd></div>
+                <div><dt>Dataset</dt><dd id="readiness-dataset">Not selected</dd></div>
+                <div><dt>Models</dt><dd id="readiness-model-count">0 selected</dd></div>
+                <div><dt>Manifest</dt><dd id="readiness-manifest">Not ready</dd></div>
+                <div><dt>Baseline (V1)</dt><dd id="readiness-baseline">Not selected</dd></div>
+                <div><dt>Candidate (V2)</dt><dd id="readiness-candidate">Not selected</dd></div>
+              </dl>
+              <p id="upload-readiness-message" class="table-note">Choose two trusted models and one labelled CSV.</p>
+            </section>
+            <div class="upload-actions">
+              <button id="run-upload-comparison" class="primary-action" type="submit">Run local comparison</button>
+              <a href="data/upload-manifest-example.json" download>Download example manifest</a>
+              <p id="upload-comparison-message" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+        </section>
+
+        <section id="upload-validation" class="content-section upload-validation" aria-labelledby="upload-validation-heading" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Preflight check</p>
+              <h2 id="upload-validation-heading">Upload compatibility</h2>
+            </div>
+            <p id="upload-validation-summary"></p>
+          </div>
+          <div id="upload-validation-grid" class="upload-validation-grid"></div>
+        </section>
+
+        <section id="candidate-verdict" class="content-section candidate-verdict" aria-labelledby="candidate-verdict-heading" hidden>
+          <div class="candidate-verdict-copy">
+            <p class="eyebrow">Paired evidence conclusion</p>
+            <h2 id="candidate-verdict-heading">Candidate result</h2>
+            <p id="candidate-verdict-message"></p>
+          </div>
+          <strong id="candidate-verdict-status" class="candidate-verdict-status inconclusive">Inconclusive</strong>
+        </section>
+
+        <div id="upload-results" hidden>
+          <section class="content-section" aria-labelledby="model-overview-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">All uploaded models</p>
+                <h2 id="model-overview-heading">Model performance overview</h2>
+              </div>
+              <p>Accuracy ranks every uploaded model on the same labelled samples; macro F1 weights every class equally. SHA-256 fingerprints identify the exact uploaded model bytes.</p>
+            </div>
+            <div id="model-overview-grid" class="model-overview-grid"></div>
+            <div class="table-scroll">
+              <table class="comparison-table agreement-table">
+                <thead><tr><th>Model pair</th><th>Prediction agreement</th></tr></thead>
+                <tbody id="model-agreement-results"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="status-panel upload-status" aria-labelledby="upload-results-heading">
+            <div>
+              <p class="eyebrow">Uploaded comparison</p>
+              <h2 id="upload-results-heading">Prediction-level result</h2>
+              <p id="upload-scope-note" class="status-explanation">Accuracy summarizes the versions; the table below shows the concrete sample-level changes behind it.</p>
+            </div>
+            <div class="summary-grid upload-summary" aria-label="Uploaded model summary">
+              <article><span>Samples</span><strong id="upload-total">—</strong></article>
+              <article><span id="upload-v1-label">V1 accuracy</span><strong id="upload-v1-accuracy">—</strong></article>
+              <article><span id="upload-v2-label">V2 accuracy</span><strong id="upload-v2-accuracy">—</strong></article>
+              <article><span id="upload-v1-f1-label">V1 macro F1</span><strong id="upload-v1-f1">—</strong></article>
+              <article><span id="upload-v2-f1-label">V2 macro F1</span><strong id="upload-v2-f1">—</strong></article>
+              <article><span>Prediction agreement</span><strong id="upload-agreement">—</strong></article>
+            </div>
+          </section>
+
+          <section class="content-section paired-evidence" aria-labelledby="paired-evidence-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Paired evidence</p>
+                <h2 id="paired-evidence-heading">Is the accuracy change larger than sample noise?</h2>
+              </div>
+              <p id="paired-evidence-note">Exact McNemar uses only samples where one version was correct and the other was wrong.</p>
+            </div>
+            <div class="summary-grid paired-evidence-grid">
+              <article><span>Accuracy change</span><strong id="paired-accuracy-change">—</strong></article>
+              <article><span>Discordant samples</span><strong id="paired-discordant-count">—</strong></article>
+              <article><span>Exact p-value</span><strong id="paired-p-value">—</strong></article>
+              <article><span>Evidence</span><strong id="paired-evidence-status">—</strong></article>
+            </div>
+          </section>
+
+          <section class="content-section export-panel" aria-labelledby="comparison-export-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Local audit artifacts</p>
+                <h2 id="comparison-export-heading">Download comparison results</h2>
+              </div>
+              <p>Exports are generated in your browser. No additional file is sent to the server.</p>
+            </div>
+            <div class="export-actions">
+              <button id="download-comparison-json" class="secondary-action" type="button">Download JSON report</button>
+              <button id="download-comparison-summary" class="secondary-action" type="button">Download readable summary</button>
+              <button id="download-samples-csv" class="secondary-action" type="button">Download sample CSV</button>
+            </div>
+          </section>
+
+          <section class="content-section" aria-labelledby="transition-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Version transitions</p>
+                <h2 id="transition-heading">What changed from V1 to V2</h2>
+              </div>
+              <p>“Wrong → correct” is an improvement; “correct → wrong” is a regression on the supplied labelled sample.</p>
+            </div>
+            <div id="upload-transition-grid" class="transition-grid"></div>
+          </section>
+
+          <section class="content-section" aria-labelledby="prediction-flow-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Prediction direction</p>
+                <h2 id="prediction-flow-heading">Where predictions moved</h2>
+              </div>
+              <p>Each path groups images by V1 and V2 predicted class. Select a path to inspect its images below.</p>
+            </div>
+            <p id="prediction-flow-summary" class="prediction-flow-summary"></p>
+            <p class="prediction-flow-legend"><span class="improved">Fixed</span><span class="regressed">Regressed</span><span class="changed-wrong">Changed between wrong classes</span></p>
+            <div id="prediction-flow-list" class="prediction-flow-list"></div>
+            <div class="prediction-flow-actions">
+              <button id="prediction-flow-show-all" class="secondary-action" type="button" hidden>Show all paths</button>
+              <button id="prediction-flow-clear" class="secondary-action" type="button" hidden>Clear selected path</button>
+            </div>
+          </section>
+
+          <section class="content-section" aria-labelledby="class-diagnostics-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Class-level diagnosis</p>
+                <h2 id="class-diagnostics-heading">Where performance changed</h2>
+              </div>
+              <p>Precision measures false-positive control, recall measures captured examples, and F1 balances both. Positive F1 changes favor the candidate.</p>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table class-diagnostics-table">
+                <thead><tr><th>Actual class</th><th>Samples</th><th id="class-v1-heading">V1 accuracy</th><th>V1 precision</th><th>V1 recall</th><th>V1 F1</th><th id="class-v2-heading">V2 accuracy</th><th>V2 precision</th><th>V2 recall</th><th>V2 F1</th><th>F1 change</th></tr></thead>
+                <tbody id="class-diagnostics-results"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="content-section" aria-labelledby="confusion-matrix-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Confusion matrices</p>
+                <h2 id="confusion-matrix-heading">Actual versus predicted classes</h2>
+              </div>
+              <p>Rows are actual classes and columns are predictions. Darker diagonal cells are correct; off-diagonal cells are errors.</p>
+            </div>
+            <div class="confusion-matrix-grid">
+              <article>
+                <h3 id="confusion-matrix-v1-title">V1</h3>
+                <div id="confusion-matrix-v1" class="confusion-matrix-wrap"></div>
+              </article>
+              <article>
+                <h3 id="confusion-matrix-v2-title">V2</h3>
+                <div id="confusion-matrix-v2" class="confusion-matrix-wrap"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="content-section" aria-labelledby="confusion-diagnostics-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Misclassification paths</p>
+                <h2 id="confusion-diagnostics-heading">Which classes were confused</h2>
+              </div>
+              <p>A negative error change means the candidate made fewer mistakes for that actual-to-predicted class pair.</p>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table confusion-diagnostics-table">
+                <thead><tr><th>Actual class</th><th>Predicted as</th><th id="confusion-v1-heading">V1 errors</th><th id="confusion-v2-heading">V2 errors</th><th>Error change</th></tr></thead>
+                <tbody id="confusion-diagnostics-results"></tbody>
+              </table>
+            </div>
+            <p id="confusion-empty-message" class="table-note" hidden>Neither selected model made a classification error on these samples.</p>
+          </section>
+
+          <section class="content-section" aria-labelledby="sample-results-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Concrete examples</p>
+                <h2 id="sample-results-heading">Sample-by-sample predictions</h2>
+                <p id="confidence-risk-summary" class="confidence-risk-summary"></p>
+              </div>
+              <div class="triage-controls" aria-label="Sample triage controls">
+                <label>High confidence (%)
+                  <input id="confidence-threshold-input" type="number" min="50" max="100" step="1" value="80" />
+                </label>
+                <label>Drift similarity (%)
+                  <input id="explanation-threshold-input" type="number" min="0" max="100" step="0.1" value="80" />
+                </label>
+                <label>Show
+                  <select id="upload-transition-filter">
+                  <option value="all">All samples</option>
+                  <option value="v1_correct_v2_wrong">Correct → wrong</option>
+                  <option value="v1_wrong_v2_correct">Wrong → correct</option>
+                  <option value="both_correct">Both correct</option>
+                  <option value="both_wrong">Both wrong</option>
+                  <option value="v2_high_confidence_wrong">V2 high-confidence errors</option>
+                  <option value="high_confidence_regression">High-confidence regressions</option>
+                  <option value="explanation_drift">Explanation drift</option>
+                  <option value="hidden_explanation_drift">Same prediction, changed explanation</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <p id="explanation-threshold-source" class="table-note"></p>
+            <div id="explanation-method-summary" class="explanation-method-summary" aria-label="Active explanation methods">
+              <article><span id="explanation-v1-model">Model V1</span><strong id="explanation-v1-method">Explanation unavailable</strong><small id="explanation-v1-note"></small></article>
+              <article><span id="explanation-v2-model">Model V2</span><strong id="explanation-v2-method">Explanation unavailable</strong><small id="explanation-v2-note"></small></article>
+              <p id="explanation-policy-note" class="explanation-policy-note"></p>
+            </div>
+            <div class="drift-gallery-panel" aria-labelledby="drift-gallery-heading">
+              <div class="drift-gallery-heading">
+                <div>
+                  <p class="eyebrow">Explanation review queue</p>
+                  <h3 id="drift-gallery-heading">Same prediction, changed explanation</h3>
+                </div>
+                <p id="drift-gallery-summary"></p>
+              </div>
+              <div id="drift-gallery" class="drift-gallery"></div>
+              <p id="drift-gallery-empty" class="table-note"></p>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table sample-table">
+                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th id="v1-prediction-heading">V1 prediction</th><th id="v1-confidence-heading">V1 confidence</th><th id="v2-prediction-heading">V2 prediction</th><th id="v2-confidence-heading">V2 confidence</th><th>Explanation similarity</th><th>Transition</th><th>Explanation</th></tr></thead>
+                <tbody id="upload-sample-results"></tbody>
+              </table>
+            </div>
+            <p id="upload-table-note" class="table-note"></p>
+          </section>
+
+          <section class="interpretation-panel" aria-labelledby="upload-boundary-heading">
+            <div class="interpretation-icon" aria-hidden="true">i</div>
+            <div>
+              <h2 id="upload-boundary-heading">Current scope</h2>
+              <ul id="upload-limitations" class="limitation-list"></ul>
+            </div>
+          </section>
+        </div>
+
+        <div id="regression-results" hidden>
+          <section class="content-section" aria-labelledby="regression-overview-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">All uploaded regressors</p><h2 id="regression-overview-heading">Regression model overview</h2></div>
+              <p>Models are ranked by MAE on the same labelled samples; lower MAE and RMSE are better.</p>
+            </div>
+            <div id="regression-model-overview-grid" class="model-overview-grid"></div>
+          </section>
+          <section class="content-section export-panel" aria-labelledby="regression-export-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Regression audit artifacts</p><h2 id="regression-export-heading">Download regression results</h2></div>
+              <p>Exports are created in the browser and include the selected pair plus the complete model ranking.</p>
+            </div>
+            <div class="export-actions">
+              <button id="download-regression-json" class="secondary-action" type="button">Download JSON report</button>
+              <button id="download-regression-summary" class="secondary-action" type="button">Download readable summary</button>
+              <button id="download-regression-samples-csv" class="secondary-action" type="button">Download sample errors CSV</button>
+              <button id="download-regression-ranking-csv" class="secondary-action" type="button">Download model ranking CSV</button>
+            </div>
+          </section>
+          <section class="status-panel regression-status" aria-labelledby="regression-results-heading">
+            <div>
+              <p class="eyebrow">Uploaded regression comparison</p>
+              <h2 id="regression-results-heading">Numeric prediction result</h2>
+              <div class="result-model-pair" aria-label="Selected regression model pair">
+                <span><b>V1</b><strong id="regression-v1-name">Model V1</strong></span>
+                <i aria-hidden="true">→</i>
+                <span><b>V2</b><strong id="regression-v2-name">Model V2</strong></span>
+              </div>
+              <p id="regression-scope-note" class="status-explanation"></p>
+            </div>
+            <div class="summary-grid regression-summary">
+              <article><span>V1 MAE</span><strong id="regression-v1-mae">—</strong></article>
+              <article><span>V2 MAE</span><strong id="regression-v2-mae">—</strong></article>
+              <article><span>V1 RMSE</span><strong id="regression-v1-rmse">—</strong></article>
+              <article><span>V2 RMSE</span><strong id="regression-v2-rmse">—</strong></article>
+              <article><span>V1 R²</span><strong id="regression-v1-r2">—</strong></article>
+              <article><span>V2 R²</span><strong id="regression-v2-r2">—</strong></article>
+            </div>
+          </section>
+          <section class="content-section" aria-labelledby="regression-transition-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Paired error changes</p><h2 id="regression-transition-heading">Which samples improved?</h2></div>
+              <p id="regression-evidence-note"></p>
+            </div>
+            <div id="regression-outcome-grid" class="transition-grid"></div>
+          </section>
+          <section class="content-section" aria-labelledby="regression-visual-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Visual comparison</p><h2 id="regression-visual-heading">Where did predictions change?</h2></div>
+              <p>Points closer to the diagonal are more accurate; bars below zero favor V2.</p>
+            </div>
+            <div class="regression-visual-grid">
+              <figure class="regression-chart-card">
+                <figcaption>Actual versus predicted</figcaption>
+                <svg id="regression-parity-chart" class="regression-chart" role="img" aria-label="Actual versus predicted values for model V1 and model V2"></svg>
+                <div class="chart-legend"><span id="regression-legend-v1" class="legend-v1">V1</span><span id="regression-legend-v2" class="legend-v2">V2</span><span class="legend-reference">Perfect prediction</span></div>
+              </figure>
+              <figure class="regression-chart-card">
+                <figcaption>Per-sample absolute-error change</figcaption>
+                <svg id="regression-error-chart" class="regression-chart" role="img" aria-label="Change in absolute error from model V1 to model V2"></svg>
+                <p class="chart-note">Negative values indicate improvement; positive values indicate regression.</p>
+              </figure>
+            </div>
+          </section>
+          <section class="content-section" aria-labelledby="regression-importance-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Model explanation</p><h2 id="regression-importance-heading">Permutation feature importance</h2></div>
+              <p id="regression-importance-note">MAE increase after shuffling one feature; larger values indicate stronger reliance.</p>
+            </div>
+            <div id="regression-importance-results" class="regression-importance-list"></div>
+          </section>
+          <section class="content-section" aria-labelledby="regression-samples-heading">
+            <div class="section-heading">
+              <div><p class="eyebrow">Concrete numeric examples</p><h2 id="regression-samples-heading">Sample-by-sample errors</h2></div>
+              <label class="dataset-picker">Show
+                <select id="regression-outcome-filter">
+                  <option value="all">All samples</option>
+                  <option value="improved">Improved</option>
+                  <option value="worsened">Worsened</option>
+                  <option value="unchanged">Unchanged</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-scroll">
+              <table class="comparison-table regression-sample-table">
+                <thead><tr><th>Sample</th><th>Actual</th><th id="regression-v1-prediction-heading">V1 prediction</th><th id="regression-v1-error-heading">V1 absolute error</th><th id="regression-v2-prediction-heading">V2 prediction</th><th id="regression-v2-error-heading">V2 absolute error</th><th>Error change</th><th>Outcome</th></tr></thead>
+                <tbody id="regression-sample-results"></tbody>
+              </table>
+            </div>
+            <p id="regression-table-note" class="table-note"></p>
+          </section>
+        </div>
+      </div>
+
+      <dialog id="explanation-dialog" class="explanation-dialog">
+        <div class="explanation-dialog-head">
+          <div>
+            <p class="eyebrow">Sample explanation</p>
+            <h2 id="explanation-dialog-title">Model contribution comparison</h2>
+          </div>
+          <button id="close-explanation-dialog" class="dialog-close" type="button" aria-label="Close explanation">×</button>
+        </div>
+        <div class="explanation-meta" id="explanation-meta"></div>
+        <div class="explanation-visuals">
+          <figure>
+            <img id="explanation-original" class="explanation-original" alt="Selected sample" />
+            <figcaption>Original image</figcaption>
+          </figure>
+          <figure>
+            <div id="v1-heatmap" class="pixel-heatmap" aria-label="Model V1 pixel contribution map"></div>
+            <figcaption id="v1-heatmap-caption">Model V1</figcaption>
+          </figure>
+          <figure>
+            <div id="v2-heatmap" class="pixel-heatmap" aria-label="Model V2 pixel contribution map"></div>
+            <figcaption id="v2-heatmap-caption">Model V2</figcaption>
+          </figure>
+        </div>
+        <div class="heatmap-legend"><span class="negative"></span> Opposes predicted class <span class="neutral"></span> Little influence <span class="positive"></span> Supports predicted class</div>
+        <p id="explanation-boundary" class="explanation-boundary"></p>
+      </dialog>
+
+    </main>
+
+    <footer>
+      <span>FYP prototype</span>
+      <span>Local processing · Uploaded files are not persisted</span>
+    </footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>

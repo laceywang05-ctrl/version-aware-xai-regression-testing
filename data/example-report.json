@@ -1,0 +1,36 @@
+{
+  "overall_status": "REVIEW",
+  "methods": [
+    {
+      "method": "SHAP",
+      "status": "REVIEW",
+      "baseline_type": "benign model retraining",
+      "probe_samples": 100,
+      "prediction_agreement": 0.99,
+      "reference_accuracy": 0.972027972,
+      "candidate_accuracy": 0.958041958,
+      "flagged_metrics": "cosine_similarity"
+    },
+    {
+      "method": "LIME",
+      "status": "REVIEW",
+      "baseline_type": "fixed-model explainer randomness",
+      "probe_samples": 20,
+      "prediction_agreement": 0.95,
+      "reference_accuracy": 0.972027972,
+      "candidate_accuracy": 0.958041958,
+      "flagged_metrics": "cosine_similarity"
+    }
+  ],
+  "metrics": [
+    {"method":"SHAP","baseline_type":"benign model retraining","metric":"cosine_similarity","baseline_mean":0.9779,"candidate_mean":0.9719,"sample_limit":0.9549,"candidate_breach_rate":0.1,"run_level_limit":0.092,"review_flag":true},
+    {"method":"SHAP","baseline_type":"benign model retraining","metric":"rank_correlation","baseline_mean":0.9158,"candidate_mean":0.9075,"sample_limit":0.813,"candidate_breach_rate":0.05,"run_level_limit":0.071,"review_flag":false},
+    {"method":"SHAP","baseline_type":"benign model retraining","metric":"top_k_overlap","baseline_mean":0.9464,"candidate_mean":0.962,"sample_limit":0.8,"candidate_breach_rate":0.03,"run_level_limit":0.051,"review_flag":false},
+    {"method":"SHAP","baseline_type":"benign model retraining","metric":"direction_flip_rate","baseline_mean":0.092,"candidate_mean":0.1,"sample_limit":0.2,"candidate_breach_rate":0.01,"run_level_limit":0.03,"review_flag":false},
+    {"method":"LIME","baseline_type":"fixed-model explainer randomness","metric":"cosine_similarity","baseline_mean":0.8494,"candidate_mean":0.8072,"sample_limit":0.6432,"candidate_breach_rate":0.115,"run_level_limit":0.0775,"review_flag":true},
+    {"method":"LIME","baseline_type":"fixed-model explainer randomness","metric":"rank_correlation","baseline_mean":0.5843,"candidate_mean":0.554,"sample_limit":0.2268,"candidate_breach_rate":0.055,"run_level_limit":0.1,"review_flag":false},
+    {"method":"LIME","baseline_type":"fixed-model explainer randomness","metric":"top_k_overlap","baseline_mean":0.768,"candidate_mean":0.721,"sample_limit":0.39,"candidate_breach_rate":0.05,"run_level_limit":0.0775,"review_flag":false},
+    {"method":"LIME","baseline_type":"fixed-model explainer randomness","metric":"direction_flip_rate","baseline_mean":0.2537,"candidate_mean":0.2697,"sample_limit":0.4,"candidate_breach_rate":0.05,"run_level_limit":0.1,"review_flag":false}
+  ],
+  "interpretation": "SHAP and LIME use different natural-variation baselines. Their thresholds are method-specific and must not be treated as interchangeable."
+}

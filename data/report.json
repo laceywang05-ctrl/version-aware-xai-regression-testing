@@ -1,0 +1,116 @@
+{
+  "overall_status": "REVIEW",
+  "methods": [
+    {
+      "method": "SHAP",
+      "status": "REVIEW",
+      "baseline_type": "benign model retraining",
+      "probe_samples": 100,
+      "prediction_agreement": 0.99,
+      "reference_accuracy": 0.972027972027972,
+      "candidate_accuracy": 0.958041958041958,
+      "flagged_metrics": "cosine_similarity"
+    },
+    {
+      "method": "LIME",
+      "status": "REVIEW",
+      "baseline_type": "fixed-model explainer randomness",
+      "probe_samples": 20,
+      "prediction_agreement": 0.95,
+      "reference_accuracy": 0.972027972027972,
+      "candidate_accuracy": 0.958041958041958,
+      "flagged_metrics": "cosine_similarity"
+    }
+  ],
+  "metrics": [
+    {
+      "method": "SHAP",
+      "baseline_type": "benign model retraining",
+      "metric": "cosine_similarity",
+      "baseline_mean": 0.9779109673622499,
+      "candidate_mean": 0.9719026602240519,
+      "sample_limit": 0.9548618836955164,
+      "candidate_breach_rate": 0.1,
+      "run_level_limit": 0.0919999999999999,
+      "review_flag": true
+    },
+    {
+      "method": "SHAP",
+      "baseline_type": "benign model retraining",
+      "metric": "rank_correlation",
+      "baseline_mean": 0.9157944382647386,
+      "candidate_mean": 0.9074972191323694,
+      "sample_limit": 0.8130144605116796,
+      "candidate_breach_rate": 0.05,
+      "run_level_limit": 0.0709999999999999,
+      "review_flag": false
+    },
+    {
+      "method": "SHAP",
+      "baseline_type": "benign model retraining",
+      "metric": "top_k_overlap",
+      "baseline_mean": 0.9464,
+      "candidate_mean": 0.9620000000000001,
+      "sample_limit": 0.8,
+      "candidate_breach_rate": 0.03,
+      "run_level_limit": 0.0509999999999999,
+      "review_flag": false
+    },
+    {
+      "method": "SHAP",
+      "baseline_type": "benign model retraining",
+      "metric": "direction_flip_rate",
+      "baseline_mean": 0.09196666666666664,
+      "candidate_mean": 0.09999999999999998,
+      "sample_limit": 0.2,
+      "candidate_breach_rate": 0.01,
+      "run_level_limit": 0.03,
+      "review_flag": false
+    },
+    {
+      "method": "LIME",
+      "baseline_type": "fixed-model explainer randomness",
+      "metric": "cosine_similarity",
+      "baseline_mean": 0.8494199274028653,
+      "candidate_mean": 0.8072484854660079,
+      "sample_limit": 0.6431892009617134,
+      "candidate_breach_rate": 0.115,
+      "run_level_limit": 0.0774999999999999,
+      "review_flag": true
+    },
+    {
+      "method": "LIME",
+      "baseline_type": "fixed-model explainer randomness",
+      "metric": "rank_correlation",
+      "baseline_mean": 0.5843337041156841,
+      "candidate_mean": 0.5539933259176862,
+      "sample_limit": 0.2268075639599554,
+      "candidate_breach_rate": 0.055,
+      "run_level_limit": 0.1,
+      "review_flag": false
+    },
+    {
+      "method": "LIME",
+      "baseline_type": "fixed-model explainer randomness",
+      "metric": "top_k_overlap",
+      "baseline_mean": 0.7680000000000001,
+      "candidate_mean": 0.7210000000000001,
+      "sample_limit": 0.3900000000000002,
+      "candidate_breach_rate": 0.05,
+      "run_level_limit": 0.0774999999999999,
+      "review_flag": false
+    },
+    {
+      "method": "LIME",
+      "baseline_type": "fixed-model explainer randomness",
+      "metric": "direction_flip_rate",
+      "baseline_mean": 0.25366666666666665,
+      "candidate_mean": 0.26966666666666667,
+      "sample_limit": 0.4,
+      "candidate_breach_rate": 0.05,
+      "run_level_limit": 0.1,
+      "review_flag": false
+    }
+  ],
+  "interpretation": "Advisory synthesis. Method-specific baselines are preserved and must not be treated as interchangeable thresholds."
+}

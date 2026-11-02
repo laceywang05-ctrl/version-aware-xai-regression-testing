@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "title": "Cross-dataset SHAP and LIME evidence summary",
+  "coverage": {
+    "datasets": 2,
+    "methods": 2,
+    "completed_cells": 4,
+    "expected_cells": 4
+  },
+  "entries": [
+    {
+      "dataset_id": "breast_cancer",
+      "dataset": "Breast Cancer Wisconsin",
+      "method": "SHAP",
+      "evidence_type": "held-out repeated benchmark",
+      "status": "SEPARATED",
+      "observations": 120,
+      "prediction_agreement": 0.9966666666666667,
+      "cosine_similarity": 0.9746099114405904,
+      "headline_metric": "strongest_candidate_review_rate",
+      "headline_value": 0.5,
+      "control_review_rate": 0.16666666666666666,
+      "strongest_scenario": "constrained_candidate",
+      "separated_scenarios": 1,
+      "scenario_comparisons": 3,
+      "flagged_metrics": [],
+      "interpretation": "Repeated held-out sensitivity evidence. Separation from the seed-only control does not show that the candidate is harmful."
+    },
+    {
+      "dataset_id": "breast_cancer",
+      "dataset": "Breast Cancer Wisconsin",
+      "method": "LIME",
+      "evidence_type": "held-out paired-seed validation",
+      "status": "SEPARATED",
+      "observations": 600,
+      "prediction_agreement": 0.95,
+      "cosine_similarity": 0.8078454108405316,
+      "paired_seed_cosine_similarity": 0.9514408270976313,
+      "headline_metric": "candidate_review_rate",
+      "headline_value": 0.6666666666666666,
+      "control_review_rate": 0.1,
+      "strongest_scenario": null,
+      "separated_scenarios": null,
+      "scenario_comparisons": 1,
+      "flagged_metrics": [
+        "cosine_similarity"
+      ],
+      "interpretation": "Calibration and evaluation LIME seeds are disjoint. SEPARATED is paired evidence of a change relative to the fixed-model control, not evidence of harm."
+    },
+    {
+      "dataset_id": "wine_binary",
+      "dataset": "Wine (binary)",
+      "method": "SHAP",
+      "evidence_type": "held-out repeated benchmark",
+      "status": "SEPARATED",
+      "observations": 120,
+      "prediction_agreement": 0.9977777777777778,
+      "cosine_similarity": 0.9820442941326567,
+      "headline_metric": "strongest_candidate_review_rate",
+      "headline_value": 0.7666666666666667,
+      "control_review_rate": 0.03333333333333333,
+      "strongest_scenario": "larger_leaves",
+      "separated_scenarios": 2,
+      "scenario_comparisons": 3,
+      "flagged_metrics": [],
+      "interpretation": "Repeated held-out sensitivity evidence. Separation from the seed-only control does not show that the candidate is harmful."
+    },
+    {
+      "dataset_id": "wine_binary",
+      "dataset": "Wine (binary)",
+      "method": "LIME",
+      "evidence_type": "held-out paired-seed validation",
+      "status": "SEPARATED",
+      "observations": 600,
+      "prediction_agreement": 1.0,
+      "cosine_similarity": 0.9688141184356593,
+      "paired_seed_cosine_similarity": 0.993544649563543,
+      "headline_metric": "candidate_review_rate",
+      "headline_value": 0.6333333333333333,
+      "control_review_rate": 0.13333333333333333,
+      "strongest_scenario": null,
+      "separated_scenarios": null,
+      "scenario_comparisons": 1,
+      "flagged_metrics": [
+        "cosine_similarity"
+      ],
+      "interpretation": "Calibration and evaluation LIME seeds are disjoint. SEPARATED is paired evidence of a change relative to the fixed-model control, not evidence of harm."
+    }
+  ],
+  "interpretation": "The completed experiments show method- and dataset-dependent explanation signals while prediction agreement remains high. The portfolio is descriptive and does not define a universal threshold.",
+  "comparability_note": "SHAP summarizes the strongest of several held-out model-change scenarios; LIME summarizes one paired held-out candidate. Headline rates must not be compared as if they were identical experimental contrasts.",
+  "sources": {
+    "breast_cancer_shap": "/Users/mayo/Documents/ChatGPT/nusri311/version-aware-xai-regression-testing/artifacts/experiment_10_heldout_benchmark/reports/summary.json",
+    "breast_cancer_lime": "/Users/mayo/Documents/ChatGPT/nusri311/version-aware-xai-regression-testing/artifacts/experiment_15_breast_lime_heldout/reports/summary.json",
+    "wine_shap": "/Users/mayo/Documents/ChatGPT/nusri311/version-aware-xai-regression-testing/artifacts/experiment_11_wine_heldout_benchmark/reports/summary.json",
+    "wine_lime": "/Users/mayo/Documents/ChatGPT/nusri311/version-aware-xai-regression-testing/artifacts/experiment_16_wine_lime_heldout/reports/summary.json"
+  }
+}
