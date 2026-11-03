@@ -22,14 +22,24 @@
 
     <main>
       <nav class="view-tabs" aria-label="Dashboard view">
-        <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
-        <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
-        <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
-        <button class="view-tab" data-view="robustness" type="button">Split robustness</button>
-        <button class="view-tab" data-view="upload" type="button">CIFAR-10 results</button>
+        <button class="view-tab active" data-view="xai" type="button">SHAP &amp; LIME evidence</button>
+        <button class="view-tab" data-view="upload" type="button">Uploaded model comparison</button>
       </nav>
 
       <div id="comparison-view" class="dashboard-view">
+      <section class="module-hub" aria-labelledby="xai-module-heading">
+        <div class="module-hub-heading">
+          <p class="eyebrow">Explanation stability evidence</p>
+          <h2 id="xai-module-heading">Choose an SHAP or LIME result</h2>
+          <p>All completed explanation experiments are collected on this page. Select a module to jump directly to its evidence.</p>
+        </div>
+        <div class="module-card-grid">
+          <a class="module-card" href="#status-heading"><span>01</span><h3>Current comparison</h3><p>SHAP and LIME stability signals for the current baseline and candidate.</p></a>
+          <a class="module-card" href="#benchmark-heading"><span>02</span><h3>Benchmark validation</h3><p>Repeated held-out runs, review rates, confidence intervals and paired tests.</p></a>
+          <a class="module-card" href="#portfolio-heading"><span>03</span><h3>Cross-dataset evidence</h3><p>Breast Cancer and Wine results summarized across both explanation methods.</p></a>
+          <a class="module-card" href="#robustness-heading"><span>04</span><h3>Split robustness</h3><p>Checks whether conclusions remain consistent across independent data splits.</p></a>
+        </div>
+      </section>
       <section class="status-panel" aria-labelledby="status-heading">
         <div>
           <p class="eyebrow">Current decision</p>
@@ -355,6 +365,23 @@
         </section>
 
         <div id="upload-results" hidden>
+          <section class="module-hub uploaded-module-hub" aria-labelledby="uploaded-module-heading">
+            <div class="module-hub-heading">
+              <p class="eyebrow">Completed CIFAR-10 comparison</p>
+              <h2 id="uploaded-module-heading">Choose a comparison result</h2>
+              <p>The uploaded models are evaluated on the same 1,000 labelled images. Select a module to inspect the result you need.</p>
+            </div>
+            <div class="module-card-grid uploaded-module-grid">
+              <a class="module-card" href="#model-overview-heading"><span>01</span><h3>Model overview</h3><p>Rank all uploaded models by accuracy, macro F1 and pairwise agreement.</p></a>
+              <a class="module-card" href="#upload-results-heading"><span>02</span><h3>Selected pair</h3><p>Compare the chosen baseline and candidate on headline performance.</p></a>
+              <a class="module-card" href="#paired-evidence-heading"><span>03</span><h3>Statistical evidence</h3><p>McNemar evidence for whether the accuracy difference exceeds sample noise.</p></a>
+              <a class="module-card" href="#transition-heading"><span>04</span><h3>Version transitions</h3><p>Count samples that improved, regressed, stayed correct or stayed wrong.</p></a>
+              <a class="module-card" href="#class-diagnostics-heading"><span>05</span><h3>Class diagnosis</h3><p>Precision, recall and F1 changes for every CIFAR-10 class.</p></a>
+              <a class="module-card" href="#confusion-matrix-heading"><span>06</span><h3>Confusion matrices</h3><p>See exactly which actual classes each model predicts correctly or confuses.</p></a>
+              <a class="module-card" href="#confusion-diagnostics-heading"><span>07</span><h3>Error paths</h3><p>Compare the most important actual-to-predicted misclassification routes.</p></a>
+              <a class="module-card" href="#sample-results-heading"><span>08</span><h3>Images &amp; explanations</h3><p>Inspect individual images, predictions, confidence and explanation maps.</p></a>
+            </div>
+          </section>
           <section class="content-section" aria-labelledby="model-overview-heading">
             <div class="section-heading">
               <div>

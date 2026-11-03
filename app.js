@@ -271,14 +271,15 @@ function scenarioLabel(id) {
 }
 
 function switchView(view) {
+  const xai = view === "xai";
   const benchmark = view === "benchmark";
   const portfolio = view === "portfolio";
   const robustness = view === "robustness";
   const upload = view === "upload";
-  elements.comparisonView.hidden = benchmark || portfolio || robustness || upload;
-  elements.benchmarkView.hidden = !benchmark;
-  elements.portfolioView.hidden = !portfolio;
-  elements.robustnessView.hidden = !robustness;
+  elements.comparisonView.hidden = !(xai || view === "comparison");
+  elements.benchmarkView.hidden = !(xai || benchmark);
+  elements.portfolioView.hidden = !(xai || portfolio);
+  elements.robustnessView.hidden = !(xai || robustness);
   elements.uploadView.hidden = !upload;
   for (const tab of elements.viewTabs) {
     tab.classList.toggle("active", tab.dataset.view === view);
@@ -2359,7 +2360,7 @@ async function loadReadonlyCifarDemo() {
     if (exported.validation) renderUploadValidation(exported.validation);
     if (exported.overview) renderModelOverview(exported.overview);
     renderUploadComparison(exported.comparison);
-    switchView("comparison");
+    switchView("xai");
     elements.message.textContent = "Showing the completed project results in a public read-only supervisor view.";
     elements.uploadMessage.className = "upload-comparison-message success";
     elements.uploadMessage.textContent = "Completed CIFAR-10 comparison · 1,000 official test images · read-only supervisor view.";
