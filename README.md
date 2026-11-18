@@ -7,6 +7,8 @@ Exact files, expected results and click order for a supervisor demonstration
 are recorded in [`docs/LIVE_DEMO_GUIDE.md`](docs/LIVE_DEMO_GUIDE.md).
 Ready-to-upload example models and datasets are in
 [`examples/upload_bundles/`](examples/upload_bundles/).
+Supervisors can run the upload website locally using the
+[`deployment and upload guide`](docs/TEACHER_LOCAL_DEPLOYMENT.md).
 
 An FYP project for detecting unexpected changes in model explanations across machine-learning model versions.
 
