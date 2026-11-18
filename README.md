@@ -5,6 +5,8 @@ assessment are available in
 [`docs/FINAL_EVALUATION_SUMMARY.md`](docs/FINAL_EVALUATION_SUMMARY.md).
 Exact files, expected results and click order for a supervisor demonstration
 are recorded in [`docs/LIVE_DEMO_GUIDE.md`](docs/LIVE_DEMO_GUIDE.md).
+Ready-to-upload example models and datasets are in
+[`examples/upload_bundles/`](examples/upload_bundles/).
 To run the original interactive upload website on your own computer, see
 [`docs/TEACHER_LOCAL_DEPLOYMENT.md`](docs/TEACHER_LOCAL_DEPLOYMENT.md).
 
