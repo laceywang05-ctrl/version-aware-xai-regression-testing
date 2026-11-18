@@ -1,0 +1,19 @@
+{
+  "task": "regression",
+  "label_column": "target",
+  "id_column": "sample_id",
+  "dataset_note": "Scikit-learn diabetes regression demo using a fixed 70/30 train-test split.",
+  "feature_columns": [
+    "age",
+    "sex",
+    "bmi",
+    "bp",
+    "s1",
+    "s2",
+    "s3",
+    "s4",
+    "s5",
+    "s6"
+  ],
+  "trusted_model_files": true
+}
