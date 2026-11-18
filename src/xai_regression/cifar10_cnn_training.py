@@ -150,6 +150,25 @@ def _save_checkpoint(path, data):
     temporary.replace(path)
 
 
+def _random_state(device):
+    """Capture augmentation and dropout RNG streams at an epoch boundary."""
+    state = {"torch_cpu": torch.get_rng_state(), "numpy": np.random.get_state()}
+    if device.type == "mps":
+        state["torch_mps"] = torch.mps.get_rng_state()
+    elif device.type == "cuda":
+        state["torch_cuda"] = torch.cuda.get_rng_state_all()
+    return state
+
+
+def _restore_random_state(state, device):
+    torch.set_rng_state(state["torch_cpu"])
+    np.random.set_state(state["numpy"])
+    if device.type == "mps":
+        torch.mps.set_rng_state(state["torch_mps"])
+    elif device.type == "cuda":
+        torch.cuda.set_rng_state_all(state["torch_cuda"])
+
+
 def _plot_history(destination, history):
     import matplotlib
     matplotlib.use("Agg")
@@ -248,6 +267,9 @@ def train_cifar10_cnn(
         history = state["history"]
         best_accuracy, best_loss, best_epoch = state["best_accuracy"], state["best_loss"], state["best_epoch"]
         start_epoch = state["epoch"] + 1
+        if "random_state" not in state:
+            raise ValueError("This checkpoint lacks RNG state and cannot resume reproducibly. Start a new run.")
+        _restore_random_state(state["random_state"], selected_device)
         print(f"Resuming after epoch {start_epoch - 1}", flush=True)
     print(f"Train={len(training)}, validation={len(validation)}, final test=10000; parameters={sum(p.numel() for p in network.parameters()):,}", flush=True)
     started = time.monotonic()
@@ -289,6 +311,7 @@ def train_cifar10_cnn(
         _save_checkpoint(checkpoint_path, {
             "model": model_state, "optimizer": optimizer.state_dict(), "scheduler": scheduler.state_dict(),
             "epoch": epoch, "history": history, "best_accuracy": best_accuracy, "best_loss": best_loss, "best_epoch": best_epoch,
+            "random_state": _random_state(selected_device),
         })
         _write_json(destination / "history.json", history)
         _write_json(destination / "progress.json", {"status": "training", "epoch": epoch, "best_epoch": best_epoch, "best_validation_accuracy": best_accuracy, "latest": row})

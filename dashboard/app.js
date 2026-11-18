@@ -614,7 +614,12 @@ function renderModelOverview(report) {
     } else {
       calibration.textContent = "Calibration unavailable: model has no probability output";
     }
-    card.append(rank, name, fingerprint, accuracy, metrics, count, calibration, renderReliabilityChart(model));
+    const calibrationDetails = document.createElement("details");
+    calibrationDetails.className = "calibration-details";
+    const calibrationToggle = document.createElement("summary");
+    calibrationToggle.textContent = "Confidence by bin";
+    calibrationDetails.append(calibrationToggle, renderReliabilityChart(model));
+    card.append(rank, name, fingerprint, accuracy, metrics, count, calibration, calibrationDetails);
     elements.modelOverviewGrid.append(card);
   }
   elements.modelAgreementResults.replaceChildren();

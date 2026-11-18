@@ -76,6 +76,24 @@ median was `0.314381`. A threshold near zero would detect only almost-disjoint
 maps, so Grad-CAM remains available for visual sample review without an
 automatic confirmatory drift decision.
 
+An additional exploratory CIFAR-10 CNN pixel-masking audit checked whether
+masking pixels ranked highly by IG or Grad-CAM lowered true-class probability
+more than matched-size random masks. Across three matched width pairs and 50
+jointly correct images per pair, only one of 24 seed × model × method × mask-size
+mean contrasts was positive under mean-pixel replacement. A matched follow-up
+using pixels from a Gaussian-blurred version of each image reversed the
+direction: all 24 mean contrasts were positive. The two intervention-dependent
+results do not rank the methods or prove that either map is faithful or
+unfaithful. See
+[`CIFAR10_MAP_PERTURBATION_AUDIT.md`](CIFAR10_MAP_PERTURBATION_AUDIT.md)
+and [`CIFAR10_MASK_BASELINE_SENSITIVITY.md`](CIFAR10_MASK_BASELINE_SENSITIVITY.md).
+A larger sensitivity check selected 200 jointly correct images per seed pair
+and used 10 random masks per image. All 24 condition means were negative under
+mean-pixel replacement and positive under blur replacement. The result remains
+exploratory because the sample came from the previously examined official-test
+subset and neither replacement is a validated ground-truth intervention. See
+[`CIFAR10_MASK_SAMPLE_ROBUSTNESS.md`](CIFAR10_MASK_SAMPLE_ROBUSTNESS.md).
+
 **Answer:** the overall workflow transfers, but numerical thresholds do not.
 Thresholds must be calibrated for the dataset, representation, model family and
 explanation method rather than treated as universal constants. Some methods may
@@ -112,13 +130,14 @@ on the same test images. See
 A subsequent version-change experiment compared those original CNNs with
 **wider six-layer CNNs**, increasing stage widths from 32/64/128 to
 40/80/160 and trainable parameters from 288,746 to 450,210. The architecture
-change was repeated within matched seed 42 and seed 43 pairs. On the full
-official test set, accuracy changed from **88.54% to 90.11%** and from
-**88.83% to 89.94%**, respectively. The two pairs changed **891** and
-**880** individual class predictions: 442 versus 285 and 417 versus 306
-wrong-to-correct versus correct-to-wrong transitions. Thus a roughly
-1–1.6 percentage-point net gain coexisted with substantial changes in which
-images were classified correctly. On the seed 43 dashboard subset of 1,000
+change was repeated within matched seed 42, 43 and 44 pairs. On the full
+official test set, accuracy changed from **88.54% to 90.11%**,
+**88.83% to 89.94%** and **88.85% to 90.08%**, respectively. The three
+pairs changed **891**, **880** and **855** individual class predictions:
+442 versus 285, 417 versus 306 and 411 versus 288 wrong-to-correct versus
+correct-to-wrong transitions. Thus a 1.11–1.57 percentage-point net gain
+coexisted with substantial changes in which images were classified correctly.
+On the seed 43 dashboard subset of 1,000
 images, accuracy changed only **90.1% to 90.4%** while **77** predictions
 changed class. The new prediction-direction panel groups these changes by
 V1-predicted → V2-predicted class and links each path to its images.
@@ -126,10 +145,20 @@ V1-predicted → V2-predicted class and links each path to its images.
 Same-true-class Grad-CAM comparisons on all 1,000 dashboard images found
 lower average map cosine similarity when predictions changed than when they
 did not: **0.841 versus 0.932** for seed 42 and **0.835 versus 0.927** for
-seed 43. Some unchanged predictions also had changed maps. These values are
+seed 43, and **0.854 versus 0.934** for seed 44. Some unchanged predictions
+also had changed maps. These values are
 exploratory and do not make Grad-CAM an automatic quality or release gate.
 See [`CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md`](CIFAR10_DIRECTIONAL_VERSION_COMPARISON.md)
-and [`CIFAR10_WIDTH_REPEAT_RESULT.md`](CIFAR10_WIDTH_REPEAT_RESULT.md).
+[`CIFAR10_WIDTH_REPEAT_RESULT.md`](CIFAR10_WIDTH_REPEAT_RESULT.md), and
+[`CIFAR10_WIDTH_THIRD_SEED_RESULT.md`](CIFAR10_WIDTH_THIRD_SEED_RESULT.md).
+
+A matched-index audit across all three seeds found that only **185** official
+test images changed predicted class in every run, while **1,701** changed in
+at least one. Only **23** images were fixed and **10** regressed in all three;
+**255** images were fixed under one seed but regressed under another. The
+aggregate gain was repeatable in direction across these three runs, whereas
+individual image outcomes were less consistent. See
+[`CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md`](CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md).
 
 For every completed comparison, the dashboard can export matched predictions,
 confidence, transitions, explanation similarity, compatibility results and
@@ -161,7 +190,7 @@ supports human review rather than automatic deployment approval.
    Grad-CAM remained too variable for confirmatory automatic review.
 7. Reproducibility requires artifact identity as well as parameters. SHA-256
    fingerprints connect exported evidence to the exact uploaded bytes.
-8. A genuine CNN width change improved full-test accuracy in two matched
+8. A genuine CNN width change improved full-test accuracy in three matched
    runs, but changed roughly 9% of individual class predictions. Small net
    score changes can therefore conceal both fixes and regressions.
 
@@ -178,8 +207,9 @@ release gate. In particular:
 - the main MNIST/CIFAR-10 ranking experiments use lightweight scikit-learn
   models, while the neural extension uses research MLP/CNN architectures
   rather than production-scale image networks; the full CIFAR-10 width-change
-  comparison has only two matched training seeds, and the original seed 42
-  run was resumed without restoring augmentation RNG state;
+  comparison has only three matched training seeds, and the original seed 42
+  run was resumed without restoring augmentation RNG state; the seed 43 and
+  seed 44 pairs trained continuously;
 - MNIST and CIFAR-10 thresholds are empirical workload controls estimated from
   small benign-retraining samples;
 - user-uploaded `.joblib` models and CIFAR pickle archives must come from trusted
@@ -189,7 +219,7 @@ release gate. In particular:
 
 ## 5. Reproducibility status
 
-- Automated test suite: **141 tests passed** after the CIFAR-10 width-change repeat.
+- Automated test suite: **146 tests passed** after the masking-baseline sensitivity check.
 - Data splits and random seeds are fixed and documented by each experiment.
 - Calibration and evaluation seeds are disjoint in the confirmatory workflows.
 - Machine-readable experiment summaries are generated under `artifacts/`.

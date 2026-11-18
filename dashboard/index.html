@@ -28,14 +28,16 @@
 
     <main>
       <nav class="view-tabs" aria-label="Dashboard view">
-        <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
-        <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
-        <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
-        <button class="view-tab" data-view="robustness" type="button">Split robustness</button>
-        <button class="view-tab" data-view="upload" type="button">Compare uploaded models</button>
+        <p class="nav-group-label">Your workspace</p>
+        <button class="view-tab active" data-view="upload" type="button"><span>Upload &amp; compare models</span><small>Run your own V1 and V2</small></button>
+        <p class="nav-group-label">Built-in experiment results</p>
+        <button class="view-tab" data-view="comparison" type="button"><span>SHAP / LIME report</span><small>Latest explanation comparison</small></button>
+        <button class="view-tab" data-view="benchmark" type="button"><span>Benchmark validation</span><small>Repeated model tests</small></button>
+        <button class="view-tab" data-view="portfolio" type="button"><span>Cross-dataset results</span><small>Breast cancer and Wine</small></button>
+        <button class="view-tab" data-view="robustness" type="button"><span>Split robustness</span><small>Results across data splits</small></button>
       </nav>
 
-      <div id="comparison-view" class="dashboard-view">
+      <div id="comparison-view" class="dashboard-view" hidden>
       <section class="status-panel" aria-labelledby="status-heading">
         <div>
           <p class="eyebrow">Current decision</p>
@@ -229,7 +231,7 @@
         </section>
       </div>
 
-      <div id="upload-view" class="dashboard-view" hidden>
+      <div id="upload-view" class="dashboard-view">
         <section class="content-section upload-intro" aria-labelledby="upload-heading">
           <div class="section-heading">
             <div>
@@ -241,6 +243,7 @@
           <div class="local-warning">
             <strong>Local prototype:</strong> only load <code>.joblib</code> files that you trust. Files are processed in memory by the local server and are not saved.
           </div>
+          <p class="upload-method-note">The other dashboard tabs show built-in SHAP/LIME research results. This upload workflow chooses an explanation method from the model's capabilities; adding sample images lets you inspect spatial maps but does not determine the method by itself.</p>
         </section>
 
         <section class="content-section" aria-labelledby="upload-files-heading">
@@ -361,6 +364,18 @@
         </section>
 
         <div id="upload-results" hidden>
+          <nav class="results-index" aria-label="Classification result sections">
+            <strong>Jump to result</strong>
+            <div class="results-index-links">
+              <a href="#model-overview-heading">All models</a>
+              <a href="#upload-results-heading">V1 vs V2</a>
+              <a href="#paired-evidence-heading">Paired evidence</a>
+              <a href="#prediction-flow-heading">Prediction direction</a>
+              <a href="#class-diagnostics-heading">Class changes</a>
+              <a href="#sample-results-heading">Images and explanations</a>
+              <a href="#comparison-export-heading">Downloads</a>
+            </div>
+          </nav>
           <section class="content-section" aria-labelledby="model-overview-heading">
             <div class="section-heading">
               <div>
@@ -571,6 +586,18 @@
         </div>
 
         <div id="regression-results" hidden>
+          <nav class="results-index" aria-label="Regression result sections">
+            <strong>Jump to result</strong>
+            <div class="results-index-links">
+              <a href="#regression-overview-heading">All models</a>
+              <a href="#regression-results-heading">V1 vs V2</a>
+              <a href="#regression-transition-heading">Error changes</a>
+              <a href="#regression-visual-heading">Charts</a>
+              <a href="#regression-importance-heading">Feature importance</a>
+              <a href="#regression-samples-heading">Samples</a>
+              <a href="#regression-export-heading">Downloads</a>
+            </div>
+          </nav>
           <section class="content-section" aria-labelledby="regression-overview-heading">
             <div class="section-heading">
               <div><p class="eyebrow">All uploaded regressors</p><h2 id="regression-overview-heading">Regression model overview</h2></div>

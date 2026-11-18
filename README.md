@@ -7,6 +7,8 @@ Exact files, expected results and click order for a supervisor demonstration
 are recorded in [`docs/LIVE_DEMO_GUIDE.md`](docs/LIVE_DEMO_GUIDE.md).
 Ready-to-upload example models and datasets are in
 [`examples/upload_bundles/`](examples/upload_bundles/).
+To run the original interactive upload website on your own computer, see
+[`docs/TEACHER_LOCAL_DEPLOYMENT.md`](docs/TEACHER_LOCAL_DEPLOYMENT.md).
 
 An FYP project for detecting unexpected changes in model explanations across machine-learning model versions.
 
@@ -817,8 +819,10 @@ PYTHONPATH=src .venv/bin/python -m xai_regression cifar10-cnn-train \
 ```
 
 The command uses the Mac GPU when PyTorch MPS is available, or a CUDA GPU/CPU
-elsewhere. Each epoch saves a resumable checkpoint, `history.json` and
-`progress.json`. If interrupted, repeat the command with `--resume`. The
+elsewhere. Each epoch saves a checkpoint with training and random states,
+`history.json` and `progress.json`. If interrupted, repeat the command with
+`--resume`; checkpoints made before random-state capture was added cannot be
+resumed reproducibly by this version. The
 finished folder contains full-test metrics and predictions, training curves,
 and `upload_bundle/` with two trusted `.joblib` models plus a 1,000-image
 dashboard sample (`samples.csv`, `images.zip`, `manifest.json`). The website
@@ -845,3 +849,22 @@ paired results, explanation-map audit and the ready-to-upload bundle, is in
 The width change was repeated with a matched seed 43 pair; its prediction
 transitions and full 1,000-image explanation audit are documented in
 [`docs/CIFAR10_WIDTH_REPEAT_RESULT.md`](docs/CIFAR10_WIDTH_REPEAT_RESULT.md).
+A third matched pair with seed 44, its official-test prediction changes, and
+its upload-bundle audit are documented in
+[`docs/CIFAR10_WIDTH_THIRD_SEED_RESULT.md`](docs/CIFAR10_WIDTH_THIRD_SEED_RESULT.md).
+The three pairs were also aligned by official test-image index to inspect
+whether the same examples were fixed or regressed under different training
+seeds. Results and the reproduction command are in
+[`docs/CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md`](docs/CIFAR10_WIDTH_INSTANCE_CONSISTENCY.md).
+An exploratory pixel-masking audit of the same CNNs found that neither
+Integrated Gradients nor Grad-CAM consistently caused a larger target-class
+probability drop than matched-size random masks under mean-pixel replacement.
+Replacing selected pixels with values from a blurred image reversed this
+pattern, showing that the diagnostic depends on its intervention. See
+[`docs/CIFAR10_MAP_PERTURBATION_AUDIT.md`](docs/CIFAR10_MAP_PERTURBATION_AUDIT.md)
+and [`docs/CIFAR10_MASK_BASELINE_SENSITIVITY.md`](docs/CIFAR10_MASK_BASELINE_SENSITIVITY.md).
+A larger-sample check used 200 jointly correct images per seed pair and 10
+random masks per image. All 24 mean-pixel contrasts remained negative and all
+24 blur contrasts positive; this remains an exploratory intervention-dependent
+diagnostic. See
+[`docs/CIFAR10_MASK_SAMPLE_ROBUSTNESS.md`](docs/CIFAR10_MASK_SAMPLE_ROBUSTNESS.md).
