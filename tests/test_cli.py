@@ -323,6 +323,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         build.assert_called_once_with(cli.PROJECT_ROOT / "wine-demo")
 
+    def test_demo_matrix_standard_preset_parses(self):
+        args = cli.build_parser().parse_args(
+            ["demo-matrix", "--standard", "--check-explanations"]
+        )
+
+        self.assertEqual(args.command, "demo-matrix")
+        self.assertTrue(args.standard)
+        self.assertTrue(args.check_explanations)
+        self.assertIsNone(args.bundle_dir)
+
 
 if __name__ == "__main__":
     unittest.main()

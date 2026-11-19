@@ -54,6 +54,12 @@ DEFAULT_PORTFOLIO_REPORT = (
 DEFAULT_ROBUSTNESS_REPORT = (
     "artifacts/experiment_27_lime_split_probe_robustness/reports/summary.json"
 )
+STANDARD_DEMO_BUNDLES = (
+    "artifacts/breast_cancer_model_demo",
+    "artifacts/wine_multiclass_model_demo",
+    "artifacts/mnist_neural_demo",
+    "artifacts/demo_regression_upload",
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -386,8 +392,12 @@ def build_parser() -> argparse.ArgumentParser:
     demo_matrix_parser.add_argument(
         "--bundle-dir",
         action="append",
-        required=True,
         help="Bundle directory to check; repeat this option for additional bundles.",
+    )
+    demo_matrix_parser.add_argument(
+        "--standard",
+        action="store_true",
+        help="Check the standard tabular, neural-image and regression demo matrix.",
     )
     demo_matrix_parser.add_argument(
         "--check-explanations",
@@ -1131,8 +1141,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("READY FOR DEMO" if result["ready"] else "NOT READY", flush=True)
             return 0 if result["ready"] else 1
         if args.command == "demo-matrix":
+            bundle_dirs = list(STANDARD_DEMO_BUNDLES) if args.standard else []
+            bundle_dirs.extend(args.bundle_dir or [])
             result = check_demo_matrix(
-                [_project_path(path) for path in args.bundle_dir],
+                [_project_path(path) for path in bundle_dirs],
                 check_explanations=args.check_explanations,
             )
             print("Dashboard demo validation matrix", flush=True)
