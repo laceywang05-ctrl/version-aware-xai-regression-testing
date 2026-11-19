@@ -86,3 +86,41 @@ class DemoCheckTests(unittest.TestCase):
             {row["method"] for row in result["explanations"]},
             {"pixel_occlusion"},
         )
+
+    def test_tabular_explanation_preflight_reports_lime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frame = pd.DataFrame(
+                {
+                    "sample_id": [f"sample-{index}" for index in range(8)],
+                    "x1": [float(index) for index in range(8)],
+                    "x2": [float(index % 3) for index in range(8)],
+                    "target": [index % 2 for index in range(8)],
+                }
+            )
+            frame.to_csv(root / "samples.csv", index=False)
+            (root / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "task": "classification",
+                        "label_column": "target",
+                        "id_column": "sample_id",
+                        "feature_columns": ["x1", "x2"],
+                        "trusted_model_files": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            for index in range(2):
+                model = DummyClassifier(strategy="prior").fit(
+                    frame[["x1", "x2"]], frame["target"]
+                )
+                joblib.dump(model, root / f"model_{index}.joblib")
+
+            result = check_demo_bundle(root, check_explanations=True)
+
+        self.assertTrue(result["ready"])
+        self.assertEqual(len(result["explanations"]), 2)
+        self.assertTrue(
+            all("lime" in row["method"] for row in result["explanations"])
+        )
