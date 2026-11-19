@@ -512,6 +512,26 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertFalse(result["ready"])
         self.assertTrue(result["models"][0]["compatible"])
         self.assertFalse(result["models"][1]["compatible"])
+        self.assertIn("expects 2 features", result["models"][1]["message"])
+        self.assertIn("provide 1", result["models"][1]["message"])
+
+    def test_upload_validation_explains_feature_order_mismatch(self):
+        training = pd.DataFrame({"x": [0, 1, 2, 3], "y": [3, 2, 1, 0]})
+        labels = [0, 0, 1, 1]
+        model = DecisionTreeClassifier(random_state=7).fit(training, labels)
+        buffer = BytesIO()
+        joblib.dump(model, buffer)
+        manifest = json.dumps({
+            "task": "classification", "label_column": "target",
+            "feature_columns": ["y", "x"], "trusted_model_files": True,
+        }).encode()
+        result = validate_upload_models(
+            models=[("first.joblib", buffer.getvalue()), ("second.joblib", buffer.getvalue())],
+            dataset=("samples.csv", training.assign(target=labels).to_csv(index=False).encode()),
+            manifest=manifest,
+        )
+        self.assertFalse(result["ready"])
+        self.assertTrue(all("names or order" in item["message"] for item in result["models"]))
 
     def test_uploaded_image_archive_is_attached_to_matching_samples(self):
         archive = BytesIO()

@@ -196,6 +196,25 @@ def load_uploaded_model(payload: bytes, filename: str) -> Any:
     return model
 
 
+def validate_model_features(model: Any, features: pd.DataFrame) -> None:
+    """Explain common fitted-model and uploaded-CSV mismatches before predict()."""
+    expected_count = getattr(model, "n_features_in_", None)
+    if expected_count is not None and expected_count != features.shape[1]:
+        raise ValueError(
+            f"Model expects {expected_count} features, but the selected CSV columns "
+            f"provide {features.shape[1]}. Check the manifest feature_columns and preprocessing."
+        )
+    expected_names = getattr(model, "feature_names_in_", None)
+    if expected_names is not None:
+        names = list(expected_names)
+        actual = list(features.columns)
+        if names != actual:
+            raise ValueError(
+                "Model feature names or order do not match the selected CSV columns. "
+                "Use the same feature_columns and preprocessing order used during training."
+            )
+
+
 def load_uploaded_dataset(payload: bytes, filename: str) -> pd.DataFrame:
     """Load a bounded CSV dataset from memory."""
     if not filename.lower().endswith(".csv"):
@@ -1459,6 +1478,7 @@ def validate_upload_models(
         }
         try:
             model = load_uploaded_model(payload, filename)
+            validate_model_features(model, features)
             prediction = np.asarray(model.predict(features))
             if prediction.shape != (len(frame),):
                 raise ValueError("predict() did not return one value per dataset row.")

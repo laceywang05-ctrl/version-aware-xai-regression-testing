@@ -16,6 +16,7 @@ from xai_regression.upload_comparison import (
     _json_value,
     load_uploaded_dataset,
     load_uploaded_model,
+    validate_model_features,
 )
 
 
@@ -426,6 +427,7 @@ def validate_regression_upload_models(
         try:
             model = load_uploaded_model(payload, filename)
             model_type = type(model).__name__
+            validate_model_features(model, features)
             try:
                 predicted = np.asarray(model.predict(features), dtype=float)
             except Exception as error:

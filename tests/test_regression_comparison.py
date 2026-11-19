@@ -191,6 +191,23 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertFalse(result["models"][1]["compatible"])
         self.assertIn("one numeric prediction", result["models"][1]["message"])
 
+    def test_upload_validation_explains_regressor_feature_count_mismatch(self):
+        training = pd.DataFrame({"x": [0.0, 1.0, 2.0], "y": [2.0, 1.0, 0.0]})
+        model = LinearRegression().fit(training, [1.0, 2.0, 3.0])
+        buffer = BytesIO()
+        joblib.dump(model, buffer)
+        manifest = json.dumps({
+            "task": "regression", "label_column": "target",
+            "feature_columns": ["x"], "trusted_model_files": True,
+        }).encode()
+        result = validate_regression_upload_models(
+            models=[("first.joblib", buffer.getvalue()), ("second.joblib", buffer.getvalue())],
+            dataset=("samples.csv", training.assign(target=[1.0, 2.0, 3.0]).to_csv(index=False).encode()),
+            manifest=manifest,
+        )
+        self.assertFalse(result["ready"])
+        self.assertTrue(all("expects 2 features" in item["message"] for item in result["models"]))
+
 
 if __name__ == "__main__":
     unittest.main()
