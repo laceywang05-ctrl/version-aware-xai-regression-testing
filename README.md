@@ -418,6 +418,9 @@ Gaussian naive Bayes and Extra Trees. Its fixed test split has 45 labelled rows,
 4 numeric features and 3 classes. The service uses LIME for the model-agnostic
 families and Tree SHAP plus LIME for Extra Trees.
 
+The complete five-model dashboard validation and observed metrics are recorded
+in `docs/IRIS_MODEL_FAMILY_RESULT.md`.
+
 Before a live demonstration, validate any generated classification or
 regression bundle with one command:
 
