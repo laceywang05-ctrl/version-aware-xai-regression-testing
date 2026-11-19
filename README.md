@@ -407,6 +407,17 @@ The output under `artifacts/wine_multiclass_model_demo/` contains four trusted
 Classification, select the first two models as the initial pair, add the other
 two under Additional models, then upload `samples.csv` and `manifest.json`.
 
+Generate a broader five-family Iris demonstration with:
+
+```bash
+PYTHONPATH=src python -m xai_regression iris-demo
+```
+
+The Iris bundle contains logistic regression, K-nearest neighbours, RBF SVM,
+Gaussian naive Bayes and Extra Trees. Its fixed test split has 45 labelled rows,
+4 numeric features and 3 classes. The service uses LIME for the model-agnostic
+families and Tree SHAP plus LIME for Extra Trees.
+
 Before a live demonstration, validate any generated classification or
 regression bundle with one command:
 
@@ -447,9 +458,9 @@ PYTHONPATH=src python -m xai_regression demo-matrix \
   --check-explanations
 ```
 
-The built-in standard matrix covers two tabular-classification datasets, one
+The built-in standard matrix covers three tabular-classification datasets, one
 neural image-classification dataset and one numeric-regression dataset. Run the
-same four-bundle check more concisely with:
+same five-bundle check more concisely with:
 
 ```bash
 MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
