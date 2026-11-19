@@ -179,3 +179,43 @@ def check_demo_matrix(
         "failed_count": len(bundles) - ready_count,
         "bundles": bundles,
     }
+
+
+def write_demo_matrix_report(result: dict[str, Any], output_dir: Path) -> dict[str, Path]:
+    """Write machine-readable and presentation-ready matrix reports."""
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    json_path = destination / "demo_validation_matrix.json"
+    markdown_path = destination / "demo_validation_matrix.md"
+    json_path.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+
+    lines = [
+        "# Dashboard Demo Validation Matrix",
+        "",
+        f"**Overall status:** {'READY' if result['ready'] else 'FAILED'}  ",
+        f"**Bundles ready:** {result['ready_count']}/{result['bundle_count']}",
+        "",
+        "| Bundle | Task | Models | Samples | Features | Explanations | Status |",
+        "| --- | --- | ---: | ---: | ---: | --- | --- |",
+    ]
+    for bundle in result["bundles"]:
+        name = Path(bundle["bundle_dir"]).name
+        if bundle["error"] is not None:
+            lines.append(
+                f"| {name} | — | — | — | — | {bundle['error']} | FAILED |"
+            )
+            continue
+        explanation_labels = sorted(
+            {row["label"] for row in bundle["explanations"]}
+        )
+        explanation_text = ", ".join(explanation_labels) or "Not checked"
+        status = "READY" if bundle["ready"] else "FAILED"
+        lines.append(
+            f"| {name} | {bundle['task']} | {bundle['model_count']} | "
+            f"{bundle['dataset']['rows']} | {bundle['dataset']['feature_count']} | "
+            f"{explanation_text} | {status} |"
+        )
+    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return {"json": json_path, "markdown": markdown_path}

@@ -454,8 +454,12 @@ same four-bundle check more concisely with:
 ```bash
 MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
 PYTHONPATH=src python -m xai_regression demo-matrix \
-  --standard --check-explanations
+  --standard --check-explanations \
+  --output-dir artifacts/standard_demo_validation
 ```
+
+The optional output directory receives a machine-readable JSON report and a
+Markdown summary suitable for project records or supervisor review.
 
 When the manifest supplies `image_shape`, each sample row can open a
 contribution comparison. Compatible tree estimators use Tree SHAP. Other
