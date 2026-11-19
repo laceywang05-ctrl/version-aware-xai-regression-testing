@@ -374,6 +374,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Validate a generated upload bundle before a live dashboard demo.",
     )
     demo_check_parser.add_argument("--bundle-dir", required=True)
+    demo_check_parser.add_argument(
+        "--check-explanations",
+        action="store_true",
+        help="Generate an image explanation with every uploaded classifier.",
+    )
     digits_benchmark_parser = subparsers.add_parser(
         "digits-close-benchmark",
         help="Compare four closely matched random-forest digit models.",
@@ -1086,7 +1091,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "wine-demo":
             return run_wine_demo(args.output_dir)
         if args.command == "demo-check":
-            result = check_demo_bundle(_project_path(args.bundle_dir))
+            result = check_demo_bundle(
+                _project_path(args.bundle_dir),
+                check_explanations=args.check_explanations,
+            )
             print("Dashboard demo preflight", flush=True)
             print("------------------------", flush=True)
             print(f"Task: {result['task']}", flush=True)
@@ -1098,6 +1106,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             for model in result["models"]:
                 status = "READY" if model["compatible"] else "FAILED"
                 print(f"{status}: {model['filename']} — {model['message']}", flush=True)
+            for explanation in result["explanations"]:
+                status = "READY" if explanation["available"] else "FAILED"
+                print(
+                    f"{status}: {explanation['filename']} — "
+                    f"{explanation['label']}",
+                    flush=True,
+                )
             print("READY FOR DEMO" if result["ready"] else "NOT READY", flush=True)
             return 0 if result["ready"] else 1
         if args.command == "digits-close-benchmark":

@@ -421,6 +421,18 @@ model, verifies its prediction shape against the manifest-selected feature
 columns, reports the dataset dimensions and prints `READY FOR DEMO` only when
 the complete bundle is compatible.
 
+For image bundles, add `--check-explanations` to execute the same explanation
+selection used by the upload service for every model. The output identifies the
+actual method (for example Integrated Gradients or Grad-CAM) and marks the
+bundle ready only after every explanation map is generated:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression demo-check \
+  --bundle-dir artifacts/mnist_neural_demo \
+  --check-explanations
+```
+
 When the manifest supplies `image_shape`, each sample row can open a
 contribution comparison. Compatible tree estimators use Tree SHAP. Other
 classifiers exposing `predict_proba()` and `classes_` automatically use pixel
