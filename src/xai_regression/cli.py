@@ -277,7 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     image_bundle_parser = subparsers.add_parser(
         "prepare-image-data",
-        help="Prepare MNIST/CIFAR-style NPZ arrays for dashboard upload.",
+        help="Prepare image NPZ arrays or the official CIFAR-10 archive for dashboard upload.",
     )
     image_bundle_parser.add_argument("--input", required=True)
     image_bundle_parser.add_argument("--output-dir", default="artifacts/prepared_image_upload")

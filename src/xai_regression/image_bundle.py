@@ -229,9 +229,17 @@ def prepare_image_npz_bundle(
     class_names: dict[str, str] | None = None,
 ) -> dict[str, Path | int | str | tuple[int, ...]]:
     """Convert generic or Keras-style NPZ image arrays into dashboard files."""
-    if limit < 1 or limit > 5_000:
-        raise ValueError("Image bundle limit must be between 1 and 5,000.")
-    source, images, labels, array_source = _load_image_npz(input_path)
+    if limit < 1 or limit > 10_000:
+        raise ValueError("Image bundle limit must be between 1 and 10,000.")
+    source = Path(input_path)
+    source_class_names = None
+    if _is_cifar10_python_archive(source):
+        _, _, images, labels, source_class_names = _load_cifar10_python_splits(
+            source, limit=limit
+        )
+        array_source = "official CIFAR-10 test_batch"
+    else:
+        source, images, labels, array_source = _load_image_npz(source)
     count = min(len(images), limit)
     images = images[:count]
     labels = labels[:count]
@@ -241,20 +249,27 @@ def prepare_image_npz_bundle(
     feature_columns = [f"pixel_{index}" for index in range(flat.shape[1])]
     frame = pd.DataFrame(flat, columns=feature_columns)
     frame.insert(0, "sample_id", [f"image-{index:05d}" for index in range(count)])
-    frame.insert(1, "image_filename", [f"images/image-{index:05d}.png" for index in range(count)])
+    preview_count = min(count, 1_000)
+    frame.insert(1, "image_filename", [
+        f"images/image-{index:05d}.png" if index < preview_count else ""
+        for index in range(count)
+    ])
     frame["target"] = labels
     csv_path = destination / "samples.csv"
     images_path = destination / "images.zip"
     manifest_path = destination / "manifest.json"
     frame.to_csv(csv_path, index=False)
     with ZipFile(images_path, "w", compression=ZIP_DEFLATED) as output:
-        for index, image in enumerate(images):
+        for index, image in enumerate(images[:preview_count]):
             stream = BytesIO()
             rendered = image[..., 0] if image.ndim == 3 and image.shape[-1] == 1 else image
             options = {"cmap": "gray"} if rendered.ndim == 2 else {}
             mpimg.imsave(stream, rendered, format="png", **options)
             output.writestr(f"images/image-{index:05d}.png", stream.getvalue())
-    inferred_class_names, class_name_source = _image_class_names(source, labels)
+    if source_class_names is None:
+        inferred_class_names, class_name_source = _image_class_names(source, labels)
+    else:
+        inferred_class_names, class_name_source = source_class_names, "CIFAR-10 batches.meta"
     resolved_class_names = class_names or inferred_class_names
     if class_names is not None:
         class_name_source = "source dataset"

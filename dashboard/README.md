@@ -42,10 +42,17 @@ Open **Compare uploaded models** when the dashboard is running through
 
 - two required trusted classifiers plus up to three additional classifiers,
   each named with the `.joblib` extension;
-- a labelled CSV with no more than 5,000 rows; and
+- a labelled CSV with no more than 10,000 rows; and
 - a JSON manifest describing the label, optional sample ID, ordered feature
   columns, optional class display names, and an optional image filename column;
 - optionally, a ZIP containing PNG, JPEG, WebP or GIF sample images.
+
+For a full 10,000-row image evaluation, `prepare-image-data --limit 10000`
+keeps all labelled rows in the CSV and includes up to 1,000 image previews in
+the ZIP. Rows without previews still contribute to every prediction metric.
+The combined local upload request must fit within 200 MB. Image explanations
+are generated for a bounded subset, with individual maps available on demand.
+The preparation command accepts the official CIFAR-10 Python archive directly.
 
 Download the example manifest from the page and edit it to match the CSV. Both
 models must expose `predict()` and accept the same selected features. Optional

@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from xai_regression.upload_comparison import (
     compare_upload_payloads,
+    explain_upload_sample,
     summarize_upload_models,
     validate_upload_models,
 )
@@ -27,12 +28,13 @@ BENCHMARK_ROUTE = "/data/benchmarks.json"
 PORTFOLIO_ROUTE = "/data/portfolio.json"
 ROBUSTNESS_ROUTE = "/data/robustness.json"
 CLASSIFICATION_COMPARE_ROUTE = "/api/classification/compare"
+CLASSIFICATION_EXPLANATION_ROUTE = "/api/classification/sample-explanation"
 CLASSIFICATION_OVERVIEW_ROUTE = "/api/classification/overview"
 CLASSIFICATION_VALIDATE_ROUTE = "/api/classification/validate"
 REGRESSION_COMPARE_ROUTE = "/api/regression/compare"
 REGRESSION_OVERVIEW_ROUTE = "/api/regression/overview"
 REGRESSION_VALIDATE_ROUTE = "/api/regression/validate"
-MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+MAX_UPLOAD_BYTES = 200 * 1024 * 1024
 
 
 def parse_multipart_form(content_type: str, payload: bytes) -> dict[str, tuple[str, bytes]]:
@@ -169,6 +171,7 @@ def _handler_class(
             route = urlparse(self.path).path
             if route not in {
                 CLASSIFICATION_COMPARE_ROUTE,
+                CLASSIFICATION_EXPLANATION_ROUTE,
                 CLASSIFICATION_OVERVIEW_ROUTE,
                 CLASSIFICATION_VALIDATE_ROUTE,
                 REGRESSION_COMPARE_ROUTE,
@@ -182,14 +185,16 @@ def _handler_class(
                 if length < 1:
                     raise ValueError("The upload request is empty.")
                 if length > MAX_UPLOAD_BYTES:
-                    raise ValueError("The upload exceeds the 100 MB local limit.")
+                    raise ValueError("The upload exceeds the 200 MB local limit.")
                 fields = parse_multipart_form(
                     self.headers.get("Content-Type", ""),
                     self.rfile.read(length),
                 )
                 required = {"dataset", "manifest"}
-                if route in {CLASSIFICATION_COMPARE_ROUTE, REGRESSION_COMPARE_ROUTE}:
+                if route in {CLASSIFICATION_COMPARE_ROUTE, CLASSIFICATION_EXPLANATION_ROUTE, REGRESSION_COMPARE_ROUTE}:
                     required.update({"model_v1", "model_v2"})
+                if route == CLASSIFICATION_EXPLANATION_ROUTE:
+                    required.add("sample_index")
                 missing = sorted(required - fields.keys())
                 if missing:
                     raise ValueError(
@@ -218,6 +223,18 @@ def _handler_class(
                         models=model_fields,
                         dataset=fields["dataset"],
                         manifest=fields["manifest"][1],
+                    )
+                elif route == CLASSIFICATION_EXPLANATION_ROUTE:
+                    try:
+                        sample_index = int(fields["sample_index"][1].decode("ascii"))
+                    except (UnicodeDecodeError, ValueError) as error:
+                        raise ValueError("sample_index must be an integer.") from error
+                    result = explain_upload_sample(
+                        model_v1=fields["model_v1"],
+                        model_v2=fields["model_v2"],
+                        dataset=fields["dataset"],
+                        manifest=fields["manifest"][1],
+                        sample_index=sample_index,
                     )
                 elif route == CLASSIFICATION_COMPARE_ROUTE:
                     image_field = fields.get("images")

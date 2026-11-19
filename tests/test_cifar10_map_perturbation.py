@@ -1,10 +1,15 @@
 """Checks for the exploratory CIFAR-10 pixel-occlusion audit."""
 
+import csv
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 
-from xai_regression.cifar10_map_perturbation import _masked, _replacement, _selected_indices
+from xai_regression.cifar10_map_perturbation import (
+    _masked, _official_window, _replacement, _selected_indices,
+)
 
 
 class Cifar10MapPerturbationTests(unittest.TestCase):
@@ -40,6 +45,19 @@ class Cifar10MapPerturbationTests(unittest.TestCase):
         self.assertNotIn(4, chosen)
         self.assertTrue(all(first[index] == second[index] == labels[index] for index in chosen))
         self.assertEqual(chosen, _selected_indices(labels, first, second, per_class=2, seed=11))
+
+    def test_official_window_preserves_global_indices_and_checks_labels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            with (path / "test_predictions.csv").open("w", newline="") as stream:
+                writer = csv.writer(stream)
+                writer.writerow(["official_test_index", "actual", "v2_prediction"])
+                writer.writerows((index, index % 10, (index + 1) % 10)
+                                 for index in range(10000))
+            expected = _official_window(path, 1000, 1002, np.array([0, 1]))
+            np.testing.assert_array_equal(expected, [1, 2])
+            with self.assertRaisesRegex(ValueError, "do not align"):
+                _official_window(path, 1000, 1002, np.array([1, 0]))
 
 
 if __name__ == "__main__":

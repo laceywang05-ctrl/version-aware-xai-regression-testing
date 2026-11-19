@@ -6,6 +6,8 @@ const state = {
   portfolio: null,
   robustness: null,
   uploadComparison: null,
+  uploadComparisonFiles: null,
+  sampleDisplayLimit: 500,
   selectedPredictionFlow: null,
   showAllPredictionFlows: false,
   modelOverview: null,
@@ -49,6 +51,15 @@ const elements = {
   robustnessResults: document.querySelector("#robustness-results"),
   robustnessInterpretation: document.querySelector("#robustness-interpretation"),
   uploadView: document.querySelector("#upload-view"),
+  fullTestProtocol: document.querySelector("#full-test-protocol"),
+  fullTestModels: document.querySelector("#full-test-models"),
+  fullTestResults: document.querySelector("#full-test-results"),
+  fullTestSubsetNote: document.querySelector("#full-test-subset-note"),
+  fullTestRunCount: document.querySelector("#full-test-run-count"),
+  fullTestMeanGain: document.querySelector("#full-test-mean-gain"),
+  fullTestGainRange: document.querySelector("#full-test-gain-range"),
+  fullTestImageCount: document.querySelector("#full-test-image-count"),
+  fullTestInterpretation: document.querySelector("#full-test-interpretation-text"),
   uploadForm: document.querySelector("#classification-upload-form"),
   uploadTaskSelector: document.querySelector("#upload-task-selector"),
   modelV1Upload: document.querySelector("#model-v1-upload"),
@@ -64,6 +75,7 @@ const elements = {
   manifestBuilderMessage: document.querySelector("#manifest-builder-message"),
   manifestLabelColumn: document.querySelector("#manifest-label-column"),
   manifestIdColumn: document.querySelector("#manifest-id-column"),
+  manifestExplanationMethod: document.querySelector("#manifest-explanation-method"),
   manifestImageColumn: document.querySelector("#manifest-image-column"),
   manifestImageHeight: document.querySelector("#manifest-image-height"),
   manifestImageWidth: document.querySelector("#manifest-image-width"),
@@ -93,6 +105,9 @@ const elements = {
   downloadRegressionSamplesCsv: document.querySelector("#download-regression-samples-csv"),
   downloadRegressionRankingCsv: document.querySelector("#download-regression-ranking-csv"),
   regressionModelOverviewGrid: document.querySelector("#regression-model-overview-grid"),
+  regressionMetricComparison: document.querySelector("#regression-metric-comparison"),
+  regressionBaselineComparison: document.querySelector("#regression-baseline-comparison"),
+  regressionSampleComparison: document.querySelector("#regression-sample-comparison"),
   regressionScopeNote: document.querySelector("#regression-scope-note"),
   regressionV1Name: document.querySelector("#regression-v1-name"),
   regressionV2Name: document.querySelector("#regression-v2-name"),
@@ -118,7 +133,18 @@ const elements = {
   regressionSampleResults: document.querySelector("#regression-sample-results"),
   regressionTableNote: document.querySelector("#regression-table-note"),
   modelOverviewGrid: document.querySelector("#model-overview-grid"),
-  modelAgreementResults: document.querySelector("#model-agreement-results"),
+  modelMetricComparison: document.querySelector("#model-metric-comparison"),
+  modelBaselineComparison: document.querySelector("#model-baseline-comparison"),
+  modelClassComparison: document.querySelector("#model-class-comparison"),
+  modelSampleComparison: document.querySelector("#model-sample-comparison"),
+  multiModelExplanationConsensus: document.querySelector("#multi-model-explanation-consensus"),
+  agreementFirstModel: document.querySelector("#agreement-first-model"),
+  agreementSecondModel: document.querySelector("#agreement-second-model"),
+  agreementValue: document.querySelector("#agreement-value"),
+  agreementMessage: document.querySelector("#agreement-message"),
+  transitionHeading: document.querySelector("#transition-heading"),
+  transitionV1Heading: document.querySelector("#transition-v1-heading"),
+  transitionV2Heading: document.querySelector("#transition-v2-heading"),
   uploadTotal: document.querySelector("#upload-total"),
   uploadV1Accuracy: document.querySelector("#upload-v1-accuracy"),
   uploadV2Accuracy: document.querySelector("#upload-v2-accuracy"),
@@ -159,6 +185,13 @@ const elements = {
   downloadComparisonSummary: document.querySelector("#download-comparison-summary"),
   downloadSamplesCsv: document.querySelector("#download-samples-csv"),
   uploadTransitionFilter: document.querySelector("#upload-transition-filter"),
+  sampleTransitionHeaderFilter: document.querySelector("#sample-transition-header-filter"),
+  sampleActualFilter: document.querySelector("#sample-actual-filter"),
+  sampleV1PredictionFilter: document.querySelector("#sample-v1-prediction-filter"),
+  sampleV2PredictionFilter: document.querySelector("#sample-v2-prediction-filter"),
+  transitionDetailFilter: document.querySelector("#transition-detail-filter"),
+  transitionDetailCount: document.querySelector("#transition-detail-count"),
+  transitionDetailResults: document.querySelector("#transition-detail-results"),
   confidenceThresholdInput: document.querySelector("#confidence-threshold-input"),
   explanationThresholdInput: document.querySelector("#explanation-threshold-input"),
   explanationThresholdSource: document.querySelector("#explanation-threshold-source"),
@@ -169,12 +202,30 @@ const elements = {
   explanationV2Method: document.querySelector("#explanation-v2-method"),
   explanationV2Note: document.querySelector("#explanation-v2-note"),
   explanationPolicyNote: document.querySelector("#explanation-policy-note"),
+  tabularExplanationPanel: document.querySelector("#tabular-explanation-panel"),
+  tabularExplanationGrid: document.querySelector("#tabular-explanation-grid"),
+  explanationRouteBanner: document.querySelector("#explanation-route-banner"),
+  tabularExplanationLink: document.querySelector("#tabular-explanation-link"),
+  imageExplanationLink: document.querySelector("#image-explanation-link"),
+  resultBriefPerformance: document.querySelector("#result-brief-performance"),
+  resultBriefTransitions: document.querySelector("#result-brief-transitions"),
+  resultBriefFailures: document.querySelector("#result-brief-failures"),
+  resultBriefExplanations: document.querySelector("#result-brief-explanations"),
+  resultBriefImageExplanations: document.querySelector("#result-brief-image-explanations"),
+  resultBriefSamples: document.querySelector("#result-brief-samples"),
+  resultChartPerformance: document.querySelector("#result-chart-performance"),
+  resultChartTransitions: document.querySelector("#result-chart-transitions"),
+  resultChartFailures: document.querySelector("#result-chart-failures"),
+  resultChartExplanations: document.querySelector("#result-chart-explanations"),
+  resultChartImageExplanations: document.querySelector("#result-chart-image-explanations"),
+  resultChartSamples: document.querySelector("#result-chart-samples"),
   confidenceRiskSummary: document.querySelector("#confidence-risk-summary"),
   driftGallery: document.querySelector("#drift-gallery"),
   driftGallerySummary: document.querySelector("#drift-gallery-summary"),
   driftGalleryEmpty: document.querySelector("#drift-gallery-empty"),
   uploadSampleResults: document.querySelector("#upload-sample-results"),
   uploadTableNote: document.querySelector("#upload-table-note"),
+  uploadShowMoreSamples: document.querySelector("#upload-show-more-samples"),
   uploadLimitations: document.querySelector("#upload-limitations"),
   explanationDialog: document.querySelector("#explanation-dialog"),
   explanationDialogTitle: document.querySelector("#explanation-dialog-title"),
@@ -194,6 +245,73 @@ function formatPercent(value) {
 
 function formatScore(value) {
   return Number(value).toFixed(3);
+}
+
+function formatInteger(value) {
+  return Number(value).toLocaleString("en-US");
+}
+
+function renderFullTestStudy(report) {
+  const dataset = report.dataset;
+  const protocol = [
+    ["Dataset", dataset.name],
+    ["Classes", dataset.classes],
+    ["Training", formatInteger(dataset.training_images)],
+    ["Validation", formatInteger(dataset.validation_images)],
+    ["Official test", formatInteger(dataset.official_test_images)],
+  ];
+  elements.fullTestProtocol.replaceChildren();
+  for (const [label, value] of protocol) {
+    const card = document.createElement("article");
+    const name = document.createElement("span");
+    const result = document.createElement("strong");
+    name.textContent = label;
+    result.textContent = value;
+    card.append(name, result);
+    elements.fullTestProtocol.append(card);
+  }
+
+  elements.fullTestModels.replaceChildren();
+  for (const [version, model] of Object.entries(report.models)) {
+    const card = document.createElement("article");
+    card.innerHTML = `<span>${version.toUpperCase()}</span><h3></h3><dl><div><dt>Channels</dt><dd></dd></div><div><dt>Conv layers</dt><dd></dd></div><div><dt>Parameters</dt><dd></dd></div></dl>`;
+    card.querySelector("h3").textContent = model.label;
+    const values = [model.widths, model.convolution_layers, formatInteger(model.parameters)];
+    card.querySelectorAll("dd").forEach((node, index) => { node.textContent = values[index]; });
+    elements.fullTestModels.append(card);
+  }
+
+  elements.fullTestResults.replaceChildren();
+  for (const run of report.runs) {
+    const row = document.createElement("tr");
+    const pValue = run.mcnemar_p < 0.001 ? Number(run.mcnemar_p).toExponential(2) : Number(run.mcnemar_p).toFixed(3);
+    const values = [
+      run.seed,
+      formatPercent(run.v1_accuracy),
+      formatPercent(run.v2_accuracy),
+      `+${(100 * run.accuracy_gain).toFixed(2)} pp`,
+      `${formatPercent(run.v1_macro_f1)} / ${formatPercent(run.v2_macro_f1)}`,
+      `${formatInteger(run.prediction_changed)} (${formatPercent(run.prediction_changed / dataset.official_test_images)})`,
+      `${formatInteger(run.wrong_to_correct)} / ${formatInteger(run.correct_to_wrong)}`,
+      `+${(100 * run.ci_lower).toFixed(2)} to +${(100 * run.ci_upper).toFixed(2)} pp`,
+      pValue,
+    ];
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    elements.fullTestResults.append(row);
+  }
+
+  const gains = report.runs.map((run) => run.accuracy_gain);
+  const mean = gains.reduce((sum, value) => sum + value, 0) / gains.length;
+  elements.fullTestRunCount.textContent = report.runs.length;
+  elements.fullTestMeanGain.textContent = `+${(100 * mean).toFixed(2)} pp`;
+  elements.fullTestGainRange.textContent = `+${(100 * Math.min(...gains)).toFixed(2)} to +${(100 * Math.max(...gains)).toFixed(2)} pp`;
+  elements.fullTestImageCount.textContent = formatInteger(dataset.official_test_images);
+  elements.fullTestSubsetNote.textContent = report.subset_note;
+  elements.fullTestInterpretation.textContent = report.interpretation;
 }
 
 function statusClass(status) {
@@ -271,17 +389,128 @@ function scenarioLabel(id) {
 }
 
 function switchView(view) {
+  const xai = view === "xai";
   const benchmark = view === "benchmark";
   const portfolio = view === "portfolio";
   const robustness = view === "robustness";
   const upload = view === "upload";
-  elements.comparisonView.hidden = benchmark || portfolio || robustness || upload;
-  elements.benchmarkView.hidden = !benchmark;
-  elements.portfolioView.hidden = !portfolio;
-  elements.robustnessView.hidden = !robustness;
+  elements.comparisonView.hidden = !(xai || view === "comparison");
+  elements.benchmarkView.hidden = !(xai || benchmark);
+  elements.portfolioView.hidden = !(xai || portfolio);
+  elements.robustnessView.hidden = !(xai || robustness);
   elements.uploadView.hidden = !upload;
   for (const tab of elements.viewTabs) {
     tab.classList.toggle("active", tab.dataset.view === view);
+  }
+}
+
+let moduleDetailState = null;
+
+function moduleSections(scope) {
+  if (scope === "upload") {
+    return [
+      ...elements.uploadView.querySelectorAll(":scope > section"),
+      ...elements.uploadResults.querySelectorAll(":scope > section"),
+    ];
+  }
+  return [
+    ...elements.comparisonView.querySelectorAll(":scope > section"),
+    ...elements.benchmarkView.querySelectorAll(":scope > section"),
+    ...elements.portfolioView.querySelectorAll(":scope > section"),
+    ...elements.robustnessView.querySelectorAll(":scope > section"),
+  ];
+}
+
+function prepareXaiModuleHome() {
+  const hub = elements.comparisonView.querySelector(".module-hub");
+  const status = elements.comparisonView.querySelector(".status-panel");
+  for (const section of moduleSections("xai")) {
+    section.hidden = section !== hub && section !== status;
+  }
+}
+
+function prepareUploadModuleHome() {
+  const hub = elements.uploadResults.querySelector(".module-hub");
+  for (const section of elements.uploadResults.querySelectorAll(":scope > section")) {
+    section.hidden = section !== hub;
+  }
+}
+
+function closeModuleDetail() {
+  if (!moduleDetailState) return;
+  for (const [section, wasHidden] of moduleDetailState.hiddenSections) {
+    section.hidden = wasHidden;
+  }
+  moduleDetailState.toolbar.remove();
+  const hub = moduleDetailState.hub;
+  moduleDetailState = null;
+  document.body.classList.remove("module-detail-mode");
+  hub.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function openModuleDetail(link) {
+  const target = document.querySelector(link.getAttribute("href"));
+  const selectedSection = target?.closest("section");
+  if (!selectedSection) return;
+
+  if (moduleDetailState) closeModuleDetail();
+  const scope = link.closest("#upload-view") ? "upload" : "xai";
+  const sections = moduleSections(scope);
+  const hiddenSections = new Map(sections.map((section) => [section, section.hidden]));
+  for (const section of sections) section.hidden = section !== selectedSection;
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "module-detail-toolbar";
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "module-back-button";
+  back.textContent = "← Back to modules";
+  const context = document.createElement("div");
+  const label = document.createElement("span");
+  label.textContent = scope === "upload" ? "Uploaded model comparison" : "SHAP & LIME evidence";
+  const title = document.createElement("strong");
+  title.textContent = link.querySelector("h3")?.textContent
+    || link.querySelector("strong")?.textContent
+    || target.textContent;
+  context.append(label, title);
+  toolbar.append(back, context);
+  back.addEventListener("click", closeModuleDetail);
+  selectedSection.before(toolbar);
+
+  moduleDetailState = {
+    hiddenSections,
+    toolbar,
+    hub: link.closest(".module-hub"),
+  };
+  document.body.classList.add("module-detail-mode");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+for (const link of document.querySelectorAll(".nested-module-actions a, .uploaded-result-card")) {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    openModuleDetail(link);
+  });
+}
+
+function renderResultMiniChart(container, rows) {
+  if (!container) return;
+  container.replaceChildren();
+  for (const row of rows) {
+    const item = document.createElement("div");
+    item.className = `result-mini-row ${row.tone || "neutral"}`;
+    const label = document.createElement("span");
+    label.textContent = row.label;
+    label.title = row.label;
+    const track = document.createElement("i");
+    const fill = document.createElement("b");
+    const maximum = Math.max(Number(row.maximum ?? 1), 1e-12);
+    fill.style.width = `${Math.min(100, Math.max(0, Number(row.value) / maximum * 100))}%`;
+    track.append(fill);
+    const value = document.createElement("em");
+    value.textContent = row.display;
+    item.append(label, track, value);
+    container.append(item);
   }
 }
 
@@ -336,6 +565,32 @@ function uploadedModels() {
   if (elements.modelV2Upload.files[0]) files.push(elements.modelV2Upload.files[0]);
   files.push(...Array.from(elements.additionalModelsUpload.files).slice(0, 3));
   return files;
+}
+
+function setInputFiles(input, files) {
+  const transfer = new DataTransfer();
+  files.forEach((file) => transfer.items.add(file));
+  input.files = transfer.files;
+}
+
+function resetManifestBuilder() {
+  fillColumnSelector(elements.manifestLabelColumn, [], false);
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choose CSV first";
+  elements.manifestLabelColumn.append(placeholder);
+  fillColumnSelector(elements.manifestIdColumn, [], true);
+  fillColumnSelector(elements.manifestImageColumn, [], true);
+  elements.manifestBuilderMessage.textContent = "Choose a labelled CSV first.";
+  elements.manifestBuilder.open = false;
+  elements.manifestTrustModels.checked = false;
+}
+
+function updateClearUploadButtons() {
+  for (const button of document.querySelectorAll("[data-clear-upload]")) {
+    const input = document.getElementById(button.dataset.clearUpload);
+    button.hidden = !input?.files?.length;
+  }
 }
 
 function parseCsvHeader(text) {
@@ -422,6 +677,7 @@ function selectedManifestFile() {
     image_column: imageColumn,
     feature_columns: allColumns.filter((column) => !excluded.has(column)),
     trusted_model_files: true,
+    explanation_method: isRegression ? "auto" : elements.manifestExplanationMethod.value,
   };
   const height = isRegression ? 0 : Number(elements.manifestImageHeight.value);
   const width = isRegression ? 0 : Number(elements.manifestImageWidth.value);
@@ -486,6 +742,7 @@ function updateUploadReadiness() {
   elements.uploadReadinessMessage.textContent = ready
     ? "Selections are complete. The next step checks every model before comparison."
     : `Still needed: ${missing.join(", ")}.`;
+  updateClearUploadButtons();
 }
 
 function updateModelSelectors() {
@@ -501,8 +758,23 @@ function updateModelSelectors() {
     for (const file of additional) {
       const name = document.createElement("span");
       name.className = "selected-file-name";
-      name.textContent = file.name;
       name.title = file.name;
+      const label = document.createElement("span");
+      label.textContent = file.name;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "remove-additional-model";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `Remove ${file.name}`);
+      remove.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const remaining = Array.from(elements.additionalModelsUpload.files)
+          .filter((candidate) => candidate !== file);
+        setInputFiles(elements.additionalModelsUpload, remaining);
+        updateModelSelectors();
+      });
+      name.append(label, remove);
       elements.additionalModelNames.append(name);
     }
   }
@@ -530,7 +802,7 @@ function updateModelSelectors() {
   const extraCount = elements.additionalModelsUpload.files.length;
   elements.modelCollectionMessage.textContent = extraCount > 3
     ? "Only the first three additional models will be available (five total)."
-    : `${files.length} model${files.length === 1 ? "" : "s"} ready; select two different models.`;
+    : `${files.length} model${files.length === 1 ? "" : "s"} ready; the baseline is compared with every other model, and the candidate gets a detailed comparison.`;
   updateUploadReadiness();
 }
 
@@ -574,11 +846,167 @@ function renderReliabilityChart(model) {
   return chart;
 }
 
+function renderMultiModelMetrics(container, models, metrics) {
+  if (!container) return;
+  container.replaceChildren();
+  const ordered = [...models].sort((a, b) => a.index - b.index);
+  for (const metric of metrics) {
+    const values = ordered.map((model) => model[metric.key] == null ? NaN : Number(model[metric.key]));
+    const finite = values.filter(Number.isFinite);
+    if (!finite.length) continue;
+    const minimum = metric.percent ? 0 : Math.min(0, ...finite);
+    const maximum = metric.percent ? 1 : Math.max(...finite);
+    const panel = document.createElement("section");
+    panel.className = "multi-model-metric";
+    const heading = document.createElement("h3");
+    heading.textContent = `${metric.label} · ${metric.direction}`;
+    panel.append(heading);
+    const sorted = ordered.map((model, index) => ({ model, value: values[index] })).sort((left, right) => {
+      if (!Number.isFinite(left.value)) return 1;
+      if (!Number.isFinite(right.value)) return -1;
+      return metric.direction === "lower is better" ? left.value - right.value : right.value - left.value;
+    });
+    sorted.forEach(({ model, value }) => {
+      const row = document.createElement("div");
+      row.className = "multi-model-metric-row";
+      const name = document.createElement("span");
+      name.textContent = model.filename;
+      name.title = model.filename;
+      const track = document.createElement("span");
+      track.className = "multi-model-metric-track";
+      const fill = document.createElement("span");
+      fill.className = "multi-model-metric-fill";
+      fill.style.width = `${Number.isFinite(value) && maximum > minimum ? Math.max(2, 100 * (value - minimum) / (maximum - minimum)) : 0}%`;
+      track.append(fill);
+      const number = document.createElement("strong");
+      number.textContent = Number.isFinite(value) ? (metric.percent ? formatPercent(value) : formatNumber(value)) : "—";
+      row.append(name, track, number);
+      panel.append(row);
+    });
+    container.append(panel);
+  }
+}
+
+function renderMultiModelTable(container, title, note, headings, rows, collapsible = false) {
+  if (!container) return;
+  container.replaceChildren();
+  if (!rows.length) return;
+  const section = document.createElement(collapsible ? "details" : "section");
+  section.className = `multi-model-detail${collapsible ? " multi-model-collapsible" : ""}`;
+  const heading = document.createElement(collapsible ? "summary" : "h3");
+  heading.textContent = collapsible ? `${title} · ${rows.length} examples` : title;
+  const description = document.createElement("p");
+  description.textContent = note;
+  const scroll = document.createElement("div");
+  scroll.className = "table-scroll";
+  const table = document.createElement("table");
+  table.className = "comparison-table multi-model-table";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  for (const label of headings) {
+    const cell = document.createElement("th");
+    cell.textContent = label;
+    headerRow.append(cell);
+  }
+  thead.append(headerRow);
+  const tbody = document.createElement("tbody");
+  for (const values of rows) {
+    const row = document.createElement("tr");
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.textContent = typeof value === "object" ? value.text : value;
+      if (typeof value === "object" && value.className) cell.className = value.className;
+      row.append(cell);
+    }
+    tbody.append(row);
+  }
+  table.append(thead, tbody);
+  scroll.append(table);
+  section.append(heading, description, scroll);
+  container.append(section);
+}
+
+function renderAgreementSelection() {
+  const report = state.modelOverview;
+  if (!report) return;
+  const first = Number(elements.agreementFirstModel.value);
+  const second = Number(elements.agreementSecondModel.value);
+  if (first === second) {
+    elements.agreementValue.textContent = "—";
+    elements.agreementMessage.textContent = "Choose two different models.";
+    return;
+  }
+  const pair = report.pairwise_agreements.find((item) =>
+    item.left_index === Math.min(first, second) && item.right_index === Math.max(first, second));
+  elements.agreementValue.textContent = pair ? formatPercent(pair.agreement) : "—";
+  elements.agreementMessage.textContent = pair
+    ? "Percentage of labelled samples for which both models predicted the same class."
+    : "Agreement is unavailable for this pair.";
+}
+
+function renderBaselineComparison(report, baselineIndex, regression = false) {
+  const baseline = report.models[baselineIndex];
+  const container = regression ? elements.regressionBaselineComparison : elements.modelBaselineComparison;
+  if (!baseline) return;
+  const others = report.models.filter((model) => model.index !== baselineIndex);
+  const rows = others.map((model) => {
+    const left = Math.min(baselineIndex, model.index);
+    const right = Math.max(baselineIndex, model.index);
+    const pair = (regression ? report.pairwise_error_changes : report.pairwise_agreements)
+      ?.find((item) => item.left_index === left && item.right_index === right);
+    if (regression) {
+      const improved = pair ? (baselineIndex === left ? pair.right_improved_count : pair.right_worsened_count) : null;
+      const worsened = pair ? (baselineIndex === left ? pair.right_worsened_count : pair.right_improved_count) : null;
+      return [model.filename, formatNumber(model.mae), formatNumber(model.mae - baseline.mae), String(improved ?? "—"), String(worsened ?? "—")];
+    }
+    const improved = pair ? (baselineIndex === left ? pair.left_wrong_right_correct : pair.left_correct_right_wrong) : null;
+    const regressed = pair ? (baselineIndex === left ? pair.left_correct_right_wrong : pair.left_wrong_right_correct) : null;
+    const change = (100 * (model.accuracy - baseline.accuracy)).toFixed(1);
+    return [model.filename, formatPercent(model.accuracy), `${Number(change) > 0 ? "+" : ""}${change} pp`, String(improved ?? "—"), String(regressed ?? "—")];
+  });
+  renderMultiModelTable(
+    container,
+    `All models compared with ${baseline.filename}`,
+    regression
+      ? "Improved and worsened count samples with lower or higher absolute error than the chosen baseline."
+      : "Improved means baseline wrong and comparison model correct; regressed means the reverse.",
+    regression
+      ? ["Comparison model", "MAE", "MAE change", "Improved", "Worsened"]
+      : ["Comparison model", "Accuracy", "Accuracy change", "Improved", "Regressed"],
+    rows,
+  );
+}
+
 function renderModelOverview(report) {
   if (!report || !Array.isArray(report.models) || !Array.isArray(report.pairwise_agreements)) {
     throw new Error("The server returned an invalid multi-model overview.");
   }
   state.modelOverview = report;
+  renderBaselineComparison(report, Number(elements.baselineModelSelector.value));
+  renderMultiModelMetrics(elements.modelMetricComparison, report.models, [
+    { key: "accuracy", label: "Accuracy", direction: "higher is better", percent: true },
+    { key: "macro_f1", label: "Macro F1", direction: "higher is better", percent: true },
+    { key: "expected_calibration_error", label: "ECE (models with probabilities)", direction: "lower is better", percent: true },
+  ]);
+  const orderedModels = [...report.models].sort((a, b) => a.index - b.index);
+  renderMultiModelTable(
+    elements.modelClassComparison,
+    "Accuracy by actual class · all models",
+    "Each column uses the same labelled rows for that class.",
+    ["Actual class", "Samples", ...orderedModels.map((model) => model.filename)],
+    (report.class_comparison || []).map((item) => [item.label, String(item.count), ...orderedModels.map((model) => formatPercent(item.accuracies[model.index]))]),
+  );
+  renderMultiModelTable(
+    elements.modelSampleComparison,
+    "Same samples · all model predictions",
+    "Up to 30 examples, with disagreements shown first. ✓ means the prediction matches the actual label.",
+    ["Sample", "Actual", ...orderedModels.map((model) => model.filename)],
+    (report.sample_comparison || []).map((item) => [item.sample_id, item.actual, ...orderedModels.map((model) => ({
+      text: `${item.predictions[model.index]} ${item.correct[model.index] ? "✓" : "✕"}`,
+      className: item.correct[model.index] ? "prediction-correct" : "prediction-wrong",
+    }))]),
+    true,
+  );
   elements.modelOverviewGrid.replaceChildren();
   const models = [...report.models].sort((left, right) => left.rank - right.rank);
   for (const model of models) {
@@ -617,16 +1045,18 @@ function renderModelOverview(report) {
     card.append(rank, name, fingerprint, accuracy, metrics, count, calibration, renderReliabilityChart(model));
     elements.modelOverviewGrid.append(card);
   }
-  elements.modelAgreementResults.replaceChildren();
-  for (const pair of report.pairwise_agreements) {
-    const row = document.createElement("tr");
-    const names = document.createElement("td");
-    names.textContent = `${report.models[pair.left_index].filename} ↔ ${report.models[pair.right_index].filename}`;
-    const agreement = document.createElement("td");
-    agreement.textContent = formatPercent(pair.agreement);
-    row.append(names, agreement);
-    elements.modelAgreementResults.append(row);
+  for (const selector of [elements.agreementFirstModel, elements.agreementSecondModel]) {
+    selector.replaceChildren();
+    orderedModels.forEach((model) => {
+      const option = document.createElement("option");
+      option.value = String(model.index);
+      option.textContent = model.filename;
+      selector.append(option);
+    });
   }
+  elements.agreementFirstModel.value = elements.baselineModelSelector.value;
+  elements.agreementSecondModel.value = elements.candidateModelSelector.value;
+  renderAgreementSelection();
 }
 
 function renderRegressionModelOverview(report) {
@@ -634,6 +1064,22 @@ function renderRegressionModelOverview(report) {
     throw new Error("The server returned an invalid regression model overview.");
   }
   state.regressionOverview = report;
+  renderBaselineComparison(report, Number(elements.baselineModelSelector.value), true);
+  renderMultiModelMetrics(elements.regressionMetricComparison, report.models, [
+    { key: "mae", label: "MAE", direction: "lower is better" },
+    { key: "rmse", label: "RMSE", direction: "lower is better" },
+    { key: "r2", label: "R²", direction: "higher is better" },
+  ]);
+  const orderedModels = [...report.models].sort((a, b) => a.index - b.index);
+  renderMultiModelTable(
+    elements.regressionSampleComparison,
+    "Same samples · all model predictions",
+    "First 30 labelled rows. Each model cell shows prediction and absolute error; lower error is better.",
+    ["Sample", "Actual", ...orderedModels.map((model) => model.filename)],
+    (report.sample_comparison || []).map((item) => [item.sample_id, formatNumber(item.actual), ...orderedModels.map((model) =>
+      `${formatNumber(item.predictions[model.index])} (error ${formatNumber(item.absolute_errors[model.index])})`)]),
+    true,
+  );
   elements.regressionModelOverviewGrid.replaceChildren();
   const models = [...report.models].sort((left, right) => left.rank - right.rank);
   for (const model of models) {
@@ -1077,11 +1523,55 @@ function openExplanation(sample) {
   elements.explanationDialog.showModal();
 }
 
+async function generateSampleExplanation(sample, sampleIndex, button) {
+  const files = state.uploadComparisonFiles;
+  if (!files) return;
+  button.disabled = true;
+  button.textContent = "Generating…";
+  try {
+    const form = new FormData();
+    form.append("model_v1", files.modelV1);
+    form.append("model_v2", files.modelV2);
+    form.append("dataset", files.dataset);
+    form.append("manifest", files.manifest);
+    form.append("sample_index", String(sampleIndex));
+    const result = await fetchUploadReport(
+      "/api/classification/sample-explanation", () => form, "Sample explanation",
+    );
+    sample.v1_explanation = result.v1_explanation;
+    sample.v2_explanation = result.v2_explanation;
+    sample.explanation_similarity = result.explanation_similarity;
+    button.textContent = "Compare maps";
+    button.disabled = false;
+    openExplanation(sample);
+    renderUploadSamples();
+  } catch (error) {
+    button.textContent = "Retry maps";
+    button.disabled = false;
+    button.title = error.message;
+    elements.uploadTableNote.textContent = `Could not generate sample heatmaps: ${error.message}`;
+  }
+}
+
+function fillSampleClassFilter(selector, samples, field, allLabel) {
+  selector.replaceChildren(new Option(allLabel, "all"));
+  const classes = [...new Set(samples.map((sample) => String(sample[field])))].sort(
+    (left, right) => left.localeCompare(right, undefined, {numeric: true}),
+  );
+  for (const className of classes) selector.add(new Option(className, className));
+}
+
 function renderUploadSamples() {
   const report = state.uploadComparison;
   if (!report) return;
   const selected = elements.uploadTransitionFilter.value;
   const matching = report.samples.filter((sample) => {
+    if (elements.sampleActualFilter.value !== "all"
+      && String(sample.actual) !== elements.sampleActualFilter.value) return false;
+    if (elements.sampleV1PredictionFilter.value !== "all"
+      && String(sample.v1_prediction) !== elements.sampleV1PredictionFilter.value) return false;
+    if (elements.sampleV2PredictionFilter.value !== "all"
+      && String(sample.v2_prediction) !== elements.sampleV2PredictionFilter.value) return false;
     if (state.selectedPredictionFlow && (
       sample.v1_prediction !== state.selectedPredictionFlow.from
       || sample.v2_prediction !== state.selectedPredictionFlow.to
@@ -1094,7 +1584,7 @@ function renderUploadSamples() {
     if (selected === "hidden_explanation_drift") return triage.hidden_explanation_drift;
     return sample.transition === selected;
   });
-  const displayed = matching.slice(0, 500);
+  const displayed = matching.slice(0, state.sampleDisplayLimit);
   elements.uploadSampleResults.replaceChildren();
   for (const sample of displayed) {
     const triage = sampleTriage(sample);
@@ -1144,10 +1634,16 @@ function renderUploadSamples() {
     const explanationButton = document.createElement("button");
     explanationButton.className = "explanation-button";
     explanationButton.type = "button";
-    const available = Array.isArray(sample.v1_explanation) || Array.isArray(sample.v2_explanation);
-    explanationButton.textContent = available ? "Compare maps" : "Unavailable";
-    explanationButton.disabled = !available;
+    const available = Array.isArray(sample.v1_explanation) && Array.isArray(sample.v2_explanation);
+    const canGenerate = !available && Boolean(state.uploadComparisonFiles)
+      && Array.isArray(report.explanations?.image_shape)
+      && report.explanations?.v1?.method !== "unavailable"
+      && report.explanations?.v2?.method !== "unavailable";
+    explanationButton.textContent = available ? "Compare maps" : canGenerate ? "Generate maps" : "Unavailable";
+    explanationButton.disabled = !available && !canGenerate;
     if (available) explanationButton.addEventListener("click", () => openExplanation(sample));
+    if (canGenerate) explanationButton.addEventListener("click", () =>
+      generateSampleExplanation(sample, report.samples.indexOf(sample), explanationButton));
     explanationCell.append(explanationButton);
     row.append(explanationCell);
     elements.uploadSampleResults.append(row);
@@ -1157,6 +1653,34 @@ function renderUploadSamples() {
   elements.uploadTableNote.textContent = pathPrefix + (matching.length > displayed.length
     ? `Showing the first ${displayed.length} of ${matching.length} matching samples.`
     : `Showing ${matching.length} matching sample${matching.length === 1 ? "" : "s"}.`);
+  elements.uploadShowMoreSamples.hidden = matching.length <= displayed.length;
+}
+
+function renderTransitionDetails() {
+  const report = state.uploadComparison;
+  if (!report) return;
+  const selected = elements.transitionDetailFilter.value;
+  const matching = report.samples.filter((sample) => selected === "all" || sample.transition === selected);
+  const displayed = matching.slice(0, 100);
+  elements.transitionDetailResults.replaceChildren();
+  for (const sample of displayed) {
+    const row = document.createElement("tr");
+    if (sample.transition === "v1_correct_v2_wrong") row.className = "regression-row";
+    if (sample.transition === "v1_wrong_v2_correct") row.className = "improvement-row";
+    for (const value of [sample.sample_id, sample.actual, sample.v1_prediction, sample.v2_prediction]) {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    const transitionCell = document.createElement("td");
+    const badge = document.createElement("span");
+    badge.className = `transition-pill ${sample.transition}`;
+    badge.textContent = transitionLabels[sample.transition] || sample.transition;
+    transitionCell.append(badge);
+    row.append(transitionCell);
+    elements.transitionDetailResults.append(row);
+  }
+  elements.transitionDetailCount.textContent = `Showing ${displayed.length} of ${matching.length} matching samples`;
 }
 
 function renderPredictionFlows() {
@@ -1213,6 +1737,7 @@ function renderPredictionFlows() {
     button.addEventListener("click", () => {
       state.selectedPredictionFlow = {from: path.from, to: path.to};
       elements.uploadTransitionFilter.value = "all";
+      elements.sampleTransitionHeaderFilter.value = "all";
       renderPredictionFlows();
       renderUploadSamples();
       document.querySelector("#sample-results-heading").scrollIntoView({behavior: "smooth", block: "start"});
@@ -1289,6 +1814,125 @@ function renderTriageSummary() {
   renderDriftGallery();
 }
 
+function renderTabularExplanations(report, v1Name, v2Name) {
+  const explanations = report.feature_explanations;
+  const methodGroups = explanations?.methods
+    ? Object.entries(explanations.methods).map(([key, value]) => ({ key, ...value }))
+    : explanations ? [{
+      key: explanations.v1?.method || "explanation",
+      label: explanations.v1?.label || "Explanation",
+      v1: explanations.v1,
+      v2: explanations.v2,
+    }] : [];
+  const availableGroups = methodGroups.filter((group) =>
+    [group.v1, group.v2].every(
+      (item) => item?.available && Array.isArray(item.features) && item.features.length,
+    ));
+  const available = availableGroups.length > 0;
+  elements.tabularExplanationPanel.hidden = !available;
+  elements.tabularExplanationLink.hidden = !available;
+  elements.imageExplanationLink.hidden = Boolean(available);
+  elements.tabularExplanationGrid.replaceChildren();
+  elements.multiModelExplanationConsensus.replaceChildren();
+  if (!available) return;
+  const consensus = state.modelOverview?.explanation_consensus;
+  if (consensus?.model_count >= 2 && Array.isArray(consensus.features)) {
+    const panel = document.createElement("section");
+    panel.className = "multi-model-explanation-consensus";
+    const title = document.createElement("h3");
+    title.textContent = `Shared feature ranking across ${consensus.model_count} distinct models`;
+    const note = document.createElement("p");
+    note.textContent = `Exploratory LIME ranking on the same ${consensus.sample_rows_per_model} rows per compatible model. Bars count how many distinct models put a feature in their top five; this is a ranking summary, not a combined prediction.${consensus.duplicate_model_count ? ` ${consensus.duplicate_model_count} byte-identical uploaded model${consensus.duplicate_model_count === 1 ? " was" : "s were"} excluded from the vote.` : ""}`;
+    panel.append(title, note);
+    for (const item of consensus.features.slice(0, 7)) {
+      const row = document.createElement("div");
+      row.className = "consensus-feature-row";
+      const label = document.createElement("span");
+      label.textContent = item.feature;
+      const track = document.createElement("i");
+      const fill = document.createElement("b");
+      fill.style.width = `${100 * item.top_five_votes / consensus.model_count}%`;
+      track.append(fill);
+      const count = document.createElement("strong");
+      count.textContent = `${item.top_five_votes}/${consensus.model_count} models`;
+      row.append(label, track, count);
+      panel.append(row);
+    }
+    const models = document.createElement("p");
+    models.className = "consensus-model-list";
+    models.textContent = consensus.models.map((item) => {
+      const name = state.modelOverview.models.find((model) => model.index === item.index)?.filename || `Model ${item.index + 1}`;
+      return `${name}: ${item.top_features.slice(0, 3).join(", ")}`;
+    }).join("  ·  ");
+    panel.append(models);
+    elements.multiModelExplanationConsensus.append(panel);
+  }
+  const requested = report.explanations?.requested_method || "auto";
+  const usedMethods = availableGroups.map((group) => group.label);
+  const comparisonNote = usedMethods.length > 1
+    ? "Both methods used the same models and rows; compare feature rankings rather than raw scales."
+    : "The same method was applied to both models for a fair comparison.";
+  elements.explanationRouteBanner.className = `explanation-route-banner ${usedMethods.length === 1 && usedMethods[0] === "LIME" ? "lime" : "shap"}`;
+  elements.explanationRouteBanner.textContent = `Requested: ${requested.toUpperCase()} · Available: ${usedMethods.join(" + ")} · ${comparisonNote}`;
+  elements.resultBriefExplanations.textContent = "Feature rankings are available for both models.";
+  renderResultMiniChart(elements.resultChartExplanations, usedMethods.map((method) => ({
+    label: method,
+    value: 1,
+    maximum: 1,
+    display: "Ready",
+    tone: "available",
+  })));
+  for (const group of availableGroups) {
+    const methodSection = document.createElement("section");
+    methodSection.className = `tabular-method-group method-${group.key === "lime" ? "lime" : "shap"}`;
+    const methodHeading = document.createElement("div");
+    methodHeading.className = "tabular-method-title";
+    const heading = document.createElement("h3");
+    heading.textContent = group.label;
+    const description = document.createElement("p");
+    description.textContent = group.key === "lime"
+      ? "Local surrogate explanations aggregated across deterministic uploaded rows."
+      : "Tree-structure contributions aggregated across all uploaded rows.";
+    methodHeading.append(heading, description);
+    const pair = document.createElement("div");
+    pair.className = "tabular-explanation-pair";
+    for (const [key, modelName] of [["v1", v1Name], ["v2", v2Name]]) {
+      const explanation = group[key];
+      const card = document.createElement("article");
+      const cardHeading = document.createElement("div");
+      cardHeading.className = "tabular-explanation-heading";
+      const title = document.createElement("h4");
+      title.textContent = modelName;
+      const method = document.createElement("strong");
+      method.textContent = group.label;
+      cardHeading.append(title, method);
+      card.append(cardHeading);
+      const features = (explanation.features || []).slice(0, 10);
+      const maximum = Math.max(1e-12, ...features.map((item) => Math.abs(item.importance)));
+      for (const item of features) {
+        const row = document.createElement("div");
+        row.className = "tabular-feature-row";
+        const label = document.createElement("span");
+        label.textContent = item.feature;
+        const track = document.createElement("i");
+        const fill = document.createElement("b");
+        fill.style.width = `${Math.abs(item.importance) / maximum * 100}%`;
+        track.append(fill);
+        const value = document.createElement("em");
+        value.textContent = formatNumber(item.importance);
+        row.append(label, track, value);
+        card.append(row);
+      }
+      const note = document.createElement("p");
+      note.textContent = explanation.note || "";
+      card.append(note);
+      pair.append(card);
+    }
+    methodSection.append(methodHeading, pair);
+    elements.tabularExplanationGrid.append(methodSection);
+  }
+}
+
 function renderUploadComparison(report) {
   if (
     !report || report.task !== "classification" || !report.summary
@@ -1304,6 +1948,70 @@ function renderUploadComparison(report) {
   const summary = report.summary;
   const v1Name = report.models?.v1?.filename || "Model V1";
   const v2Name = report.models?.v2?.filename || "Model V2";
+  elements.transitionHeading.textContent = `What changed from ${v1Name} to ${v2Name}?`;
+  elements.transitionV1Heading.textContent = `${v1Name} prediction`;
+  elements.transitionV2Heading.textContent = `${v2Name} prediction`;
+  const accuracyDelta = summary.v2_accuracy - summary.v1_accuracy;
+  const significance = summary.mcnemar_significant
+    ? `statistically separated (p=${Number(summary.mcnemar_exact_p).toExponential(2)})`
+    : `exploratory (p=${Number(summary.mcnemar_exact_p).toFixed(3)})`;
+  elements.resultBriefPerformance.textContent =
+    `Accuracy change ${accuracyDelta >= 0 ? "+" : ""}${formatPercent(accuracyDelta)} · ${significance}.`;
+  renderResultMiniChart(elements.resultChartPerformance, [
+    { label: "Baseline", value: summary.v1_accuracy, maximum: 1, display: formatPercent(summary.v1_accuracy), tone: "neutral" },
+    { label: "Candidate", value: summary.v2_accuracy, maximum: 1, display: formatPercent(summary.v2_accuracy), tone: accuracyDelta >= 0 ? "improved" : "regressed" },
+  ]);
+  elements.resultBriefTransitions.textContent = "Correctness changes on the same labelled samples.";
+  const changedMaximum = Math.max(1, summary.v1_wrong_v2_correct, summary.v1_correct_v2_wrong);
+  renderResultMiniChart(elements.resultChartTransitions, [
+    { label: "Improved", value: summary.v1_wrong_v2_correct, maximum: changedMaximum, display: summary.v1_wrong_v2_correct, tone: "improved" },
+    { label: "Regressed", value: summary.v1_correct_v2_wrong, maximum: changedMaximum, display: summary.v1_correct_v2_wrong, tone: "regressed" },
+    { label: "Agreement", value: summary.prediction_agreement, maximum: 1, display: formatPercent(summary.prediction_agreement), tone: "neutral" },
+  ]);
+  const weakestClass = [...report.class_diagnostics]
+    .sort((left, right) => left.v2_f1 - right.v2_f1)[0];
+  const largestErrorPath = [...report.confusion_diagnostics].sort(
+    (left, right) => Math.abs(right.error_change) - Math.abs(left.error_change),
+  )[0];
+  elements.resultBriefFailures.textContent = weakestClass
+    ? `Candidate's weakest class: ${weakestClass.class_label}.`
+    : "No class-level failure summary was returned.";
+  renderResultMiniChart(elements.resultChartFailures, weakestClass ? [
+    { label: `${weakestClass.class_label} F1`, value: weakestClass.v2_f1, maximum: 1, display: formatPercent(weakestClass.v2_f1), tone: "risk" },
+    ...(largestErrorPath ? [{
+      label: `${largestErrorPath.actual_class} → ${largestErrorPath.predicted_class}`,
+      value: Math.abs(largestErrorPath.error_change),
+      maximum: Math.max(1, Math.abs(largestErrorPath.error_change)),
+      display: `${largestErrorPath.error_change > 0 ? "+" : ""}${largestErrorPath.error_change}`,
+      tone: largestErrorPath.error_change > 0 ? "regressed" : "improved",
+    }] : []),
+  ] : []);
+  const briefThreshold = summary.high_confidence_threshold ?? 0.8;
+  const briefTriage = report.samples.map((sample) => sampleTriage(sample));
+  const highConfidenceWrong = briefTriage.filter((item) => item.v2_high_confidence_wrong).length;
+  const correctnessRegressions = report.samples.filter(
+    (sample) => sample.transition === "v1_correct_v2_wrong",
+  ).length;
+  elements.resultBriefSamples.textContent = `Candidate errors use a ${formatPercent(briefThreshold)} confidence cutoff.`;
+  renderResultMiniChart(elements.resultChartSamples, [
+    { label: "Regressions", value: correctnessRegressions, maximum: summary.total_samples, display: correctnessRegressions, tone: "regressed" },
+    { label: "High-conf. errors", value: highConfidenceWrong, maximum: summary.total_samples, display: highConfidenceWrong, tone: "risk" },
+    { label: "Reviewed samples", value: summary.total_samples, maximum: summary.total_samples, display: summary.total_samples, tone: "neutral" },
+  ]);
+  const imageMethods = [...new Set([
+    report.explanations?.v1?.label,
+    report.explanations?.v2?.label,
+  ].filter(Boolean))];
+  elements.resultBriefImageExplanations.textContent = imageMethods.length
+    ? `${imageMethods.join(" and ")} maps generated for the selected model pair.`
+    : "No compatible image explanation method was available.";
+  renderResultMiniChart(elements.resultChartImageExplanations, imageMethods.map((method) => ({
+    label: method,
+    value: 1,
+    maximum: 1,
+    display: "Ready",
+    tone: "available",
+  })));
   elements.uploadTotal.textContent = summary.total_samples;
   elements.uploadV1Accuracy.textContent = formatPercent(summary.v1_accuracy);
   elements.uploadV2Accuracy.textContent = formatPercent(summary.v2_accuracy);
@@ -1363,6 +2071,7 @@ function renderUploadComparison(report) {
   elements.explanationPolicyNote.className = summary.explanation_similarity_threshold_calibrated
     ? "explanation-policy-note calibrated"
     : "explanation-policy-note exploratory";
+  renderTabularExplanations(report, v1Name, v2Name);
   renderTriageSummary();
 
   const transitions = [
@@ -1492,9 +2201,17 @@ function renderUploadComparison(report) {
     elements.uploadLimitations.append(item);
   }
   elements.uploadTransitionFilter.value = "all";
+  state.sampleDisplayLimit = 500;
+  elements.sampleTransitionHeaderFilter.value = "all";
+  fillSampleClassFilter(elements.sampleActualFilter, report.samples, "actual", "All classes");
+  fillSampleClassFilter(elements.sampleV1PredictionFilter, report.samples, "v1_prediction", "All predictions");
+  fillSampleClassFilter(elements.sampleV2PredictionFilter, report.samples, "v2_prediction", "All predictions");
+  elements.transitionDetailFilter.value = "all";
+  renderTransitionDetails();
   renderUploadSamples();
   elements.uploadResults.hidden = false;
-  elements.uploadResults.scrollIntoView({ behavior: "smooth", block: "start" });
+  prepareUploadModuleHome();
+  elements.uploadResults.querySelector(".module-hub").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderRegressionSamples() {
@@ -2105,10 +2822,34 @@ elements.benchmarkSelector.addEventListener("change", (event) => {
 });
 
 elements.uploadTransitionFilter.addEventListener("change", () => {
+  state.sampleDisplayLimit = 500;
+  elements.sampleTransitionHeaderFilter.value = [...elements.sampleTransitionHeaderFilter.options].some(
+    (option) => option.value === elements.uploadTransitionFilter.value,
+  ) ? elements.uploadTransitionFilter.value : "all";
   state.selectedPredictionFlow = null;
   renderPredictionFlows();
   renderUploadSamples();
 });
+elements.sampleTransitionHeaderFilter.addEventListener("change", () => {
+  state.sampleDisplayLimit = 500;
+  elements.uploadTransitionFilter.value = elements.sampleTransitionHeaderFilter.value;
+  state.selectedPredictionFlow = null;
+  renderPredictionFlows();
+  renderUploadSamples();
+});
+for (const selector of [
+  elements.sampleActualFilter,
+  elements.sampleV1PredictionFilter,
+  elements.sampleV2PredictionFilter,
+]) selector.addEventListener("change", () => {
+  state.sampleDisplayLimit = 500;
+  renderUploadSamples();
+});
+elements.uploadShowMoreSamples.addEventListener("click", () => {
+  state.sampleDisplayLimit += 500;
+  renderUploadSamples();
+});
+elements.transitionDetailFilter.addEventListener("change", renderTransitionDetails);
 elements.predictionFlowShowAll.addEventListener("click", () => {
   state.showAllPredictionFlows = !state.showAllPredictionFlows;
   renderPredictionFlows();
@@ -2138,15 +2879,46 @@ for (const input of [
 ]) {
   input.addEventListener("change", updateModelSelectors);
 }
+for (const button of document.querySelectorAll("[data-clear-upload]")) {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const input = document.getElementById(button.dataset.clearUpload);
+    if (!input) return;
+    input.value = "";
+    if (input === elements.datasetUpload) resetManifestBuilder();
+    if ([elements.modelV1Upload, elements.modelV2Upload, elements.additionalModelsUpload].includes(input)) {
+      updateModelSelectors();
+    } else {
+      updateUploadReadiness();
+    }
+  });
+}
 elements.datasetUpload.addEventListener("change", async () => {
   await updateManifestBuilder();
   updateUploadReadiness();
 });
-elements.manifestUpload.addEventListener("change", updateUploadReadiness);
+elements.manifestUpload.addEventListener("change", async () => {
+  const file = elements.manifestUpload.files[0];
+  if (file) {
+    try {
+      const manifest = JSON.parse(await file.text());
+      const method = String(manifest.explanation_method || "auto").toLowerCase();
+      if ([...elements.manifestExplanationMethod.options].some((option) => option.value === method)) {
+        elements.manifestExplanationMethod.value = method;
+      }
+    } catch (error) {
+      // Server-side validation will provide the complete manifest error message.
+    }
+  }
+  updateUploadReadiness();
+});
 elements.manifestLabelColumn.addEventListener("change", updateUploadReadiness);
 elements.manifestTrustModels.addEventListener("change", updateUploadReadiness);
 elements.baselineModelSelector.addEventListener("change", updateUploadReadiness);
 elements.candidateModelSelector.addEventListener("change", updateUploadReadiness);
+elements.agreementFirstModel.addEventListener("change", renderAgreementSelection);
+elements.agreementSecondModel.addEventListener("change", renderAgreementSelection);
 elements.uploadTaskSelector.addEventListener("change", updateUploadTask);
 elements.regressionOutcomeFilter.addEventListener("change", renderRegressionSamples);
 elements.closeExplanationDialog.addEventListener("click", () => {
@@ -2155,6 +2927,26 @@ elements.closeExplanationDialog.addEventListener("click", () => {
 elements.explanationDialog.addEventListener("click", (event) => {
   if (event.target === elements.explanationDialog) elements.explanationDialog.close();
 });
+
+async function fetchUploadReport(route, form, stage) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await fetch(route, { method: "POST", body: form() });
+    const body = await response.text();
+    if (!body.trim()) {
+      if (response.ok && attempt === 0) continue;
+      throw new Error(`${stage} returned an empty response (HTTP ${response.status}). Restart the local dashboard and try again.`);
+    }
+    let payload;
+    try {
+      payload = JSON.parse(body);
+    } catch (error) {
+      if (response.ok && attempt === 0) continue;
+      throw new Error(`${stage} returned incomplete JSON (HTTP ${response.status}). Restart the local dashboard and try again.`);
+    }
+    if (!response.ok) throw new Error(payload.error || `${stage} failed (HTTP ${response.status}).`);
+    return payload;
+  }
+}
 
 elements.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -2199,53 +2991,29 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     : "Checking model compatibility before running the comparison.";
   try {
     if (isRegression) {
-      const validationResponse = await fetch("/api/regression/validate", {
-        method: "POST",
-        body: collectionForm(),
-      });
-      const validation = await validationResponse.json();
-      if (!validationResponse.ok) throw new Error(validation.error || `HTTP ${validationResponse.status}`);
+      const validation = await fetchUploadReport("/api/regression/validate", collectionForm, "Regression model validation");
       renderUploadValidation(validation);
       if (!validation.ready) throw new Error("One or more uploaded regression models are incompatible.");
-      const overviewResponse = await fetch("/api/regression/overview", {
-        method: "POST",
-        body: collectionForm(),
-      });
-      const overview = await overviewResponse.json();
-      if (!overviewResponse.ok) throw new Error(overview.error || `HTTP ${overviewResponse.status}`);
+      const overview = await fetchUploadReport("/api/regression/overview", collectionForm, "Regression model overview");
       renderRegressionModelOverview(overview);
-      const response = await fetch("/api/regression/compare", {
-        method: "POST",
-        body: comparisonForm,
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+      const payload = await fetchUploadReport("/api/regression/compare", () => comparisonForm, "Regression model comparison");
       renderRegressionComparison(payload);
       elements.uploadMessage.className = "upload-comparison-message success";
       elements.uploadMessage.textContent = "Regression comparison complete. No uploaded file was saved.";
       return;
     }
-    const validationResponse = await fetch("/api/classification/validate", {
-      method: "POST",
-      body: collectionForm(),
-    });
-    const validation = await validationResponse.json();
-    if (!validationResponse.ok) throw new Error(validation.error || `HTTP ${validationResponse.status}`);
+    const validation = await fetchUploadReport("/api/classification/validate", collectionForm, "Model validation");
     renderUploadValidation(validation);
     if (!validation.ready) throw new Error("One or more uploaded models are incompatible.");
-    const overviewResponse = await fetch("/api/classification/overview", {
-      method: "POST",
-      body: collectionForm(),
-    });
-    const overview = await overviewResponse.json();
-    if (!overviewResponse.ok) throw new Error(overview.error || `HTTP ${overviewResponse.status}`);
+    const overview = await fetchUploadReport("/api/classification/overview", collectionForm, "Model overview");
     renderModelOverview(overview);
-    const response = await fetch("/api/classification/compare", {
-      method: "POST",
-      body: comparisonForm,
-    });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+    const payload = await fetchUploadReport("/api/classification/compare", () => comparisonForm, "Model comparison");
+    state.uploadComparisonFiles = {
+      modelV1: models[baselineIndex],
+      modelV2: models[candidateIndex],
+      dataset: elements.datasetUpload.files[0],
+      manifest: manifestFile,
+    };
     renderUploadComparison(payload);
     elements.uploadMessage.className = "upload-comparison-message success";
     elements.uploadMessage.textContent = "Comparison complete. No uploaded file was saved.";
@@ -2345,6 +3113,38 @@ async function loadInitialReport() {
   } catch (_error) {
     // Split-robustness evidence is optional when served statically.
   }
+
+  try {
+    const response = await fetch("data/cifar10-full-test-summary.json", { cache: "no-store" });
+    if (!response.ok) return;
+    renderFullTestStudy(await response.json());
+  } catch (_error) {
+    // The completed full-test study is optional for other dashboard deployments.
+  }
 }
 
-loadInitialReport();
+switchView("upload");
+
+// A reproducible presentation view of the same upload result renderer.
+if (new URLSearchParams(window.location.search).get("demo") === "cifar10-10000") {
+  fetch("data/cifar10-10000-demo.json")
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(({ overview, comparison }) => {
+      renderModelOverview(overview);
+      renderUploadComparison(comparison);
+      document.body.classList.add("preloaded-demo");
+      const banner = document.createElement("div");
+      banner.className = "demo-banner";
+      banner.textContent = "CIFAR-10 demonstration · 10,000 labelled test images · Precomputed from two uploaded CNN models";
+      elements.uploadResults.prepend(banner);
+      elements.uploadMessage.textContent = "Precomputed comparison loaded. All 10,000 test images are included in the metrics; image previews are available for the first 1,000.";
+      elements.uploadMessage.className = "upload-comparison-message success";
+    })
+    .catch((error) => {
+      elements.uploadMessage.textContent = `Could not load demonstration: ${error.message}`;
+      elements.uploadMessage.className = "upload-comparison-message error";
+    });
+}

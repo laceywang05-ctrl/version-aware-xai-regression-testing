@@ -18,6 +18,30 @@ from xai_regression.image_bundle import (
 
 
 class ImageBundleTests(unittest.TestCase):
+    def test_large_bundle_keeps_all_rows_but_bounds_image_previews(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "images.npz"
+            np.savez(source, images=np.zeros((1_001, 2, 2), dtype=np.uint8), labels=np.zeros(1_001, dtype=int))
+            prepare_image_npz_bundle(source, root / "output", limit=1_001)
+            frame = pd.read_csv(root / "output" / "samples.csv")
+            with ZipFile(root / "output" / "images.zip") as archive:
+                self.assertEqual(len(archive.namelist()), 1_000)
+            self.assertEqual(len(frame), 1_001)
+            self.assertTrue(pd.isna(frame.loc[1_000, "image_filename"]))
+
+    def test_official_cifar_archive_can_prepare_upload_without_retraining(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "cifar-10-python.tar.gz"
+            self._write_cifar_archive(archive)
+            result = prepare_image_npz_bundle(archive, root / "output", limit=12)
+            frame = pd.read_csv(root / "output" / "samples.csv")
+            self.assertEqual(result["sample_count"], 12)
+            self.assertEqual(result["array_source"], "official CIFAR-10 test_batch")
+            self.assertEqual(len(frame), 12)
+            self.assertEqual(result["image_shape"], (32, 32, 3))
+
     def _write_cifar_archive(self, path: Path) -> None:
         def add_pickle(archive, name, value):
             payload = pickle.dumps(value, protocol=2)

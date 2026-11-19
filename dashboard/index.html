@@ -8,7 +8,7 @@
       content="Dashboard for version-aware SHAP and LIME regression testing"
     />
     <title>XAI Regression Monitor</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20261116-1" />
   </head>
   <body>
     <header class="site-header">
@@ -18,24 +18,47 @@
         <h1>XAI Regression Monitor</h1>
       </div>
       <div class="upload-area">
-        <label class="upload-button" for="report-upload">
-          Load report JSON
-          <input id="report-upload" type="file" accept="application/json,.json" />
-        </label>
+        <input id="report-upload" hidden type="file" accept="application/json,.json" />
         <p id="load-message" class="load-message" role="status" aria-live="polite"></p>
       </div>
     </header>
 
     <main>
       <nav class="view-tabs" aria-label="Dashboard view">
-        <button class="view-tab active" data-view="comparison" type="button">Current comparison</button>
-        <button class="view-tab" data-view="benchmark" type="button">Benchmark validation</button>
-        <button class="view-tab" data-view="portfolio" type="button">Cross-dataset overview</button>
-        <button class="view-tab" data-view="robustness" type="button">Split robustness</button>
-        <button class="view-tab" data-view="upload" type="button">Compare uploaded models</button>
+        <button class="view-tab active" data-view="upload" type="button">Upload &amp; compare models</button>
       </nav>
 
-      <div id="comparison-view" class="dashboard-view">
+      <div id="comparison-view" class="dashboard-view" hidden>
+      <section class="module-hub" aria-labelledby="xai-module-heading">
+        <div class="module-hub-heading">
+          <p class="eyebrow">Explanation stability evidence</p>
+          <h2 id="xai-module-heading">Choose an SHAP or LIME result</h2>
+          <p>All completed explanation experiments are collected on this page. Select a module to jump directly to its evidence.</p>
+        </div>
+        <div class="nested-module-grid">
+          <details class="nested-module-card" open>
+            <summary><span>01</span><div><h3>Current SHAP &amp; LIME comparison</h3><p>Start here to understand the current decision and which stability metrics triggered review.</p></div></summary>
+            <div class="nested-module-actions">
+              <a href="#methods-heading"><strong>Method overview</strong><small>Separate summaries for SHAP and LIME. Open page →</small></a>
+              <a href="#metrics-heading"><strong>Metric evidence</strong><small>Cosine similarity, rank correlation and breach rates. Open page →</small></a>
+            </div>
+          </details>
+          <details class="nested-module-card">
+            <summary><span>02</span><div><h3>Repeated validation</h3><p>Open this group when you need evidence that the review policy works beyond one run.</p></div></summary>
+            <div class="nested-module-actions">
+              <a href="#benchmark-heading"><strong>Benchmark validation</strong><small>Repeated held-out runs and confidence intervals.</small></a>
+              <a href="#paired-heading"><strong>Control comparison</strong><small>Paired McNemar tests against seed-only controls.</small></a>
+            </div>
+          </details>
+          <details class="nested-module-card">
+            <summary><span>03</span><div><h3>Generalisation and robustness</h3><p>Use this group to check whether results transfer across datasets and fitted splits.</p></div></summary>
+            <div class="nested-module-actions">
+              <a href="#portfolio-heading"><strong>Cross-dataset evidence</strong><small>Breast Cancer and Wine across SHAP and LIME.</small></a>
+              <a href="#robustness-heading"><strong>Split robustness</strong><small>Consistency across independently fitted data splits.</small></a>
+            </div>
+          </details>
+        </div>
+      </section>
       <section class="status-panel" aria-labelledby="status-heading">
         <div>
           <p class="eyebrow">Current decision</p>
@@ -229,7 +252,7 @@
         </section>
       </div>
 
-      <div id="upload-view" class="dashboard-view" hidden>
+      <div id="upload-view" class="dashboard-view">
         <section class="content-section upload-intro" aria-labelledby="upload-heading">
           <div class="section-heading">
             <div>
@@ -264,21 +287,25 @@
               <span>Model file 1</span>
               <small>Trusted estimator</small>
               <input id="model-v1-upload" name="model_v1" type="file" accept=".joblib" required />
+              <button class="clear-upload-button" type="button" data-clear-upload="model-v1-upload" hidden>Remove selected file</button>
             </label>
             <label class="file-field">
               <span>Model file 2</span>
               <small>Trusted estimator</small>
               <input id="model-v2-upload" name="model_v2" type="file" accept=".joblib" required />
+              <button class="clear-upload-button" type="button" data-clear-upload="model-v2-upload" hidden>Remove selected file</button>
             </label>
             <label class="file-field">
               <span>Labelled dataset</span>
-              <small>CSV, up to 5,000 rows</small>
+              <small>CSV, up to 10,000 rows</small>
               <input id="dataset-upload" name="dataset" type="file" accept=".csv,text/csv" required />
+              <button class="clear-upload-button" type="button" data-clear-upload="dataset-upload" hidden>Remove selected file</button>
             </label>
             <label class="file-field">
               <span>Manifest <em>optional</em></span>
               <small>Upload JSON or build it below</small>
               <input id="manifest-upload" name="manifest" type="file" accept=".json,application/json" />
+              <button class="clear-upload-button" type="button" data-clear-upload="manifest-upload" hidden>Remove selected file</button>
             </label>
             <details id="manifest-builder" class="manifest-builder">
               <summary>Build manifest from CSV columns</summary>
@@ -286,18 +313,29 @@
               <div class="manifest-builder-grid">
                 <label>Label column <select id="manifest-label-column"><option value="">Choose CSV first</option></select></label>
                 <label>Sample ID <select id="manifest-id-column"><option value="">None</option></select></label>
+                <label class="classification-only">Explanation method
+                  <select id="manifest-explanation-method">
+                    <option value="auto">Auto · run all compatible methods</option>
+                    <option value="shap">SHAP</option>
+                    <option value="lime">LIME</option>
+                    <option value="grad_cam">Grad-CAM</option>
+                    <option value="integrated_gradients">Integrated Gradients</option>
+                    <option value="pixel_occlusion">Pixel occlusion</option>
+                  </select>
+                </label>
                 <label class="classification-only">Image filename <select id="manifest-image-column"><option value="">None</option></select></label>
                 <label class="classification-only">Image height <input id="manifest-image-height" type="number" min="1" placeholder="e.g. 28" /></label>
                 <label class="classification-only">Image width <input id="manifest-image-width" type="number" min="1" placeholder="e.g. 28" /></label>
                 <label class="classification-only">Image channels <select id="manifest-image-channels"><option value="1">1 · grayscale</option><option value="3">3 · RGB</option><option value="4">4 · RGBA</option></select></label>
               </div>
               <label class="trust-check"><input id="manifest-trust-models" type="checkbox" /> I confirm that these model files come from a trusted source.</label>
-              <p class="table-note">All remaining CSV columns become model features in their existing order.</p>
+              <p class="table-note">All remaining CSV columns become model features in their existing order. Auto selects Tree SHAP for compatible trees, LIME for other tabular classifiers, Grad-CAM or Integrated Gradients for compatible neural adapters, and pixel occlusion as an image fallback.</p>
             </details>
             <label class="file-field optional-image-field">
               <span>Additional models <em>optional</em></span>
               <small>Select up to three more trusted .joblib models</small>
               <input id="additional-models-upload" type="file" accept=".joblib" multiple />
+              <button class="clear-upload-button" type="button" data-clear-upload="additional-models-upload" hidden>Remove all additional models</button>
               <div id="additional-model-names" class="selected-file-list" aria-live="polite">
                 <span class="selected-file-empty">No additional models selected</span>
               </div>
@@ -310,12 +348,13 @@
               <label>Candidate model
                 <select id="candidate-model-selector"></select>
               </label>
-              <p id="model-collection-message">Upload two to five models, then select the pair to compare.</p>
+              <p id="model-collection-message">Choose a baseline for comparison against every other model, then choose one candidate for detailed results.</p>
             </div>
             <label class="file-field optional-image-field classification-only">
               <span>Sample images <em>optional</em></span>
               <small>ZIP of PNG, JPEG, WebP or GIF files referenced by the CSV</small>
               <input id="images-upload" name="images" type="file" accept=".zip,application/zip" />
+              <button class="clear-upload-button" type="button" data-clear-upload="images-upload" hidden>Remove selected file</button>
             </label>
             <section id="upload-readiness" class="upload-readiness" aria-labelledby="upload-readiness-heading">
               <div class="upload-readiness-head">
@@ -361,6 +400,21 @@
         </section>
 
         <div id="upload-results" hidden>
+          <section class="module-hub uploaded-module-hub" aria-labelledby="uploaded-module-heading">
+            <div class="module-hub-heading">
+              <p class="eyebrow">Comparison workspace</p>
+              <h2 id="uploaded-module-heading">Choose a result module</h2>
+              <p>Your uploaded models have been evaluated on the same labelled samples. Select a module to inspect the comparison you need.</p>
+            </div>
+            <div class="uploaded-result-grid">
+              <a class="uploaded-result-card" href="#model-overview-heading"><span>01</span><h3>Overall model performance</h3><p id="result-brief-performance">Calculating model performance…</p><div id="result-chart-performance" class="result-mini-chart" aria-label="Accuracy comparison"></div><strong>Open results →</strong></a>
+              <a class="uploaded-result-card" href="#transition-heading"><span>02</span><h3>What changed between versions?</h3><p id="result-brief-transitions">Calculating prediction transitions…</p><div id="result-chart-transitions" class="result-mini-chart" aria-label="Prediction transition summary"></div><strong>Open results →</strong></a>
+              <a class="uploaded-result-card" href="#class-diagnostics-heading"><span>03</span><h3>Where did the models fail?</h3><p id="result-brief-failures">Calculating class-level weaknesses…</p><div id="result-chart-failures" class="result-mini-chart" aria-label="Weakest class summary"></div><strong>Open results →</strong></a>
+              <a id="tabular-explanation-link" class="uploaded-result-card" href="#tabular-explanation-heading"><span>04</span><h3>Why did the models decide differently?</h3><p id="result-brief-explanations">Calculating compatible explanations…</p><div id="result-chart-explanations" class="result-mini-chart" aria-label="Available explanation methods"></div><strong>Open results →</strong></a>
+              <a id="image-explanation-link" class="uploaded-result-card" href="#sample-results-heading" hidden><span>04</span><h3>Why did the models decide differently?</h3><p id="result-brief-image-explanations">Calculating image explanations…</p><div id="result-chart-image-explanations" class="result-mini-chart" aria-label="Available image explanation methods"></div><strong>Open results →</strong></a>
+              <a class="uploaded-result-card" href="#sample-results-heading"><span>05</span><h3>Which samples need review?</h3><p id="result-brief-samples">Calculating sample-level risks…</p><div id="result-chart-samples" class="result-mini-chart" aria-label="Sample review summary"></div><strong>Open results →</strong></a>
+            </div>
+          </section>
           <section class="content-section" aria-labelledby="model-overview-heading">
             <div class="section-heading">
               <div>
@@ -370,11 +424,18 @@
               <p>Accuracy ranks every uploaded model on the same labelled samples; macro F1 weights every class equally. SHA-256 fingerprints identify the exact uploaded model bytes.</p>
             </div>
             <div id="model-overview-grid" class="model-overview-grid"></div>
-            <div class="table-scroll">
-              <table class="comparison-table agreement-table">
-                <thead><tr><th>Model pair</th><th>Prediction agreement</th></tr></thead>
-                <tbody id="model-agreement-results"></tbody>
-              </table>
+            <div id="model-metric-comparison" class="multi-model-metrics" aria-label="Metrics for all uploaded classification models"></div>
+            <div id="model-baseline-comparison"></div>
+            <div id="model-class-comparison"></div>
+            <div id="model-sample-comparison"></div>
+            <div class="agreement-picker" aria-label="Prediction agreement between two models">
+              <h3>Prediction agreement between two models</h3>
+              <div class="agreement-picker-controls">
+                <label>First model <select id="agreement-first-model"></select></label>
+                <label>Second model <select id="agreement-second-model"></select></label>
+                <strong id="agreement-value">—</strong>
+              </div>
+              <p id="agreement-message" class="table-note">Select two different models.</p>
             </div>
           </section>
 
@@ -429,11 +490,25 @@
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Version transitions</p>
-                <h2 id="transition-heading">What changed from V1 to V2</h2>
+                <h2 id="transition-heading">What changed between the selected models?</h2>
               </div>
               <p>“Wrong → correct” is an improvement; “correct → wrong” is a regression on the supplied labelled sample.</p>
             </div>
             <div id="upload-transition-grid" class="transition-grid"></div>
+            <label class="transition-detail-filter">Show samples
+              <select id="transition-detail-filter">
+                <option value="all">All transitions</option>
+                <option value="v1_correct_v2_wrong">Correct → wrong</option>
+                <option value="v1_wrong_v2_correct">Wrong → correct</option>
+                <option value="both_correct">Both correct</option>
+                <option value="both_wrong">Both wrong</option>
+              </select>
+            </label>
+            <p id="transition-detail-count" class="table-note"></p>
+            <div class="table-scroll"><table class="comparison-table">
+              <thead><tr><th>Sample</th><th>Actual</th><th id="transition-v1-heading">Baseline prediction</th><th id="transition-v2-heading">Candidate prediction</th><th>Transition</th></tr></thead>
+              <tbody id="transition-detail-results"></tbody>
+            </table></div>
           </section>
 
           <section class="content-section" aria-labelledby="prediction-flow-heading">
@@ -506,6 +581,19 @@
             <p id="confusion-empty-message" class="table-note" hidden>Neither selected model made a classification error on these samples.</p>
           </section>
 
+          <section id="tabular-explanation-panel" class="content-section tabular-explanation-panel" aria-labelledby="tabular-explanation-heading" hidden>
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Tabular model explanation</p>
+                <h2 id="tabular-explanation-heading">Which features influenced the uploaded models?</h2>
+              </div>
+              <p>Bars show relative global importance for this uploaded labelled dataset.</p>
+            </div>
+            <div id="explanation-route-banner" class="explanation-route-banner"></div>
+            <div id="multi-model-explanation-consensus"></div>
+            <div id="tabular-explanation-grid" class="tabular-explanation-grid"></div>
+          </section>
+
           <section class="content-section" aria-labelledby="sample-results-heading">
             <div class="section-heading">
               <div>
@@ -554,11 +642,12 @@
             </div>
             <div class="table-scroll">
               <table class="comparison-table sample-table">
-                <thead><tr><th>Image</th><th>Sample</th><th>Actual</th><th id="v1-prediction-heading">V1 prediction</th><th id="v1-confidence-heading">V1 confidence</th><th id="v2-prediction-heading">V2 prediction</th><th id="v2-confidence-heading">V2 confidence</th><th>Explanation similarity</th><th>Transition</th><th>Explanation</th></tr></thead>
+                <thead><tr><th>Image</th><th>Sample</th><th><label class="table-header-filter">Actual<select id="sample-actual-filter" aria-label="Filter by actual class"><option value="all">All classes</option></select></label></th><th><label class="table-header-filter"><span id="v1-prediction-heading">V1 prediction</span><select id="sample-v1-prediction-filter" aria-label="Filter by V1 prediction"><option value="all">All predictions</option></select></label></th><th id="v1-confidence-heading">V1 confidence</th><th><label class="table-header-filter"><span id="v2-prediction-heading">V2 prediction</span><select id="sample-v2-prediction-filter" aria-label="Filter by V2 prediction"><option value="all">All predictions</option></select></label></th><th id="v2-confidence-heading">V2 confidence</th><th>Explanation similarity</th><th><label class="table-header-filter">Transition<select id="sample-transition-header-filter" aria-label="Filter by transition"><option value="all">All transitions</option><option value="v1_correct_v2_wrong">Correct → wrong</option><option value="v1_wrong_v2_correct">Wrong → correct</option><option value="both_correct">Both correct</option><option value="both_wrong">Both wrong</option></select></label></th><th>Explanation</th></tr></thead>
                 <tbody id="upload-sample-results"></tbody>
               </table>
             </div>
             <p id="upload-table-note" class="table-note"></p>
+            <button id="upload-show-more-samples" class="explanation-button" type="button" hidden>Show 500 more samples</button>
           </section>
 
           <section class="interpretation-panel" aria-labelledby="upload-boundary-heading">
@@ -577,6 +666,9 @@
               <p>Models are ranked by MAE on the same labelled samples; lower MAE and RMSE are better.</p>
             </div>
             <div id="regression-model-overview-grid" class="model-overview-grid"></div>
+            <div id="regression-metric-comparison" class="multi-model-metrics" aria-label="Metrics for all uploaded regression models"></div>
+            <div id="regression-baseline-comparison"></div>
+            <div id="regression-sample-comparison"></div>
           </section>
           <section class="content-section export-panel" aria-labelledby="regression-export-heading">
             <div class="section-heading">
@@ -698,6 +790,6 @@
       <span>FYP prototype</span>
       <span>Local processing · Uploaded files are not persisted</span>
     </footer>
-    <script src="app.js" defer></script>
+    <script src="app.js?v=20261116-1" defer></script>
   </body>
 </html>

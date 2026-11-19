@@ -17,7 +17,9 @@ from xai_regression.upload_comparison import (
     _explanation_threshold,
     compare_classifiers,
     compare_upload_payloads,
+    explain_upload_sample,
     load_uploaded_images,
+    load_uploaded_dataset,
     parse_manifest,
     summarize_upload_models,
     validate_upload_models,
@@ -39,6 +41,69 @@ class StubClassifier:
 
 
 class UploadComparisonTests(unittest.TestCase):
+    def test_full_test_csv_accepts_10000_rows_but_rejects_more(self):
+        frame = pd.DataFrame({"feature": np.zeros(10_001), "target": np.zeros(10_001)})
+        payload = frame.iloc[:10_000].to_csv(index=False).encode()
+        self.assertEqual(len(load_uploaded_dataset(payload, "samples.csv")), 10_000)
+        with self.assertRaisesRegex(ValueError, "at most 10000 rows"):
+            load_uploaded_dataset(frame.to_csv(index=False).encode(), "samples.csv")
+
+    def test_rows_without_image_previews_still_contribute_to_comparison(self):
+        manifest = parse_manifest({
+            "task": "classification", "label_column": "target",
+            "image_column": "image", "feature_columns": ["x"],
+            "trusted_model_files": True,
+        })
+        result = compare_classifiers(
+            StubClassifier([1, 1], [[0.1, 0.9], [0.1, 0.9]]),
+            StubClassifier([1, 0], [[0.1, 0.9], [0.9, 0.1]]),
+            pd.DataFrame({"image": ["shown.png", ""], "x": [1.0, 0.0], "target": [1, 0]}),
+            manifest, {"shown.png": "data:image/png;base64,AA=="},
+        )
+        self.assertEqual(result["summary"]["total_samples"], 2)
+        self.assertEqual(result["summary"]["v2_accuracy"], 1.0)
+        self.assertIsNone(result["samples"][1]["image_data_url"])
+
+    def test_explanation_can_be_generated_beyond_precomputed_rows(self):
+        columns = [f"p{index}" for index in range(4)]
+        features = pd.DataFrame(
+            [[0, 0, 0, 0], [1, 1, 0, 0], [0, 1, 1, 0], [1, 0, 1, 1]],
+            columns=columns,
+        )
+        labels = np.asarray([0, 1, 0, 1])
+        model = DecisionTreeClassifier(random_state=4).fit(features, labels)
+        buffer = BytesIO()
+        joblib.dump(model, buffer)
+        dataset = features.assign(target=labels).to_csv(index=False).encode()
+        manifest = json.dumps({
+            "task": "classification",
+            "label_column": "target",
+            "feature_columns": columns,
+            "image_shape": [2, 2],
+            "trusted_model_files": True,
+        }).encode()
+
+        result = explain_upload_sample(
+            model_v1=("tree.joblib", buffer.getvalue()),
+            model_v2=("tree.joblib", buffer.getvalue()),
+            dataset=("samples.csv", dataset),
+            manifest=manifest,
+            sample_index=3,
+        )
+
+        self.assertEqual(result["sample_index"], 3)
+        self.assertEqual(len(result["v1_explanation"]), 2)
+        self.assertEqual(len(result["v2_explanation"][0]), 2)
+        self.assertAlmostEqual(result["explanation_similarity"], 1.0)
+        with self.assertRaisesRegex(ValueError, "outside the uploaded dataset"):
+            explain_upload_sample(
+                model_v1=("tree.joblib", buffer.getvalue()),
+                model_v2=("tree.joblib", buffer.getvalue()),
+                dataset=("samples.csv", dataset),
+                manifest=manifest,
+                sample_index=4,
+            )
+
     def test_explanation_threshold_uses_dataset_specific_calibration(self):
         base = {
             "task": "classification",
@@ -89,6 +154,8 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertEqual(_exact_mcnemar_p(0, 0), 1.0)
         self.assertEqual(_exact_mcnemar_p(1, 1), 1.0)
         self.assertAlmostEqual(_exact_mcnemar_p(0, 10), 0.001953125)
+        self.assertLess(_exact_mcnemar_p(200, 2004), 1e-100)
+        self.assertAlmostEqual(_exact_mcnemar_p(5000, 5000), 1.0)
         with self.assertRaisesRegex(ValueError, "cannot be negative"):
             _exact_mcnemar_p(-1, 2)
 
@@ -155,6 +222,59 @@ class UploadComparisonTests(unittest.TestCase):
                     "trusted_model_files": True,
                 }
             )
+
+    def test_manifest_accepts_auto_and_manual_explanation_methods(self):
+        base = {
+            "task": "classification",
+            "label_column": "target",
+            "trusted_model_files": True,
+        }
+        self.assertEqual(parse_manifest(base).explanation_method, "auto")
+        self.assertEqual(
+            parse_manifest({**base, "explanation_method": "lime"}).explanation_method,
+            "lime",
+        )
+        with self.assertRaisesRegex(ValueError, "explanation_method"):
+            parse_manifest({**base, "explanation_method": "unknown"})
+
+    def test_auto_routes_tabular_tree_model_to_shap_feature_ranking(self):
+        dataset = pd.DataFrame(
+            {
+                "radius": [1.0, 1.2, 1.4, 4.0, 4.2, 4.4],
+                "texture": [0.1, 0.2, 0.3, 1.0, 1.1, 1.2],
+                "target": [0, 0, 0, 1, 1, 1],
+            }
+        )
+        features = dataset[["radius", "texture"]]
+        model = DecisionTreeClassifier(random_state=0).fit(features, dataset["target"])
+        report = compare_classifiers(
+            model,
+            model,
+            dataset,
+            parse_manifest(
+                {
+                    "task": "classification",
+                    "label_column": "target",
+                    "trusted_model_files": True,
+                    "explanation_method": "auto",
+                }
+            ),
+        )
+
+        self.assertEqual(report["explanations"]["requested_method"], "auto")
+        self.assertEqual(report["feature_explanations"]["v1"]["method"], "tree_shap")
+        self.assertEqual(
+            set(report["feature_explanations"]["methods"]),
+            {"tree_shap", "lime"},
+        )
+        self.assertEqual(
+            report["feature_explanations"]["methods"]["lime"]["v1"]["method"],
+            "lime",
+        )
+        self.assertEqual(
+            {item["feature"] for item in report["feature_explanations"]["v1"]["features"]},
+            {"radius", "texture"},
+        )
 
     def test_comparison_reports_all_correctness_transitions(self):
         dataset = pd.DataFrame(
@@ -306,6 +426,7 @@ class UploadComparisonTests(unittest.TestCase):
             ("strong.joblib", strong),
             ("copy.joblib", strong),
             ("weak.joblib", weak),
+            ("weak-copy.joblib", weak),
         ):
             buffer = BytesIO()
             joblib.dump(model, buffer)
@@ -326,7 +447,7 @@ class UploadComparisonTests(unittest.TestCase):
             manifest=manifest,
         )
 
-        self.assertEqual(len(result["models"]), 3)
+        self.assertEqual(len(result["models"]), 4)
         self.assertEqual(result["models"][0]["accuracy"], 1.0)
         self.assertEqual(len(result["models"][0]["short_sha256"]), 12)
         self.assertEqual(result["dataset"]["filename"], "samples.csv")
@@ -338,8 +459,20 @@ class UploadComparisonTests(unittest.TestCase):
         self.assertAlmostEqual(result["models"][2]["macro_f1"], 1 / 3)
         self.assertEqual(result["best_model_index"], 0)
         self.assertEqual(result["best_macro_f1_index"], 0)
-        self.assertEqual(len(result["pairwise_agreements"]), 3)
+        self.assertEqual(len(result["pairwise_agreements"]), 6)
         self.assertEqual(result["pairwise_agreements"][0]["agreement"], 1.0)
+        self.assertEqual(result["pairwise_agreements"][1]["left_wrong_right_correct"], 0)
+        self.assertEqual(result["pairwise_agreements"][1]["left_correct_right_wrong"], 2)
+        self.assertEqual(len(result["class_comparison"]), 2)
+        self.assertEqual(result["class_comparison"][1]["accuracies"], [1.0, 1.0, 0.0, 0.0])
+        self.assertEqual(len(result["sample_comparison"]), 4)
+        self.assertEqual(result["sample_comparison"][0]["predictions"], ["1", "1", "0", "0"])
+        consensus = result["explanation_consensus"]
+        self.assertEqual(consensus["method"], "LIME")
+        self.assertEqual(consensus["model_count"], 2)
+        self.assertEqual(consensus["duplicate_model_count"], 2)
+        self.assertEqual(consensus["sample_rows_per_model"], 4)
+        self.assertEqual(consensus["features"][0]["top_five_votes"], 2)
 
     def test_upload_validation_identifies_an_incompatible_model(self):
         features = pd.DataFrame({"x": [0.0, 1.0, 2.0, 3.0]})

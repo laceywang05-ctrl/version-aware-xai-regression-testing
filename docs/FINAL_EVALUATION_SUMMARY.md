@@ -93,6 +93,12 @@ mean-pixel replacement and positive under blur replacement. The result remains
 exploratory because the sample came from the previously examined official-test
 subset and neither replacement is a validated ground-truth intervention. See
 [`CIFAR10_MASK_SAMPLE_ROBUSTNESS.md`](CIFAR10_MASK_SAMPLE_ROBUSTNESS.md).
+On different official-test images (indices 1000–9999, previously unused by
+the masking audit), 23/24 mean-pixel condition means were negative and all
+24 blur means positive. The single mean-pixel exception was +0.0044. This
+supports intervention sensitivity while leaving explanation-quality gating
+exploratory. See
+[`CIFAR10_MASK_UNSEEN_TEST_RESULT.md`](CIFAR10_MASK_UNSEEN_TEST_RESULT.md).
 
 **Answer:** the overall workflow transfers, but numerical thresholds do not.
 Thresholds must be calibrated for the dataset, representation, model family and

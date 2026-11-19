@@ -325,6 +325,7 @@ def summarize_regression_upload_models(
         raise ValueError("Regression labels must be numeric.") from error
     features = frame.loc[:, feature_columns]
     summaries = []
+    predictions = []
     for index, (filename, payload) in enumerate(models):
         model = load_uploaded_model(payload, filename)
         try:
@@ -335,6 +336,7 @@ def summarize_regression_upload_models(
             ) from error
         if predicted.shape != actual.shape:
             raise ValueError(f"Model {filename} must return one prediction per dataset row.")
+        predictions.append(predicted)
         summaries.append(
             {
                 "index": index,
@@ -345,6 +347,27 @@ def summarize_regression_upload_models(
     ranked = sorted(summaries, key=lambda item: (item["mae"], item["index"]))
     for rank, item in enumerate(ranked, start=1):
         summaries[item["index"]]["rank"] = rank
+    pairwise_error_changes = []
+    for left in range(len(predictions)):
+        for right in range(left + 1, len(predictions)):
+            left_error = np.abs(predictions[left] - actual)
+            right_error = np.abs(predictions[right] - actual)
+            pairwise_error_changes.append({
+                "left_index": left,
+                "right_index": right,
+                "right_improved_count": int(np.count_nonzero(right_error < left_error)),
+                "right_worsened_count": int(np.count_nonzero(right_error > left_error)),
+            })
+    identifiers = frame[contract.id_column].tolist() if contract.id_column in frame else list(range(len(frame)))
+    sample_comparison = [
+        {
+            "sample_id": str(_json_value(identifiers[row])),
+            "actual": float(actual[row]),
+            "predictions": [float(prediction[row]) for prediction in predictions],
+            "absolute_errors": [float(abs(prediction[row] - actual[row])) for prediction in predictions],
+        }
+        for row in range(min(len(frame), 30))
+    ]
     return {
         "task": "regression",
         "dataset": {
@@ -354,6 +377,9 @@ def summarize_regression_upload_models(
         },
         "manifest": artifact_fingerprint("manifest.json", manifest),
         "models": summaries,
+        "pairwise_error_changes": pairwise_error_changes,
+        "sample_comparison": sample_comparison,
+        "sample_comparison_total": len(frame),
         "best_model_index": ranked[0]["index"],
     }
 
