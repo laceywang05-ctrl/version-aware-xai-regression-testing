@@ -7,10 +7,34 @@ import joblib
 import pandas as pd
 from sklearn.dummy import DummyClassifier, DummyRegressor
 
-from xai_regression.demo_check import check_demo_bundle
+from xai_regression.demo_check import check_demo_bundle, check_demo_matrix
 
 
 class DemoCheckTests(unittest.TestCase):
+    @staticmethod
+    def _write_classification_bundle(root: Path) -> None:
+        frame = pd.DataFrame(
+            {"sample_id": ["a", "b", "c"], "x": [0.0, 1.0, 2.0], "target": [0, 1, 1]}
+        )
+        frame.to_csv(root / "samples.csv", index=False)
+        (root / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "task": "classification",
+                    "label_column": "target",
+                    "id_column": "sample_id",
+                    "feature_columns": ["x"],
+                    "trusted_model_files": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+        for index in range(2):
+            model = DummyClassifier(strategy="most_frequent").fit(
+                frame[["x"]], frame["target"]
+            )
+            joblib.dump(model, root / f"model_{index}.joblib")
+
     def test_classification_bundle_is_ready(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -47,6 +71,24 @@ class DemoCheckTests(unittest.TestCase):
             (root / "manifest.json").write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "samples.csv"):
                 check_demo_bundle(root)
+
+    def test_matrix_keeps_checking_after_one_bundle_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ready = root / "ready"
+            failed = root / "failed"
+            ready.mkdir()
+            failed.mkdir()
+            self._write_classification_bundle(ready)
+            (failed / "manifest.json").write_text("{}", encoding="utf-8")
+
+            result = check_demo_matrix([ready, failed])
+
+        self.assertFalse(result["ready"])
+        self.assertEqual(result["ready_count"], 1)
+        self.assertEqual(result["failed_count"], 1)
+        self.assertIsNone(result["bundles"][0]["error"])
+        self.assertIn("samples.csv", result["bundles"][1]["error"])
 
     def test_explanation_preflight_reports_actual_method(self):
         with tempfile.TemporaryDirectory() as directory:

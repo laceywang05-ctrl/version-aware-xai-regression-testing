@@ -66,3 +66,10 @@ selection is performed by the service after upload; users do not train separate
 For regression bundles, the same flag generates model-agnostic permutation
 importance for every uploaded regressor and confirms that numeric feature
 importance can be displayed before a live demonstration.
+
+## One-command matrix
+
+Use `demo-matrix` with repeated `--bundle-dir` options to validate several
+representative bundles in one run. The command reports the task, model count,
+sample count and explanation methods for each bundle, continues after an
+individual failure, and succeeds only when the complete matrix is ready.
