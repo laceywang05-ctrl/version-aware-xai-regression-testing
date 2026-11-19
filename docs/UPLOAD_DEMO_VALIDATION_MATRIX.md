@@ -63,6 +63,20 @@ decision tree and random forest passed with both Tree SHAP and LIME. This
 selection is performed by the service after upload; users do not train separate
 "SHAP models" or "LIME models".
 
+## Iris model-family upload
+
+Generate the five-model bundle with:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src .venv/bin/python -m xai_regression iris-demo
+```
+
+The bundle adds logistic regression, K-nearest neighbours, RBF SVM, Gaussian
+naive Bayes and Extra Trees on the same 45-row, four-feature, three-class test
+split. This checks model-agnostic LIME routing alongside Tree SHAP plus LIME for
+the Extra Trees model.
+
 For regression bundles, the same flag generates model-agnostic permutation
 importance for every uploaded regressor and confirms that numeric feature
 importance can be displayed before a live demonstration.
@@ -74,8 +88,8 @@ representative bundles in one run. The command reports the task, model count,
 sample count and explanation methods for each bundle, continues after an
 individual failure, and succeeds only when the complete matrix is ready.
 
-The `--standard` preset checks Breast Cancer, Wine, the four-model MNIST neural
-bundle and the four-model diabetes regression bundle. It therefore covers
+The `--standard` preset checks Breast Cancer, Wine, Iris, the four-model MNIST
+neural bundle and the four-model diabetes regression bundle. It therefore covers
 tabular classification, neural image classification and numeric regression,
 including Tree SHAP, LIME, Integrated Gradients, Grad-CAM and permutation
 importance.

@@ -323,6 +323,26 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         build.assert_called_once_with(cli.PROJECT_ROOT / "wine-demo")
 
+    def test_iris_demo_resolves_output_path(self):
+        with (
+            patch(
+                "xai_regression.cli.build_iris_classification_demo",
+                return_value={
+                    "model_count": 5,
+                    "training_samples": 105,
+                    "sample_count": 45,
+                    "feature_count": 4,
+                    "class_count": 3,
+                    "best_accuracy": 1.0,
+                    "output_dir": cli.PROJECT_ROOT / "iris-demo",
+                },
+            ) as build,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_iris_demo("iris-demo")
+        self.assertEqual(exit_code, 0)
+        build.assert_called_once_with(cli.PROJECT_ROOT / "iris-demo")
+
     def test_demo_matrix_standard_preset_parses(self):
         args = cli.build_parser().parse_args(
             [
