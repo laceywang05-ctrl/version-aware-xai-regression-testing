@@ -393,6 +393,20 @@ dataset. The command writes four trusted `.joblib` files, `samples.csv` and
 on the upload page, use two model files as the initial pair, and select the
 remaining two under Additional models.
 
+Generate a broader nonlinear regression demonstration with:
+
+```bash
+PYTHONPATH=src python -m xai_regression friedman-regression-demo
+```
+
+This creates 1,000 reproducible Friedman #1 rows with 10 numeric features,
+uses 700 rows for training and exports 300 labelled test rows. It trains five
+different regression families: linear regression, scaled KNN, scaled RBF SVR,
+random forest and gradient boosting. The upload-ready files are written under
+`artifacts/friedman_regression_demo/`. This bundle deliberately tests nonlinear
+model behaviour and the dashboard's model-agnostic permutation importance,
+rather than repeating only the bundled diabetes example.
+
 Generate a compact three-class tabular demonstration with:
 
 ```bash

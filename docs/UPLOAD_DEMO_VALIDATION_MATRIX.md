@@ -89,10 +89,20 @@ sample count and explanation methods for each bundle, continues after an
 individual failure, and succeeds only when the complete matrix is ready.
 
 The `--standard` preset checks Breast Cancer, Wine, Iris, the four-model MNIST
-neural bundle and the four-model diabetes regression bundle. It therefore covers
-tabular classification, neural image classification and numeric regression,
-including Tree SHAP, LIME, Integrated Gradients, Grad-CAM and permutation
-importance.
+neural bundle, the four-model diabetes regression bundle and the five-model
+Friedman nonlinear regression bundle. It therefore covers tabular
+classification, neural image classification, linear numeric regression and
+nonlinear numeric regression, including Tree SHAP, LIME, Integrated Gradients,
+Grad-CAM and permutation importance.
+
+## Friedman nonlinear regression
+
+`artifacts/friedman_regression_demo/` contains 300 labelled evaluation rows
+with 10 numeric features. Its five uploaded models cover linear regression,
+KNN, RBF SVR, random forest and gradient boosting. The bundle verifies that
+the regression dashboard can rank several model families, compare numeric
+errors on the same samples and calculate permutation importance without
+requiring a tree-specific explanation method.
 
 Add `--output-dir artifacts/standard_demo_validation` to save both
 `demo_validation_matrix.json` for automation and

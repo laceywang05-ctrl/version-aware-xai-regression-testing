@@ -303,6 +303,25 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         build.assert_called_once_with(cli.PROJECT_ROOT / "regression-demo")
 
+    def test_friedman_regression_demo_resolves_output_path(self):
+        with (
+            patch(
+                "xai_regression.cli.build_friedman_regression_demo",
+                return_value={
+                    "model_count": 5,
+                    "training_samples": 700,
+                    "sample_count": 300,
+                    "feature_count": 10,
+                    "best_mae": 1.2,
+                    "output_dir": cli.PROJECT_ROOT / "friedman-demo",
+                },
+            ) as build,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_friedman_regression_demo("friedman-demo")
+        self.assertEqual(exit_code, 0)
+        build.assert_called_once_with(cli.PROJECT_ROOT / "friedman-demo")
+
     def test_wine_demo_resolves_output_path(self):
         with (
             patch(
