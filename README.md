@@ -407,6 +407,10 @@ random forest and gradient boosting. The upload-ready files are written under
 model behaviour and the dashboard's model-agnostic permutation importance,
 rather than repeating only the bundled diabetes example.
 
+The measured five-model dashboard result is recorded in
+[`docs/FRIEDMAN_REGRESSION_RESULT.md`](docs/FRIEDMAN_REGRESSION_RESULT.md),
+including MAE, RMSE, R² and all-model pairwise validation coverage.
+
 Generate a compact three-class tabular demonstration with:
 
 ```bash

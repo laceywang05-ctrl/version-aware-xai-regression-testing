@@ -7,6 +7,7 @@ import joblib
 import pandas as pd
 
 from xai_regression.friedman_demo import build_friedman_regression_demo
+from xai_regression.regression_comparison import summarize_regression_upload_models
 
 
 class FriedmanDemoTests(unittest.TestCase):
@@ -29,6 +30,28 @@ class FriedmanDemoTests(unittest.TestCase):
             features = samples[manifest["feature_columns"]]
             self.assertTrue(
                 all(len(joblib.load(path).predict(features)) == 300 for path in model_paths)
+            )
+
+    def test_all_five_models_enter_dashboard_overview(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "demo"
+            build_friedman_regression_demo(output)
+            model_paths = sorted(output.glob("*.joblib"))
+
+            overview = summarize_regression_upload_models(
+                models=[(path.name, path.read_bytes()) for path in model_paths],
+                dataset=("samples.csv", (output / "samples.csv").read_bytes()),
+                manifest=(output / "manifest.json").read_bytes(),
+            )
+
+            self.assertEqual(len(overview["models"]), 5)
+            self.assertEqual(len(overview["pairwise_error_changes"]), 10)
+            self.assertEqual(overview["dataset"]["rows"], 300)
+            self.assertEqual(overview["dataset"]["feature_count"], 10)
+            self.assertEqual(overview["models"][overview["best_model_index"]]["rank"], 1)
+            self.assertEqual(
+                overview["models"][overview["best_model_index"]]["filename"],
+                "model_3_svr.joblib",
             )
 
 
