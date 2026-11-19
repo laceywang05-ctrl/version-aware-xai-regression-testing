@@ -82,4 +82,6 @@ importance.
 
 Add `--output-dir artifacts/standard_demo_validation` to save both
 `demo_validation_matrix.json` for automation and
-`demo_validation_matrix.md` as a readable validation record.
+`demo_validation_matrix.md` as a readable validation record. The Markdown
+report also lists every model file, estimator type, serialized file size,
+compatibility status and explanation method.
