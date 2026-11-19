@@ -68,10 +68,6 @@ def check_demo_bundle(
 
     explanation_checks = []
     if check_explanations and task == "classification":
-        if manifest_data.get("image_shape") is None:
-            raise ValueError(
-                "Explanation preflight requires image_shape in manifest.json."
-            )
         for model in models:
             comparison = compare_upload_payloads(
                 model_v1=model,
@@ -80,17 +76,35 @@ def check_demo_bundle(
                 manifest=manifest,
                 images=images_payload,
             )
-            explanation = comparison["explanations"]["v1"]
-            available = explanation["method"] != "unavailable" and any(
-                row["v1_explanation"] is not None for row in comparison["samples"]
-            )
+            feature_explanations = comparison["feature_explanations"]
+            if feature_explanations is not None:
+                methods = feature_explanations["methods"]
+                method_names = list(methods)
+                labels = [methods[name]["label"] for name in method_names]
+                available = bool(method_names)
+                method = "+".join(method_names) if method_names else "unavailable"
+                label = " + ".join(labels) if labels else "Unavailable"
+                note = (
+                    "Tabular feature explanation methods available for this model."
+                    if available
+                    else feature_explanations["v1"]["note"]
+                )
+            else:
+                explanation = comparison["explanations"]["v1"]
+                available = explanation["method"] != "unavailable" and any(
+                    row["v1_explanation"] is not None
+                    for row in comparison["samples"]
+                )
+                method = explanation["method"]
+                label = explanation["label"]
+                note = explanation["note"]
             explanation_checks.append(
                 {
                     "filename": model[0],
                     "available": available,
-                    "method": explanation["method"],
-                    "label": explanation["label"],
-                    "note": explanation["note"],
+                    "method": method,
+                    "label": label,
+                    "note": note,
                 }
             )
 

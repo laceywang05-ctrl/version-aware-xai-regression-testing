@@ -56,3 +56,9 @@ explanation path for every model rather than inferring the method from its
 filename. The MNIST neural bundle passed with Integrated Gradients for both MLP
 models and Grad-CAM for both CNN models. The CIFAR-10 CNN pair passed with
 Grad-CAM for both versions.
+
+The same flag also validates tabular classification explanations. In the Wine
+bundle, the dummy and logistic-regression models passed with LIME, while the
+decision tree and random forest passed with both Tree SHAP and LIME. This
+selection is performed by the service after upload; users do not train separate
+"SHAP models" or "LIME models".
