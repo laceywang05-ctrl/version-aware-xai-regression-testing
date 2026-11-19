@@ -323,6 +323,8 @@ def summarize_regression_upload_models(
         actual = frame[contract.label_column].to_numpy(dtype=float)
     except (TypeError, ValueError) as error:
         raise ValueError("Regression labels must be numeric.") from error
+    if not np.isfinite(actual).all():
+        raise ValueError("Regression labels must contain only finite values.")
     features = frame.loc[:, feature_columns]
     summaries = []
     predictions = []
@@ -336,6 +338,8 @@ def summarize_regression_upload_models(
             ) from error
         if predicted.shape != actual.shape:
             raise ValueError(f"Model {filename} must return one prediction per dataset row.")
+        if not np.isfinite(predicted).all():
+            raise ValueError(f"Model {filename} predictions must contain only finite numeric values.")
         predictions.append(predicted)
         summaries.append(
             {

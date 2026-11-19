@@ -30,6 +30,28 @@ class BadShapeRegressor:
 
 
 class RegressionComparisonTests(unittest.TestCase):
+    def test_overview_rejects_nonfinite_labels_and_predictions(self):
+        manifest = json.dumps({
+            "task": "regression", "label_column": "target",
+            "feature_columns": ["x"], "trusted_model_files": True,
+        }).encode()
+        def serialized(model):
+            buffer = BytesIO()
+            joblib.dump(model, buffer)
+            return buffer.getvalue()
+
+        good = ("good.joblib", serialized(StubRegressor([1.0, 2.0])))
+        bad = ("bad.joblib", serialized(StubRegressor([1.0, float("nan")])))
+        dataset = ("samples.csv", b"x,target\n0,1\n1,2\n")
+        with self.assertRaisesRegex(ValueError, "bad.joblib predictions must contain only finite"):
+            summarize_regression_upload_models(models=[good, bad], dataset=dataset, manifest=manifest)
+        with self.assertRaisesRegex(ValueError, "labels must contain only finite"):
+            summarize_regression_upload_models(
+                models=[good, good],
+                dataset=("samples.csv", b"x,target\n0,1\n1,NaN\n"),
+                manifest=manifest,
+            )
+
     def test_manifest_requires_regression_numeric_contract(self):
         with self.assertRaisesRegex(ValueError, "task set to regression"):
             parse_regression_manifest(
