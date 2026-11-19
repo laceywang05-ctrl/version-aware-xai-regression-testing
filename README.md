@@ -393,6 +393,20 @@ dataset. The command writes four trusted `.joblib` files, `samples.csv` and
 on the upload page, use two model files as the initial pair, and select the
 remaining two under Additional models.
 
+Generate a compact three-class tabular demonstration with:
+
+```bash
+PYTHONPATH=src python -m xai_regression wine-demo
+```
+
+This trains a dummy baseline, decision tree, random forest and scaled logistic
+regression model on a fixed stratified split of scikit-learn's Wine dataset.
+The output under `artifacts/wine_multiclass_model_demo/` contains four trusted
+`.joblib` files, a 54-row labelled test CSV with 13 numeric features,
+`manifest.json`, and a machine-readable summary. On the upload page choose
+Classification, select the first two models as the initial pair, add the other
+two under Additional models, then upload `samples.csv` and `manifest.json`.
+
 Before a live demonstration, validate any generated classification or
 regression bundle with one command:
 

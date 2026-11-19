@@ -303,6 +303,26 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         build.assert_called_once_with(cli.PROJECT_ROOT / "regression-demo")
 
+    def test_wine_demo_resolves_output_path(self):
+        with (
+            patch(
+                "xai_regression.cli.build_wine_classification_demo",
+                return_value={
+                    "model_count": 4,
+                    "training_samples": 124,
+                    "sample_count": 54,
+                    "feature_count": 13,
+                    "class_count": 3,
+                    "best_accuracy": 1.0,
+                    "output_dir": cli.PROJECT_ROOT / "wine-demo",
+                },
+            ) as build,
+            redirect_stdout(StringIO()),
+        ):
+            exit_code = cli.run_wine_demo("wine-demo")
+        self.assertEqual(exit_code, 0)
+        build.assert_called_once_with(cli.PROJECT_ROOT / "wine-demo")
+
 
 if __name__ == "__main__":
     unittest.main()
