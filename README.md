@@ -447,6 +447,16 @@ PYTHONPATH=src python -m xai_regression demo-matrix \
   --check-explanations
 ```
 
+The built-in standard matrix covers two tabular-classification datasets, one
+neural image-classification dataset and one numeric-regression dataset. Run the
+same four-bundle check more concisely with:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression demo-matrix \
+  --standard --check-explanations
+```
+
 When the manifest supplies `image_shape`, each sample row can open a
 contribution comparison. Compatible tree estimators use Tree SHAP. Other
 classifiers exposing `predict_proba()` and `classes_` automatically use pixel

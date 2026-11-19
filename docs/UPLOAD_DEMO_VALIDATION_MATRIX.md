@@ -73,3 +73,9 @@ Use `demo-matrix` with repeated `--bundle-dir` options to validate several
 representative bundles in one run. The command reports the task, model count,
 sample count and explanation methods for each bundle, continues after an
 individual failure, and succeeds only when the complete matrix is ready.
+
+The `--standard` preset checks Breast Cancer, Wine, the four-model MNIST neural
+bundle and the four-model diabetes regression bundle. It therefore covers
+tabular classification, neural image classification and numeric regression,
+including Tree SHAP, LIME, Integrated Gradients, Grad-CAM and permutation
+importance.
