@@ -47,3 +47,42 @@ class DemoCheckTests(unittest.TestCase):
             (root / "manifest.json").write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "samples.csv"):
                 check_demo_bundle(root)
+
+    def test_explanation_preflight_reports_actual_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frame = pd.DataFrame(
+                {
+                    "sample_id": ["a", "b", "c"],
+                    "pixel": [0.0, 1.0, 2.0],
+                    "target": [0, 1, 1],
+                }
+            )
+            frame.to_csv(root / "samples.csv", index=False)
+            (root / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "task": "classification",
+                        "label_column": "target",
+                        "id_column": "sample_id",
+                        "feature_columns": ["pixel"],
+                        "image_shape": [1, 1],
+                        "trusted_model_files": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            for index in range(2):
+                model = DummyClassifier(strategy="prior").fit(
+                    frame[["pixel"]], frame["target"]
+                )
+                joblib.dump(model, root / f"model_{index}.joblib")
+
+            result = check_demo_bundle(root, check_explanations=True)
+
+        self.assertEqual(len(result["explanations"]), 2)
+        self.assertTrue(all(row["available"] for row in result["explanations"]))
+        self.assertEqual(
+            {row["method"] for row in result["explanations"]},
+            {"pixel_occlusion"},
+        )

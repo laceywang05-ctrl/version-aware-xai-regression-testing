@@ -10,6 +10,8 @@ data, and runs the same model-summary code used by the local upload service.
 | `mnist_model_demo` | grayscale image classification | 1,000 | 784 | 10 | 4 | extra trees, 84.8% accuracy |
 | `cifar10_model_demo` | RGB image classification | 1,000 | 3,072 | 10 | 4 | random forest, 33.4% accuracy |
 | `demo_regression_upload` | tabular regression | 133 | 10 | n/a | 4 | gradient boosting, MAE 41.728 |
+| `mnist_neural_demo` | grayscale neural classification | 500 | 784 | 10 | 4 | shallow CNN, 83.4% accuracy |
+| `cifar10_cnn_full_2026-10-29/upload_bundle` | RGB CNN classification | 1,000 | 3,072 | 10 | 2 | validation-selected CNN pair |
 
 The MNIST and CIFAR-10 bundles also contain 1,000 display images. Their image
 models were trained on 1,000 official training samples and evaluated on 1,000
@@ -48,3 +50,9 @@ PYTHONPATH=src .venv/bin/python -m xai_regression demo-check \
 ```
 
 A usable bundle ends with `READY FOR DEMO` and lists every model as `READY`.
+
+For image bundles, append `--check-explanations`. This executes the real upload
+explanation path for every model rather than inferring the method from its
+filename. The MNIST neural bundle passed with Integrated Gradients for both MLP
+models and Grad-CAM for both CNN models. The CIFAR-10 CNN pair passed with
+Grad-CAM for both versions.
