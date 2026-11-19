@@ -7,7 +7,10 @@ import joblib
 import pandas as pd
 
 from xai_regression.iris_demo import build_iris_classification_demo
-from xai_regression.upload_comparison import validate_upload_models
+from xai_regression.upload_comparison import (
+    summarize_upload_models,
+    validate_upload_models,
+)
 
 
 class IrisDemoTests(unittest.TestCase):
@@ -39,6 +42,21 @@ class IrisDemoTests(unittest.TestCase):
                 model_types,
                 {"Pipeline", "GaussianNB", "ExtraTreesClassifier"},
             )
+
+            overview = summarize_upload_models(
+                models=[(path.name, path.read_bytes()) for path in model_paths],
+                dataset=(samples_path.name, samples_path.read_bytes()),
+                manifest=manifest_path.read_bytes(),
+            )
+            self.assertEqual(len(overview["models"]), 5)
+            self.assertEqual(len(overview["pairwise_agreements"]), 10)
+            self.assertEqual(len(overview["class_comparison"]), 3)
+            self.assertEqual(overview["sample_comparison_total"], 45)
+            self.assertEqual(
+                overview["models"][overview["best_model_index"]]["filename"],
+                "model_3_svm.joblib",
+            )
+            self.assertEqual(overview["explanation_consensus"]["method"], "LIME")
 
 
 if __name__ == "__main__":
