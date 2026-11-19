@@ -434,6 +434,19 @@ PYTHONPATH=src python -m xai_regression demo-check \
   --check-explanations
 ```
 
+Use `demo-matrix` to validate several representative bundles in one run. Repeat
+`--bundle-dir` for every bundle that should enter the matrix; a failure in one
+bundle is reported without preventing the remaining bundles from being checked:
+
+```bash
+MPLCONFIGDIR=/tmp/xai-matplotlib-cache \
+PYTHONPATH=src python -m xai_regression demo-matrix \
+  --bundle-dir artifacts/breast_cancer_model_demo \
+  --bundle-dir artifacts/wine_multiclass_model_demo \
+  --bundle-dir artifacts/demo_regression_upload \
+  --check-explanations
+```
+
 When the manifest supplies `image_shape`, each sample row can open a
 contribution comparison. Compatible tree estimators use Tree SHAP. Other
 classifiers exposing `predict_proba()` and `classes_` automatically use pixel

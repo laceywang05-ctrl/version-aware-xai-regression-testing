@@ -8,7 +8,7 @@ from typing import Sequence
 
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
-from xai_regression.demo_check import check_demo_bundle
+from xai_regression.demo_check import check_demo_bundle, check_demo_matrix
 from xai_regression.cifar10_calibration import run_cifar10_explanation_calibration
 from xai_regression.cifar10_scaling import run_cifar10_training_scale
 from xai_regression.digits_benchmark import (
@@ -375,6 +375,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     demo_check_parser.add_argument("--bundle-dir", required=True)
     demo_check_parser.add_argument(
+        "--check-explanations",
+        action="store_true",
+        help="Generate available explanations or feature importance for every uploaded model.",
+    )
+    demo_matrix_parser = subparsers.add_parser(
+        "demo-matrix",
+        help="Validate several generated upload bundles in one command.",
+    )
+    demo_matrix_parser.add_argument(
+        "--bundle-dir",
+        action="append",
+        required=True,
+        help="Bundle directory to check; repeat this option for additional bundles.",
+    )
+    demo_matrix_parser.add_argument(
         "--check-explanations",
         action="store_true",
         help="Generate available explanations or feature importance for every uploaded model.",
@@ -1114,6 +1129,40 @@ def main(argv: Sequence[str] | None = None) -> int:
                     flush=True,
                 )
             print("READY FOR DEMO" if result["ready"] else "NOT READY", flush=True)
+            return 0 if result["ready"] else 1
+        if args.command == "demo-matrix":
+            result = check_demo_matrix(
+                [_project_path(path) for path in args.bundle_dir],
+                check_explanations=args.check_explanations,
+            )
+            print("Dashboard demo validation matrix", flush=True)
+            print("--------------------------------", flush=True)
+            for bundle in result["bundles"]:
+                name = Path(bundle["bundle_dir"]).name
+                if bundle["error"] is not None:
+                    print(f"FAILED: {name} — {bundle['error']}", flush=True)
+                    continue
+                explanation_labels = sorted(
+                    {row["label"] for row in bundle["explanations"]}
+                )
+                explanation_text = (
+                    ", ".join(explanation_labels)
+                    if explanation_labels
+                    else "not requested"
+                )
+                status = "READY" if bundle["ready"] else "FAILED"
+                print(
+                    f"{status}: {name} — {bundle['task']}, "
+                    f"{bundle['model_count']} models, "
+                    f"{bundle['dataset']['rows']} samples, "
+                    f"explanations: {explanation_text}",
+                    flush=True,
+                )
+            print(
+                f"Summary: {result['ready_count']}/{result['bundle_count']} bundles ready",
+                flush=True,
+            )
+            print("ALL DEMOS READY" if result["ready"] else "MATRIX FAILED", flush=True)
             return 0 if result["ready"] else 1
         if args.command == "digits-close-benchmark":
             return run_digits_benchmark(args.output_dir)

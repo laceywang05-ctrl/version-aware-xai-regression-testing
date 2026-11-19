@@ -147,3 +147,35 @@ def check_demo_bundle(
         "best_model_index": overview["best_model_index"],
         "explanations": explanation_checks,
     }
+
+
+def check_demo_matrix(
+    bundle_dirs: list[Path], *, check_explanations: bool = False
+) -> dict[str, Any]:
+    """Validate several upload bundles without stopping after one failure."""
+    if not bundle_dirs:
+        raise ValueError("Provide at least one demo bundle directory.")
+    bundles = []
+    for bundle_dir in bundle_dirs:
+        try:
+            result = check_demo_bundle(
+                bundle_dir, check_explanations=check_explanations
+            )
+        except Exception as error:
+            bundles.append(
+                {
+                    "bundle_dir": str(Path(bundle_dir).resolve()),
+                    "ready": False,
+                    "error": str(error),
+                }
+            )
+        else:
+            bundles.append({**result, "error": None})
+    ready_count = sum(bool(bundle["ready"]) for bundle in bundles)
+    return {
+        "ready": ready_count == len(bundles),
+        "bundle_count": len(bundles),
+        "ready_count": ready_count,
+        "failed_count": len(bundles) - ready_count,
+        "bundles": bundles,
+    }
