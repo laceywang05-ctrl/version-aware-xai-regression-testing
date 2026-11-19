@@ -68,6 +68,9 @@ class DemoCheckTests(unittest.TestCase):
         self.assertEqual(result["task"], "classification")
         self.assertEqual(result["model_count"], 2)
         self.assertEqual(result["dataset"]["rows"], 3)
+        self.assertEqual(result["models"][0]["model_type"], "DummyClassifier")
+        self.assertGreater(result["models"][0]["file_size_bytes"], 0)
+        self.assertEqual(result["models"][0]["explanation_method"], "Not checked")
 
     def test_missing_dataset_is_reported(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -113,6 +116,9 @@ class DemoCheckTests(unittest.TestCase):
             markdown = paths["markdown"].read_text(encoding="utf-8")
             self.assertIn("Dashboard Demo Validation Matrix", markdown)
             self.assertIn("| ready | classification | 2 | 3 | 1 |", markdown)
+            self.assertIn("## Model Details", markdown)
+            self.assertIn("DummyClassifier", markdown)
+            self.assertIn("Not checked", markdown)
 
     def test_explanation_preflight_reports_actual_method(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -151,6 +157,10 @@ class DemoCheckTests(unittest.TestCase):
         self.assertEqual(
             {row["method"] for row in result["explanations"]},
             {"pixel_occlusion"},
+        )
+        self.assertEqual(
+            {row["explanation_method"] for row in result["models"]},
+            {"Pixel occlusion"},
         )
 
     def test_tabular_explanation_preflight_reports_lime(self):

@@ -43,6 +43,7 @@ def check_demo_bundle(
         raise ValueError("manifest.json must contain valid UTF-8 JSON.") from error
     task = str(manifest_data.get("task", ""))
     models = [(path.name, path.read_bytes()) for path in model_paths]
+    model_sizes = {name: len(payload) for name, payload in models}
 
     images_path = root / "images.zip"
     image_count = None
@@ -136,12 +137,30 @@ def check_demo_bundle(
     explanations_ready = not check_explanations or all(
         row["available"] for row in explanation_checks
     )
+    explanation_by_filename = {
+        row["filename"]: row for row in explanation_checks
+    }
+    model_details = []
+    for model in validation["models"]:
+        explanation = explanation_by_filename.get(model["filename"])
+        model_details.append(
+            {
+                **model,
+                "file_size_bytes": model_sizes[model["filename"]],
+                "explanation_method": (
+                    explanation["label"] if explanation is not None else "Not checked"
+                ),
+                "explanation_ready": (
+                    explanation["available"] if explanation is not None else None
+                ),
+            }
+        )
     return {
         "ready": bool(validation["ready"]) and explanations_ready,
         "task": task,
         "bundle_dir": str(root.resolve()),
         "dataset": validation["dataset"],
-        "models": validation["models"],
+        "models": model_details,
         "model_count": len(models),
         "image_count": image_count,
         "best_model_index": overview["best_model_index"],
@@ -217,5 +236,27 @@ def write_demo_matrix_report(result: dict[str, Any], output_dir: Path) -> dict[s
             f"{bundle['dataset']['rows']} | {bundle['dataset']['feature_count']} | "
             f"{explanation_text} | {status} |"
         )
+    lines.extend(["", "## Model Details", ""])
+    for bundle in result["bundles"]:
+        if bundle["error"] is not None:
+            continue
+        name = Path(bundle["bundle_dir"]).name
+        lines.extend(
+            [
+                f"### {name}",
+                "",
+                "| Model file | Model type | Size | Compatible | Explanation |",
+                "| --- | --- | ---: | --- | --- |",
+            ]
+        )
+        for model in bundle["models"]:
+            size_kib = model["file_size_bytes"] / 1024
+            compatible = "Yes" if model["compatible"] else "No"
+            lines.append(
+                f"| {model['filename']} | {model['model_type'] or 'Unknown'} | "
+                f"{size_kib:.1f} KiB | {compatible} | "
+                f"{model['explanation_method']} |"
+            )
+        lines.append("")
     markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return {"json": json_path, "markdown": markdown_path}
