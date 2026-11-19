@@ -377,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
     demo_check_parser.add_argument(
         "--check-explanations",
         action="store_true",
-        help="Generate available explanations with every uploaded classifier.",
+        help="Generate available explanations or feature importance for every uploaded model.",
     )
     digits_benchmark_parser = subparsers.add_parser(
         "digits-close-benchmark",

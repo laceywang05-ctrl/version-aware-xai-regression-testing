@@ -421,11 +421,11 @@ model, verifies its prediction shape against the manifest-selected feature
 columns, reports the dataset dimensions and prints `READY FOR DEMO` only when
 the complete bundle is compatible.
 
-For classification bundles, add `--check-explanations` to execute the same
-explanation selection used by the upload service for every model. The output
-identifies the actual method (for example Tree SHAP, LIME, Integrated Gradients
-or Grad-CAM) and marks the bundle ready only after every requested explanation
-is generated:
+Add `--check-explanations` to execute the same explanation or feature-importance
+selection used by the upload service for every model. For classification, the
+output identifies the actual method (for example Tree SHAP, LIME, Integrated
+Gradients or Grad-CAM). For regression, it validates model-agnostic permutation
+importance. The bundle is ready only after every requested result is generated:
 
 ```bash
 MPLCONFIGDIR=/tmp/xai-matplotlib-cache \

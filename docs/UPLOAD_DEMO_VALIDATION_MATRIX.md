@@ -62,3 +62,7 @@ bundle, the dummy and logistic-regression models passed with LIME, while the
 decision tree and random forest passed with both Tree SHAP and LIME. This
 selection is performed by the service after upload; users do not train separate
 "SHAP models" or "LIME models".
+
+For regression bundles, the same flag generates model-agnostic permutation
+importance for every uploaded regressor and confirms that numeric feature
+importance can be displayed before a live demonstration.
