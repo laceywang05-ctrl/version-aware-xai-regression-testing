@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from xai_regression.regression_comparison import (
+    compare_regression_upload_payloads,
     summarize_regression_upload_models,
     validate_regression_upload_models,
 )
@@ -105,6 +106,30 @@ def check_demo_bundle(
                     "method": method,
                     "label": label,
                     "note": note,
+                }
+            )
+    elif check_explanations and task == "regression":
+        for model in models:
+            comparison = compare_regression_upload_payloads(
+                model_v1=model,
+                model_v2=model,
+                dataset=dataset,
+                manifest=manifest,
+            )
+            features = comparison["feature_importance"]["features"]
+            available = bool(features)
+            explanation_checks.append(
+                {
+                    "filename": model[0],
+                    "available": available,
+                    "method": "permutation_importance" if available else "unavailable",
+                    "label": "Permutation importance" if available else "Unavailable",
+                    "note": (
+                        "Model-agnostic MAE permutation importance was generated "
+                        f"for {len(features)} feature(s)."
+                        if available
+                        else "No numeric feature importance could be generated."
+                    ),
                 }
             )
 
