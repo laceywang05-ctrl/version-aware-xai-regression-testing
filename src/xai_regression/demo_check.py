@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import platform
+import sys
+from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -192,11 +196,29 @@ def check_demo_matrix(
             bundles.append({**result, "error": None})
     ready_count = sum(bool(bundle["ready"]) for bundle in bundles)
     return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "environment": _environment_metadata(),
         "ready": ready_count == len(bundles),
         "bundle_count": len(bundles),
         "ready_count": ready_count,
         "failed_count": len(bundles) - ready_count,
         "bundles": bundles,
+    }
+
+
+def _environment_metadata() -> dict[str, Any]:
+    packages = {}
+    for package in ("numpy", "scikit-learn", "shap", "lime", "torch"):
+        try:
+            packages[package] = version(package)
+        except PackageNotFoundError:
+            packages[package] = None
+    return {
+        "python": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "platform": platform.platform(),
+        "executable": sys.executable,
+        "packages": packages,
     }
 
 
@@ -215,6 +237,20 @@ def write_demo_matrix_report(result: dict[str, Any], output_dir: Path) -> dict[s
         "",
         f"**Overall status:** {'READY' if result['ready'] else 'FAILED'}  ",
         f"**Bundles ready:** {result['ready_count']}/{result['bundle_count']}",
+        f"**Generated at:** {result['generated_at']}",
+        "",
+        "## Runtime Environment",
+        "",
+        f"- Python: {result['environment']['python']} "
+        f"({result['environment']['python_implementation']})",
+        f"- Platform: {result['environment']['platform']}",
+        "- Packages: "
+        + ", ".join(
+            f"{name} {package_version or 'not installed'}"
+            for name, package_version in result["environment"]["packages"].items()
+        ),
+        "",
+        "## Bundle Summary",
         "",
         "| Bundle | Task | Models | Samples | Features | Explanations | Status |",
         "| --- | --- | ---: | ---: | ---: | --- | --- |",

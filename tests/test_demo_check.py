@@ -94,6 +94,9 @@ class DemoCheckTests(unittest.TestCase):
         self.assertFalse(result["ready"])
         self.assertEqual(result["ready_count"], 1)
         self.assertEqual(result["failed_count"], 1)
+        self.assertIn("generated_at", result)
+        self.assertIn("python", result["environment"])
+        self.assertIn("scikit-learn", result["environment"]["packages"])
         self.assertIsNone(result["bundles"][0]["error"])
         self.assertIn("samples.csv", result["bundles"][1]["error"])
 
@@ -115,6 +118,8 @@ class DemoCheckTests(unittest.TestCase):
             )
             markdown = paths["markdown"].read_text(encoding="utf-8")
             self.assertIn("Dashboard Demo Validation Matrix", markdown)
+            self.assertIn("## Runtime Environment", markdown)
+            self.assertIn("## Bundle Summary", markdown)
             self.assertIn("| ready | classification | 2 | 3 | 1 |", markdown)
             self.assertIn("## Model Details", markdown)
             self.assertIn("DummyClassifier", markdown)
