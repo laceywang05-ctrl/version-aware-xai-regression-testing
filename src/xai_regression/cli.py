@@ -27,6 +27,7 @@ from xai_regression.lime_workflow import (
 from xai_regression.image_demo import build_digits_image_demo
 from xai_regression.image_bundle import build_image_model_demo, prepare_image_npz_bundle
 from xai_regression.regression_demo import build_regression_demo
+from xai_regression.wine_demo import build_wine_classification_demo
 from xai_regression.multiplicity import run_multiplicity_analysis
 from xai_regression.model_family import run_model_family_summary
 from xai_regression.mnist_calibration import run_mnist_explanation_calibration
@@ -359,6 +360,14 @@ def build_parser() -> argparse.ArgumentParser:
     regression_demo_parser.add_argument(
         "--output-dir",
         default="artifacts/demo_regression_upload",
+    )
+    wine_demo_parser = subparsers.add_parser(
+        "wine-demo",
+        help="Build a ready-to-upload four-model Wine classification bundle.",
+    )
+    wine_demo_parser.add_argument(
+        "--output-dir",
+        default="artifacts/wine_multiclass_model_demo",
     )
     demo_check_parser = subparsers.add_parser(
         "demo-check",
@@ -753,6 +762,21 @@ def run_regression_demo(output_dir: str | Path) -> int:
     return 0
 
 
+def run_wine_demo(output_dir: str | Path) -> int:
+    """Build and describe the Wine multiclass upload demonstration."""
+    result = build_wine_classification_demo(_project_path(output_dir))
+    print("Four-model Wine classification upload demo", flush=True)
+    print("------------------------------------------", flush=True)
+    print(f"Models: {result['model_count']}", flush=True)
+    print(f"Training samples: {result['training_samples']}", flush=True)
+    print(f"Test samples: {result['sample_count']}", flush=True)
+    print(f"Features: {result['feature_count']}", flush=True)
+    print(f"Classes: {result['class_count']}", flush=True)
+    print(f"Best accuracy: {result['best_accuracy']:.1%}", flush=True)
+    print(f"Files saved to: {result['output_dir']}", flush=True)
+    return 0
+
+
 def run_digits_benchmark(output_dir: str | Path) -> int:
     """Run and describe the close-version handwritten-digit benchmark."""
     result = run_digits_close_version_benchmark(_project_path(output_dir))
@@ -1059,6 +1083,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "regression-demo":
             return run_regression_demo(args.output_dir)
+        if args.command == "wine-demo":
+            return run_wine_demo(args.output_dir)
         if args.command == "demo-check":
             result = check_demo_bundle(_project_path(args.bundle_dir))
             print("Dashboard demo preflight", flush=True)
