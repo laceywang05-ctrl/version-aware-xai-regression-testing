@@ -79,3 +79,7 @@ bundle and the four-model diabetes regression bundle. It therefore covers
 tabular classification, neural image classification and numeric regression,
 including Tree SHAP, LIME, Integrated Gradients, Grad-CAM and permutation
 importance.
+
+Add `--output-dir artifacts/standard_demo_validation` to save both
+`demo_validation_matrix.json` for automation and
+`demo_validation_matrix.md` as a readable validation record.

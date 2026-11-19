@@ -325,13 +325,20 @@ class CliTests(unittest.TestCase):
 
     def test_demo_matrix_standard_preset_parses(self):
         args = cli.build_parser().parse_args(
-            ["demo-matrix", "--standard", "--check-explanations"]
+            [
+                "demo-matrix",
+                "--standard",
+                "--check-explanations",
+                "--output-dir",
+                "reports",
+            ]
         )
 
         self.assertEqual(args.command, "demo-matrix")
         self.assertTrue(args.standard)
         self.assertTrue(args.check_explanations)
         self.assertIsNone(args.bundle_dir)
+        self.assertEqual(args.output_dir, "reports")
 
 
 if __name__ == "__main__":

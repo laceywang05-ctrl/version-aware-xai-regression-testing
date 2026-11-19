@@ -7,7 +7,11 @@ import joblib
 import pandas as pd
 from sklearn.dummy import DummyClassifier, DummyRegressor
 
-from xai_regression.demo_check import check_demo_bundle, check_demo_matrix
+from xai_regression.demo_check import (
+    check_demo_bundle,
+    check_demo_matrix,
+    write_demo_matrix_report,
+)
 
 
 class DemoCheckTests(unittest.TestCase):
@@ -89,6 +93,26 @@ class DemoCheckTests(unittest.TestCase):
         self.assertEqual(result["failed_count"], 1)
         self.assertIsNone(result["bundles"][0]["error"])
         self.assertIn("samples.csv", result["bundles"][1]["error"])
+
+    def test_matrix_report_writes_json_and_markdown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "ready"
+            bundle.mkdir()
+            self._write_classification_bundle(bundle)
+            result = check_demo_matrix([bundle])
+
+            paths = write_demo_matrix_report(result, root / "reports")
+
+            self.assertTrue(paths["json"].is_file())
+            self.assertTrue(paths["markdown"].is_file())
+            self.assertEqual(
+                json.loads(paths["json"].read_text(encoding="utf-8"))["ready_count"],
+                1,
+            )
+            markdown = paths["markdown"].read_text(encoding="utf-8")
+            self.assertIn("Dashboard Demo Validation Matrix", markdown)
+            self.assertIn("| ready | classification | 2 | 3 | 1 |", markdown)
 
     def test_explanation_preflight_reports_actual_method(self):
         with tempfile.TemporaryDirectory() as directory:

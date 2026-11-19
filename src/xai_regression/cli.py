@@ -8,7 +8,11 @@ from typing import Sequence
 
 from xai_regression.benchmark import run_version_benchmark
 from xai_regression.config import ConfigError, load_config
-from xai_regression.demo_check import check_demo_bundle, check_demo_matrix
+from xai_regression.demo_check import (
+    check_demo_bundle,
+    check_demo_matrix,
+    write_demo_matrix_report,
+)
 from xai_regression.cifar10_calibration import run_cifar10_explanation_calibration
 from xai_regression.cifar10_scaling import run_cifar10_training_scale
 from xai_regression.digits_benchmark import (
@@ -403,6 +407,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-explanations",
         action="store_true",
         help="Generate available explanations or feature importance for every uploaded model.",
+    )
+    demo_matrix_parser.add_argument(
+        "--output-dir",
+        help="Optional directory for JSON and Markdown validation reports.",
     )
     digits_benchmark_parser = subparsers.add_parser(
         "digits-close-benchmark",
@@ -1174,6 +1182,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"Summary: {result['ready_count']}/{result['bundle_count']} bundles ready",
                 flush=True,
             )
+            if args.output_dir:
+                report_paths = write_demo_matrix_report(
+                    result, _project_path(args.output_dir)
+                )
+                print(f"JSON report: {report_paths['json']}", flush=True)
+                print(f"Markdown report: {report_paths['markdown']}", flush=True)
             print("ALL DEMOS READY" if result["ready"] else "MATRIX FAILED", flush=True)
             return 0 if result["ready"] else 1
         if args.command == "digits-close-benchmark":
