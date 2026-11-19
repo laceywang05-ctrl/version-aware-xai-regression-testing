@@ -84,4 +84,6 @@ Add `--output-dir artifacts/standard_demo_validation` to save both
 `demo_validation_matrix.json` for automation and
 `demo_validation_matrix.md` as a readable validation record. The Markdown
 report also lists every model file, estimator type, serialized file size,
-compatibility status and explanation method.
+compatibility status and explanation method. It records the UTC generation
+time, Python runtime, operating-system platform and relevant library versions
+so the validation can be reproduced in another environment.
