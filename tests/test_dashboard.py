@@ -90,7 +90,11 @@ class DashboardTests(unittest.TestCase):
             "readiness-baseline",
             "readiness-candidate",
             "model-overview-grid",
-            "model-agreement-results",
+            "agreement-first-model",
+            "agreement-second-model",
+            "agreement-value",
+            "model-baseline-comparison",
+            "regression-baseline-comparison",
             "paired-accuracy-change",
             "paired-discordant-count",
             "paired-p-value",
@@ -197,12 +201,14 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("mae_change_ci_95", script)
         self.assertIn("The paired MAE interval crosses zero.", script)
         self.assertIn("function updateUploadTask", script)
-        self.assertIn('fetch("/api/classification/compare"', script)
-        self.assertIn('fetch("/api/classification/overview"', script)
-        self.assertIn('fetch("/api/classification/validate"', script)
-        self.assertIn('fetch("/api/regression/compare"', script)
-        self.assertIn('fetch("/api/regression/overview"', script)
-        self.assertIn('fetch("/api/regression/validate"', script)
+        self.assertIn("async function fetchUploadReport", script)
+        self.assertIn("const body = await response.text()", script)
+        self.assertIn('fetchUploadReport("/api/classification/compare"', script)
+        self.assertIn('fetchUploadReport("/api/classification/overview"', script)
+        self.assertIn('fetchUploadReport("/api/classification/validate"', script)
+        self.assertIn('fetchUploadReport("/api/regression/compare"', script)
+        self.assertIn('fetchUploadReport("/api/regression/overview"', script)
+        self.assertIn('fetchUploadReport("/api/regression/validate"', script)
         self.assertIn("return finite numeric predictions", script)
         self.assertIn("function renderModelOverview", script)
         self.assertIn('calibration.className = "calibration-summary"', script)

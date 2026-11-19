@@ -132,6 +132,10 @@ class RegressionComparisonTests(unittest.TestCase):
         self.assertEqual(len(overview["models"][0]["short_sha256"]), 12)
         self.assertEqual(overview["dataset"]["filename"], "samples.csv")
         self.assertEqual(overview["best_model_index"], 0)
+        self.assertEqual(len(overview["sample_comparison"]), 4)
+        self.assertEqual(len(overview["sample_comparison"][0]["predictions"]), 2)
+        self.assertEqual(overview["sample_comparison_total"], 4)
+        self.assertEqual(overview["pairwise_error_changes"][0]["right_improved_count"], 0)
 
     def test_upload_validation_reports_each_regressor(self):
         features = pd.DataFrame({"x": [0.0, 1.0, 2.0]})

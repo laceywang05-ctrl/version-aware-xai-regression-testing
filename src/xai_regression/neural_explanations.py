@@ -74,9 +74,16 @@ class TorchImageClassifier:
     def predict_proba(self, features: Any) -> np.ndarray:
         torch = _torch()
         self.network.eval()
+        batch_size = 128
+        probabilities = []
         with torch.no_grad():
-            logits = self.network(self._tensor(features))
-            return torch.softmax(logits, dim=1).cpu().numpy()
+            for start in range(0, len(features), batch_size):
+                batch = features.iloc[start : start + batch_size] if hasattr(features, "iloc") else features[start : start + batch_size]
+                logits = self.network(self._tensor(batch))
+                probabilities.append(torch.softmax(logits, dim=1).cpu().numpy())
+        if not probabilities:
+            return np.empty((0, len(self.classes_)), dtype=np.float32)
+        return np.concatenate(probabilities, axis=0)
 
     def predict(self, features: Any) -> np.ndarray:
         indices = np.argmax(self.predict_proba(features), axis=1)

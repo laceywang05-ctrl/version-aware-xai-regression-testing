@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from io import BytesIO
 import json
 import base64
-from math import comb
+from math import exp, fsum, lgamma, log
 from pathlib import PurePosixPath
 from typing import Any
 from zipfile import BadZipFile, ZipFile
@@ -19,7 +19,7 @@ from sklearn.metrics import f1_score
 from xai_regression.provenance import artifact_fingerprint
 
 
-MAX_DATASET_ROWS = 5_000
+MAX_DATASET_ROWS = 10_000
 MAX_IMAGE_COUNT = 1_000
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024
@@ -27,6 +27,7 @@ MAX_EXPLANATION_ROWS = 500
 MAX_RGB_EXPLANATION_ROWS = 100
 MAX_RGB_OCCLUSION_ROWS = 20
 MAX_NEURAL_EXPLANATION_ROWS = 100
+MAX_TABULAR_EXPLANATION_ROWS = 20
 HIGH_CONFIDENCE_THRESHOLD = 0.80
 EXPLANATION_SIMILARITY_THRESHOLD = 0.80
 MNIST_EXPLANATION_SIMILARITY_THRESHOLD = 0.486
@@ -54,6 +55,7 @@ class UploadManifest:
     feature_columns: tuple[str, ...] | None
     class_names: dict[str, str]
     trusted_model_files: bool
+    explanation_method: str
 
 
 def _explanation_threshold(
@@ -153,6 +155,20 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
         raise ValueError(
             "Set trusted_model_files to true only for model files you trust."
         )
+    explanation_method = str(raw.get("explanation_method", "auto")).strip().lower()
+    allowed_explanation_methods = {
+        "auto",
+        "shap",
+        "lime",
+        "grad_cam",
+        "integrated_gradients",
+        "pixel_occlusion",
+    }
+    if explanation_method not in allowed_explanation_methods:
+        raise ValueError(
+            "explanation_method must be auto, shap, lime, grad_cam, "
+            "integrated_gradients or pixel_occlusion."
+        )
     return UploadManifest(
         task=task,
         label_column=label_column,
@@ -163,6 +179,7 @@ def parse_manifest(payload: bytes | str | dict[str, Any]) -> UploadManifest:
         feature_columns=feature_columns,
         class_names={str(key): str(value) for key, value in names.items()},
         trusted_model_files=trusted,
+        explanation_method=explanation_method,
     )
 
 
@@ -184,7 +201,7 @@ def load_uploaded_dataset(payload: bytes, filename: str) -> pd.DataFrame:
     if not filename.lower().endswith(".csv"):
         raise ValueError("The uploaded dataset must use the .csv format.")
     try:
-        frame = pd.read_csv(BytesIO(payload))
+        frame = pd.read_csv(BytesIO(payload), low_memory=False)
     except Exception as error:
         raise ValueError(f"Could not read dataset file {filename}.") from error
     if frame.empty:
@@ -480,16 +497,197 @@ def _occlusion_explanations(
         }
 
 
+def _tabular_shap_summary(
+    model: Any,
+    features: pd.DataFrame,
+) -> dict[str, Any]:
+    """Return a global mean-absolute Tree SHAP ranking for tabular data."""
+    try:
+        import shap
+
+        explained = features.iloc[: min(len(features), MAX_EXPLANATION_ROWS)]
+        raw_values = np.asarray(shap.TreeExplainer(model).shap_values(explained))
+        feature_count = features.shape[1]
+        if raw_values.ndim == 2 and raw_values.shape[1] == feature_count:
+            importance = np.mean(np.abs(raw_values), axis=0)
+        elif raw_values.ndim == 3 and raw_values.shape[1] == feature_count:
+            importance = np.mean(np.abs(raw_values), axis=(0, 2))
+        elif raw_values.ndim == 3 and raw_values.shape[2] == feature_count:
+            importance = np.mean(np.abs(raw_values), axis=(0, 1))
+        else:
+            raise ValueError("Unexpected Tree SHAP output shape.")
+        ranking = sorted(
+            (
+                {"feature": str(feature), "importance": float(value)}
+                for feature, value in zip(features.columns, importance, strict=True)
+            ),
+            key=lambda item: item["importance"],
+            reverse=True,
+        )
+        return {
+            "method": "tree_shap",
+            "label": "Tree SHAP",
+            "available": True,
+            "features": ranking,
+            "note": (
+                "Global mean absolute Tree SHAP contribution across "
+                f"{len(explained)} uploaded rows."
+            ),
+        }
+    except Exception as error:
+        return {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "available": False,
+            "features": [],
+            "note": f"Tree SHAP unavailable: {error}",
+        }
+
+
+def _tabular_lime_summary(
+    model: Any,
+    features: pd.DataFrame,
+    max_rows: int = MAX_TABULAR_EXPLANATION_ROWS,
+) -> dict[str, Any]:
+    """Return an aggregate LIME ranking across a deterministic row sample."""
+    try:
+        from lime.lime_tabular import LimeTabularExplainer
+
+        values = features.to_numpy(dtype=float)
+        classes = list(getattr(model, "classes_", []))
+        predict_proba = getattr(model, "predict_proba", None)
+        if not classes or not callable(predict_proba):
+            raise ValueError("LIME classification requires predict_proba() and classes_.")
+        explainer = LimeTabularExplainer(
+            values,
+            feature_names=[str(column) for column in features.columns],
+            class_names=[str(value) for value in classes],
+            mode="classification",
+            discretize_continuous=True,
+            random_state=0,
+        )
+        row_count = min(len(features), max_rows)
+        totals = np.zeros(features.shape[1], dtype=float)
+        for row_index in range(row_count):
+            explanation = explainer.explain_instance(
+                values[row_index],
+                model.predict_proba,
+                top_labels=1,
+                num_features=features.shape[1],
+                num_samples=500,
+            )
+            label = explanation.top_labels[0]
+            for feature_index, weight in explanation.as_map().get(label, []):
+                totals[int(feature_index)] += abs(float(weight))
+        importance = totals / max(1, row_count)
+        ranking = sorted(
+            (
+                {"feature": str(feature), "importance": float(value)}
+                for feature, value in zip(features.columns, importance, strict=True)
+            ),
+            key=lambda item: item["importance"],
+            reverse=True,
+        )
+        return {
+            "method": "lime",
+            "label": "LIME",
+            "available": True,
+            "features": ranking,
+            "note": (
+                "Mean absolute local LIME weight across "
+                f"{row_count} deterministic uploaded rows (500 perturbations each)."
+            ),
+        }
+    except Exception as error:
+        return {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "available": False,
+            "features": [],
+            "note": f"LIME unavailable: {error}",
+        }
+
+
+def _tabular_explanation_summary(
+    model: Any,
+    features: pd.DataFrame,
+    requested_method: str,
+) -> dict[str, Any]:
+    """Choose an appropriate global explanation for uploaded tabular data."""
+    if requested_method in {"grad_cam", "integrated_gradients", "pixel_occlusion"}:
+        return {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "available": False,
+            "features": [],
+            "note": f"{requested_method} requires image-shaped inputs or a neural adapter.",
+        }
+    if requested_method == "lime":
+        return _tabular_lime_summary(model, features)
+    shap_summary = _tabular_shap_summary(model, features)
+    if requested_method == "shap" or shap_summary["available"]:
+        return shap_summary
+    lime_summary = _tabular_lime_summary(model, features)
+    if lime_summary["available"]:
+        lime_summary["note"] += f" Auto fallback because {shap_summary['note']}"
+    return lime_summary
+
+
+def _tabular_explanation_bundle(
+    model_v1: Any,
+    model_v2: Any,
+    features: pd.DataFrame,
+    requested_method: str,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Return a comparable primary explanation plus every shared auto method."""
+    if requested_method != "auto":
+        v1 = _tabular_explanation_summary(model_v1, features, requested_method)
+        v2 = _tabular_explanation_summary(model_v2, features, requested_method)
+        methods = {
+            requested_method: {
+                "label": v1.get("label", requested_method),
+                "v1": v1,
+                "v2": v2,
+            }
+        }
+        return v1, v2, methods
+
+    shap_v1 = _tabular_shap_summary(model_v1, features)
+    shap_v2 = _tabular_shap_summary(model_v2, features)
+    lime_v1 = _tabular_lime_summary(model_v1, features)
+    lime_v2 = _tabular_lime_summary(model_v2, features)
+    methods: dict[str, Any] = {}
+    if shap_v1["available"] and shap_v2["available"]:
+        methods["tree_shap"] = {
+            "label": "Tree SHAP",
+            "v1": shap_v1,
+            "v2": shap_v2,
+        }
+    if lime_v1["available"] and lime_v2["available"]:
+        methods["lime"] = {"label": "LIME", "v1": lime_v1, "v2": lime_v2}
+    if "tree_shap" in methods:
+        return shap_v1, shap_v2, methods
+    if "lime" in methods:
+        return lime_v1, lime_v2, methods
+    # Preserve detailed unavailability messages when neither method is shared.
+    return shap_v1, shap_v2, methods
+
+
 def _model_explanations(
     model: Any,
     features: pd.DataFrame,
     predictions: np.ndarray,
     image_shape: tuple[int, ...] | None,
+    requested_method: str = "auto",
 ) -> tuple[list[list[list[float]] | None], dict[str, str]]:
     """Choose the most suitable installed explanation adapter."""
+    if requested_method == "shap":
+        return _tree_shap_explanations(model, features, predictions, image_shape)
+    if requested_method == "pixel_occlusion":
+        return _occlusion_explanations(model, features, predictions, image_shape)
     row_limit = min(len(features), MAX_NEURAL_EXPLANATION_ROWS)
     grad_cam = getattr(model, "grad_cam", None)
-    if callable(grad_cam) and image_shape is not None:
+    if requested_method in {"auto", "grad_cam"} and callable(grad_cam) and image_shape is not None:
         try:
             maps = list(grad_cam(features.iloc[:row_limit], predictions[:row_limit]))
             maps.extend([None] * (len(features) - len(maps)))
@@ -505,8 +703,14 @@ def _model_explanations(
             grad_cam_note = f"Grad-CAM unavailable: {grad_cam_error}"
     else:
         grad_cam_note = "Grad-CAM requires a convolutional neural-network adapter."
+    if requested_method == "grad_cam":
+        return [None] * len(features), {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "note": grad_cam_note,
+        }
     integrated_gradients = getattr(model, "integrated_gradients", None)
-    if callable(integrated_gradients) and image_shape is not None:
+    if requested_method in {"auto", "integrated_gradients"} and callable(integrated_gradients) and image_shape is not None:
         try:
             maps = list(
                 integrated_gradients(
@@ -522,8 +726,25 @@ def _model_explanations(
                     f"limited to the first {row_limit} rows. {grad_cam_note}"
                 ),
             }
-        except Exception:
-            pass
+        except Exception as error:
+            if requested_method == "integrated_gradients":
+                return [None] * len(features), {
+                    "method": "unavailable",
+                    "label": "Unavailable",
+                    "note": f"Integrated Gradients unavailable: {error}",
+                }
+    if requested_method == "integrated_gradients":
+        return [None] * len(features), {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "note": "Integrated Gradients requires a differentiable neural-network adapter.",
+        }
+    if requested_method == "lime":
+        return [None] * len(features), {
+            "method": "unavailable",
+            "label": "Unavailable",
+            "note": "Image LIME is not available in this upload adapter; use Auto or pixel occlusion.",
+        }
     maps, metadata = _tree_shap_explanations(
         model, features, predictions, image_shape
     )
@@ -565,8 +786,17 @@ def _exact_mcnemar_p(v1_correct_v2_wrong: int, v1_wrong_v2_correct: int) -> floa
     if discordant == 0:
         return 1.0
     smaller = min(v1_correct_v2_wrong, v1_wrong_v2_correct)
-    cumulative = sum(comb(discordant, value) for value in range(smaller + 1))
-    return min(1.0, 2.0 * cumulative / (2**discordant))
+    probability = exp(
+        lgamma(discordant + 1)
+        - lgamma(smaller + 1)
+        - lgamma(discordant - smaller + 1)
+        - discordant * log(2)
+    )
+    terms = [probability]
+    for value in range(smaller, 0, -1):
+        probability *= value / (discordant - value + 1)
+        terms.append(probability)
+    return min(1.0, 2.0 * fsum(terms))
 
 
 def compare_classifiers(
@@ -619,12 +849,42 @@ def compare_classifiers(
         raise ValueError("Model predictions must contain one value per dataset row.")
     confidence_v1 = _confidences(model_v1, features)
     confidence_v2 = _confidences(model_v2, features)
-    explanation_v1, explanation_metadata_v1 = _model_explanations(
-        model_v1, features, prediction_v1, manifest.image_shape
-    )
-    explanation_v2, explanation_metadata_v2 = _model_explanations(
-        model_v2, features, prediction_v2, manifest.image_shape
-    )
+    tabular_explanation_v1 = None
+    tabular_explanation_v2 = None
+    tabular_explanation_methods: dict[str, Any] = {}
+    if manifest.image_shape is None:
+        (
+            tabular_explanation_v1,
+            tabular_explanation_v2,
+            tabular_explanation_methods,
+        ) = _tabular_explanation_bundle(
+            model_v1, model_v2, features, manifest.explanation_method
+        )
+        explanation_v1 = [None] * len(features)
+        explanation_v2 = [None] * len(features)
+        explanation_metadata_v1 = {
+            key: str(tabular_explanation_v1[key])
+            for key in ("method", "label", "note")
+        }
+        explanation_metadata_v2 = {
+            key: str(tabular_explanation_v2[key])
+            for key in ("method", "label", "note")
+        }
+    else:
+        explanation_v1, explanation_metadata_v1 = _model_explanations(
+            model_v1,
+            features,
+            prediction_v1,
+            manifest.image_shape,
+            manifest.explanation_method,
+        )
+        explanation_v2, explanation_metadata_v2 = _model_explanations(
+            model_v2,
+            features,
+            prediction_v2,
+            manifest.image_shape,
+            manifest.explanation_method,
+        )
     correct_v1 = prediction_v1 == labels
     correct_v2 = prediction_v2 == labels
     identifiers = (
@@ -655,10 +915,12 @@ def compare_classifiers(
         image_name = None
         image_data_url = None
         if manifest.image_column is not None:
-            image_name = str(dataset.iloc[index][manifest.image_column])
-            image_data_url = images.get(image_name) if images is not None else None
-            if image_data_url is None:
-                raise ValueError(f"Image referenced by CSV was not found: {image_name}.")
+            raw_image_name = dataset.iloc[index][manifest.image_column]
+            if pd.notna(raw_image_name) and str(raw_image_name).strip():
+                image_name = str(raw_image_name)
+                image_data_url = images.get(image_name) if images is not None else None
+                if image_data_url is None:
+                    raise ValueError(f"Image referenced by CSV was not found: {image_name}.")
         v1_high_confidence_wrong = bool(
             not correct_v1[index]
             and confidence_v1[index] is not None
@@ -879,6 +1141,7 @@ def compare_classifiers(
             "CNN adapters use Grad-CAM, other differentiable neural adapters use Integrated Gradients, compatible trees use Tree SHAP, and remaining probabilistic classifiers use pixel occlusion.",
         ],
         "explanations": {
+            "requested_method": manifest.explanation_method,
             "image_shape": list(manifest.image_shape) if manifest.image_shape else None,
             "v1": explanation_metadata_v1,
             "v2": explanation_metadata_v2,
@@ -889,6 +1152,16 @@ def compare_classifiers(
                 "not causal effects."
             ),
         },
+        "feature_explanations": (
+            {
+                "requested_method": manifest.explanation_method,
+                "v1": tabular_explanation_v1,
+                "v2": tabular_explanation_v2,
+                "methods": tabular_explanation_methods,
+            }
+            if tabular_explanation_v1 is not None
+            else None
+        ),
     }
 
 
@@ -920,6 +1193,59 @@ def compare_upload_payloads(
     if images is not None:
         result["artifacts"]["images"] = artifact_fingerprint(*images)
     return result
+
+
+def explain_upload_sample(
+    *,
+    model_v1: tuple[str, bytes],
+    model_v2: tuple[str, bytes],
+    dataset: tuple[str, bytes],
+    manifest: bytes,
+    sample_index: int,
+) -> dict[str, Any]:
+    """Generate both image explanation maps for one uploaded sample on demand."""
+    contract = parse_manifest(manifest)
+    if contract.image_shape is None:
+        raise ValueError("Sample heatmaps require image_shape in the manifest.")
+    frame = load_uploaded_dataset(dataset[1], dataset[0])
+    if sample_index < 0 or sample_index >= len(frame):
+        raise ValueError("Sample index is outside the uploaded dataset.")
+    excluded = {contract.label_column, contract.id_column, contract.image_column}
+    feature_columns = (
+        list(contract.feature_columns)
+        if contract.feature_columns is not None
+        else [column for column in frame.columns if column not in excluded]
+    )
+    missing = [column for column in feature_columns if column not in frame]
+    if missing:
+        raise ValueError("Dataset is missing feature columns: " + ", ".join(missing))
+    if int(np.prod(contract.image_shape)) != len(feature_columns):
+        raise ValueError("image_shape does not match the model feature count.")
+    features = frame.loc[:, feature_columns].iloc[[sample_index]]
+    first = load_uploaded_model(model_v1[1], model_v1[0])
+    second = load_uploaded_model(model_v2[1], model_v2[0])
+    try:
+        prediction_v1 = np.asarray(first.predict(features))
+        prediction_v2 = np.asarray(second.predict(features))
+    except Exception as error:
+        raise ValueError("A model could not predict this sample.") from error
+    maps_v1, metadata_v1 = _model_explanations(
+        first, features, prediction_v1, contract.image_shape, contract.explanation_method
+    )
+    maps_v2, metadata_v2 = _model_explanations(
+        second, features, prediction_v2, contract.image_shape, contract.explanation_method
+    )
+    if not maps_v1[0] or not maps_v2[0]:
+        raise ValueError(
+            "Heatmaps could not be generated for this model pair. "
+            + metadata_v1["note"] + " " + metadata_v2["note"]
+        )
+    return {
+        "sample_index": sample_index,
+        "v1_explanation": maps_v1[0],
+        "v2_explanation": maps_v2[0],
+        "explanation_similarity": _explanation_similarity(maps_v1[0], maps_v2[0]),
+    }
 
 
 def summarize_upload_models(
@@ -954,8 +1280,10 @@ def summarize_upload_models(
     labels = frame[contract.label_column].to_numpy()
     predictions: list[np.ndarray] = []
     summaries: list[dict[str, Any]] = []
+    loaded_models: list[Any] = []
     for index, (filename, payload) in enumerate(models):
         model = load_uploaded_model(payload, filename)
+        loaded_models.append(model)
         try:
             prediction = np.asarray(model.predict(features))
         except Exception as error:
@@ -992,13 +1320,83 @@ def summarize_upload_models(
     agreements = []
     for left in range(len(predictions)):
         for right in range(left + 1, len(predictions)):
+            left_correct = predictions[left] == labels
+            right_correct = predictions[right] == labels
             agreements.append(
                 {
                     "left_index": left,
                     "right_index": right,
                     "agreement": float((predictions[left] == predictions[right]).mean()),
+                    "left_wrong_right_correct": int(np.count_nonzero(~left_correct & right_correct)),
+                    "left_correct_right_wrong": int(np.count_nonzero(left_correct & ~right_correct)),
                 }
             )
+    class_comparison = []
+    for value in dict.fromkeys(_json_value(label) for label in labels):
+        mask = labels == value
+        class_comparison.append(
+            {
+                "label": str(value),
+                "count": int(np.count_nonzero(mask)),
+                "accuracies": [float((prediction[mask] == labels[mask]).mean()) for prediction in predictions],
+            }
+        )
+    identifiers = frame[contract.id_column].tolist() if contract.id_column in frame else list(range(len(frame)))
+    disagreements = [row for row in range(len(frame)) if len({_json_value(prediction[row]) for prediction in predictions}) > 1]
+    disagreement_set = set(disagreements)
+    selected = (disagreements + [row for row in range(len(frame)) if row not in disagreement_set])[:30]
+    sample_comparison = [
+        {
+            "sample_id": str(_json_value(identifiers[row])),
+            "actual": str(_json_value(labels[row])),
+            "predictions": [str(_json_value(prediction[row])) for prediction in predictions],
+            "correct": [bool(prediction[row] == labels[row]) for prediction in predictions],
+        }
+        for row in selected
+    ]
+    explanation_consensus = None
+    if len(models) > 2 and contract.image_column is None and len(feature_columns) <= 40:
+        # Twenty shared rows improve ranking stability while keeping the overview responsive.
+        rankings = []
+        seen_fingerprints: set[str] = set()
+        duplicate_count = 0
+        for index, model in enumerate(loaded_models):
+            fingerprint = summaries[index]["sha256"]
+            if fingerprint in seen_fingerprints:
+                duplicate_count += 1
+                continue
+            seen_fingerprints.add(fingerprint)
+            result = _tabular_lime_summary(model, features, max_rows=20)
+            if result["available"]:
+                rankings.append({"index": index, "features": result["features"]})
+        if len(rankings) >= 2:
+            votes = {str(feature): [] for feature in feature_columns}
+            for ranking in rankings:
+                for rank, item in enumerate(ranking["features"], start=1):
+                    votes[item["feature"]].append(rank)
+            ordered = sorted(
+                votes.items(),
+                key=lambda entry: (
+                    -sum(rank <= 5 for rank in entry[1]),
+                    sum(entry[1]) / len(entry[1]) if entry[1] else float("inf"),
+                    entry[0],
+                ),
+            )
+            explanation_consensus = {
+                "method": "LIME",
+                "sample_rows_per_model": min(len(features), 20),
+                "model_count": len(rankings),
+                "total_model_count": len(models),
+                "duplicate_model_count": duplicate_count,
+                "models": [
+                    {"index": item["index"], "top_features": [feature["feature"] for feature in item["features"][:5]]}
+                    for item in rankings
+                ],
+                "features": [
+                    {"feature": feature, "top_five_votes": sum(rank <= 5 for rank in ranks), "mean_rank": sum(ranks) / len(ranks)}
+                    for feature, ranks in ordered[:10] if ranks
+                ],
+            }
     return {
         "schema_version": 1,
         "task": "classification",
@@ -1011,6 +1409,10 @@ def summarize_upload_models(
         "manifest": artifact_fingerprint("manifest.json", manifest),
         "models": summaries,
         "pairwise_agreements": agreements,
+        "class_comparison": class_comparison,
+        "sample_comparison": sample_comparison,
+        "explanation_consensus": explanation_consensus,
+        "sample_comparison_total": len(frame),
         "best_model_index": ranked[0]["index"],
         "best_macro_f1_index": max(
             summaries, key=lambda item: (item["macro_f1"], item["accuracy"])

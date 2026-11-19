@@ -868,3 +868,7 @@ random masks per image. All 24 mean-pixel contrasts remained negative and all
 24 blur contrasts positive; this remains an exploratory intervention-dependent
 diagnostic. See
 [`docs/CIFAR10_MASK_SAMPLE_ROBUSTNESS.md`](docs/CIFAR10_MASK_SAMPLE_ROBUSTNESS.md).
+The same audit on previously unexamined official test images 1000–9999 kept
+the intervention dependence: 23/24 mean-pixel condition means were negative
+and 24/24 blur means positive. See
+[`docs/CIFAR10_MASK_UNSEEN_TEST_RESULT.md`](docs/CIFAR10_MASK_UNSEEN_TEST_RESULT.md).

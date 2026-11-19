@@ -55,6 +55,20 @@ class TorchImageClassifierTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Conv2d"):
             dense.grad_cam(self.features, predictions)
 
+    def test_predictions_use_bounded_batches(self):
+        observed_sizes = []
+        hook = self.network.register_forward_pre_hook(
+            lambda _network, inputs: observed_sizes.append(len(inputs[0]))
+        )
+        try:
+            probabilities = self.classifier.predict_proba(
+                np.zeros((257, 16), dtype=np.float32)
+            )
+        finally:
+            hook.remove()
+        self.assertEqual(probabilities.shape, (257, 2))
+        self.assertEqual(observed_sizes, [128, 128, 1])
+
 
 if __name__ == "__main__":
     unittest.main()

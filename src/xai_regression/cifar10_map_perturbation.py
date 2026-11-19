@@ -6,6 +6,7 @@ import argparse
 import csv
 import hashlib
 import json
+import tarfile
 from pathlib import Path
 
 import joblib
@@ -61,9 +62,21 @@ def _mean(values: list[float]) -> float | None:
     return float(np.mean(values)) if values else None
 
 
+def _official_window(run_path: Path, start: int, stop: int, labels: np.ndarray) -> np.ndarray:
+    """Verify official test indices and labels before comparing model predictions."""
+    with (run_path / "test_predictions.csv").open(newline="", encoding="utf-8") as stream:
+        rows = list(csv.DictReader(stream))
+    if (len(rows) != 10000 or
+            [int(row["official_test_index"]) for row in rows] != list(range(10000)) or
+            [int(row["actual"]) for row in rows[start:stop]] != labels.tolist()):
+        raise ValueError(f"Official-test rows do not align with {run_path}.")
+    return np.array([int(row["v2_prediction"]) for row in rows[start:stop]], dtype=int)
+
+
 def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class: int = 3,
             fractions: tuple[float, ...] = (0.1, 0.2), random_repeats: int = 3,
-            seed: int = 20261031, replacement_mode: str = "mean") -> dict:
+            seed: int = 20261031, replacement_mode: str = "mean",
+            archive: Path | None = None, test_start: int = 0, test_stop: int = 1000) -> dict:
     if random_repeats < 1 or any(not 0 < fraction < 1 for fraction in fractions):
         raise ValueError("Require positive random repeats and fractions between 0 and 1.")
     if replacement_mode not in {"mean", "blur"}:
@@ -72,14 +85,6 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
 
     torch = _torch()
     torch.set_num_threads(4)
-    manifest = json.loads((bundle / "manifest.json").read_text())
-    frame = pd.read_csv(bundle / "samples.csv")
-    if len(frame) != 1000 or len(manifest["feature_columns"]) != 3072:
-        raise ValueError("Expected the 1,000-image RGB CIFAR-10 upload bundle.")
-    labels = frame[manifest["label_column"]].to_numpy(dtype=int)
-    images = frame[manifest["feature_columns"]].to_numpy(dtype=np.float32)
-    if not np.isfinite(images).all():
-        raise ValueError("Image pixels must be finite.")
     runs = [json.loads((path / "summary.json").read_text()) for path in (baseline_run, candidate_run)]
     configs = [run["config"] for run in runs]
     if (configs[0]["seed"] != configs[1]["seed"] or
@@ -88,13 +93,33 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
             configs[0]["archive_sha256"] != configs[1]["archive_sha256"] or
             configs[0]["mean"] != configs[1]["mean"]):
         raise ValueError("Expected a matched original-width/wider-width pair.")
-    for run_path in (baseline_run, candidate_run):
-        with (run_path / "test_predictions.csv").open(newline="", encoding="utf-8") as stream:
-            official_rows = [row for _, row in zip(range(1000), csv.DictReader(stream))]
-        if (len(official_rows) != 1000 or
-                [int(row["official_test_index"]) for row in official_rows] != list(range(1000)) or
-                [int(row["actual"]) for row in official_rows] != labels.tolist()):
-            raise ValueError("Upload bundle does not align with the official-test rows.")
+    if archive is None:
+        if (test_start, test_stop) != (0, 1000):
+            raise ValueError("An official test window beyond the upload bundle requires --archive.")
+        manifest = json.loads((bundle / "manifest.json").read_text())
+        frame = pd.read_csv(bundle / "samples.csv")
+        if len(frame) != 1000 or len(manifest["feature_columns"]) != 3072:
+            raise ValueError("Expected the 1,000-image RGB CIFAR-10 upload bundle.")
+        labels = frame[manifest["label_column"]].to_numpy(dtype=int)
+        images = frame[manifest["feature_columns"]].to_numpy(dtype=np.float32)
+    else:
+        if not 1000 <= test_start < test_stop <= 10000:
+            raise ValueError("Archive audit must use official test indices 1000..9999.")
+        if _sha256(archive) != configs[0]["archive_sha256"]:
+            raise ValueError("CIFAR-10 archive hash differs from the training runs.")
+        from xai_regression.image_bundle import _cifar10_batch_arrays, _read_cifar10_member
+        with tarfile.open(archive, mode="r:gz") as stream:
+            test_images, test_labels = _cifar10_batch_arrays(
+                _read_cifar10_member(stream, "test_batch"), "test_batch"
+            )
+        if len(test_images) != 10000 or len(test_labels) != 10000:
+            raise ValueError("Expected all 10,000 official CIFAR-10 test images.")
+        images = test_images[test_start:test_stop].reshape(-1, 3072).astype(np.float32)
+        labels = test_labels[test_start:test_stop].astype(int)
+    if not np.isfinite(images).all():
+        raise ValueError("Image pixels must be finite.")
+    expected_predictions = [_official_window(path, test_start, test_stop, labels)
+                            for path in (baseline_run, candidate_run)]
     model_paths = [bundle / "cifar10_v1_original_widths.joblib",
                    bundle / "cifar10_v2_wider_widths.joblib"]
     models = [joblib.load(path) for path in model_paths]
@@ -102,16 +127,15 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
            for model in models):
         raise ValueError("Expected trusted TorchImageClassifier RGB models.")
     predictions = [np.argmax(model.predict_proba(images), axis=1) for model in models]
-    for run_path, predicted in zip((baseline_run, candidate_run), predictions):
-        with (run_path / "test_predictions.csv").open(newline="", encoding="utf-8") as stream:
-            expected = [int(row["v2_prediction"]) for _, row in zip(range(1000), csv.DictReader(stream))]
-        if predicted.tolist() != expected:
+    for run_path, predicted, expected in zip((baseline_run, candidate_run), predictions, expected_predictions):
+        if not np.array_equal(predicted, expected):
             raise ValueError(f"Uploaded model predictions do not match {run_path}.")
-    selected = _selected_indices(labels, *predictions, per_class, seed)
+    selected_local = _selected_indices(labels, *predictions, per_class, seed)
+    selected = [index + test_start for index in selected_local]
     mean_pixels = np.asarray(configs[0]["mean"], dtype=np.float32) * 255.0
     rng = np.random.default_rng(seed + 1)
     rows = []
-    for index in selected:
+    for index in selected_local:
         image = images[index]
         replacement = _replacement(image, mean_pixels, replacement_mode)
         target = int(labels[index])
@@ -139,7 +163,7 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
                         top_drop = original - top_score
                         random_drop = original - float(np.mean(random_scores))
                     rows.append({
-                        "official_test_index": int(index), "class": target, "version": version,
+                        "official_test_index": int(index + test_start), "class": target, "version": version,
                         "method": method, "fraction": fraction, "informative": informative,
                         "original_probability": original, "top_drop": top_drop,
                         "random_drop": random_drop,
@@ -164,6 +188,7 @@ def analyze(bundle: Path, baseline_run: Path, candidate_run: Path, *, per_class:
     return {
         "protocol": "Prediction-conditioned, jointly correct CIFAR-10 images; target true-class probability; fixed-size pixel masking",
         "seed": configs[0]["seed"], "selected_indices": selected,
+        "test_window": [test_start, test_stop],
         "per_class": per_class, "fractions": list(fractions), "random_repeats": random_repeats,
         "random_seed": seed, "replacement_mode": replacement_mode,
         "model_sha256": {name: _sha256(path) for name, path in zip(("V1", "V2"), model_paths)},
@@ -180,11 +205,15 @@ def main() -> None:
     parser.add_argument("--per-class", type=int, default=3)
     parser.add_argument("--random-repeats", type=int, default=3)
     parser.add_argument("--replacement", choices=("mean", "blur"), default="mean")
+    parser.add_argument("--archive", type=Path, help="Use official test images outside the 1,000-image upload bundle")
+    parser.add_argument("--test-start", type=int, default=0)
+    parser.add_argument("--test-stop", type=int, default=1000)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = analyze(args.bundle, args.baseline_run, args.candidate_run,
                      per_class=args.per_class, random_repeats=args.random_repeats,
-                     replacement_mode=args.replacement)
+                     replacement_mode=args.replacement, archive=args.archive,
+                     test_start=args.test_start, test_stop=args.test_stop)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     for item in result["summary"]:
