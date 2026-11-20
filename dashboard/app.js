@@ -567,6 +567,32 @@ function uploadedModels() {
   return files;
 }
 
+function uploadSelectionError(models, manifestFile) {
+  const extraCount = elements.additionalModelsUpload.files.length;
+  if (extraCount > 3) {
+    return `Select at most three additional models. ${extraCount} are selected; remove ${extraCount - 3} before comparing.`;
+  }
+  const dataset = elements.datasetUpload.files[0];
+  const images = elements.uploadTaskSelector.value === "classification"
+    ? elements.imagesUpload.files[0] : null;
+  const files = [
+    ...models.map((file) => [file, ".joblib", "Model"]),
+    [dataset, ".csv", "Labelled dataset"],
+    [manifestFile, ".json", "Manifest"],
+    ...(images ? [[images, ".zip", "Sample images"]] : []),
+  ];
+  for (const [file, extension, label] of files) {
+    if (file && !file.name.toLowerCase().endsWith(extension)) {
+      return `${label} ${file.name} must be a ${extension} file.`;
+    }
+  }
+  const totalBytes = files.reduce((sum, [file]) => sum + (file?.size || 0), 0);
+  if (totalBytes > 199 * 1024 * 1024) {
+    return "Selected files exceed the 199 MB upload allowance. Use fewer or smaller files before comparing.";
+  }
+  return null;
+}
+
 function setInputFiles(input, files) {
   const transfer = new DataTransfer();
   files.forEach((file) => transfer.items.add(file));
@@ -721,7 +747,8 @@ function updateUploadReadiness() {
     elements.manifestUpload.files[0]
     || (elements.manifestLabelColumn.value && elements.manifestTrustModels.checked),
   );
-  const ready = models.length >= 2 && Boolean(dataset) && differentPair && manifestReady;
+  const selectionError = uploadSelectionError(models, elements.manifestUpload.files[0]);
+  const ready = models.length >= 2 && Boolean(dataset) && differentPair && manifestReady && !selectionError;
   elements.readinessTask.textContent = elements.uploadTaskSelector.value === "regression"
     ? "Regression"
     : "Classification";
@@ -741,13 +768,13 @@ function updateUploadReadiness() {
   if (!manifestReady) missing.push("a manifest or confirmed CSV column mapping");
   elements.uploadReadinessMessage.textContent = ready
     ? "Selections are complete. The next step checks every model before comparison."
-    : `Still needed: ${missing.join(", ")}.`;
+    : selectionError || `Still needed: ${missing.join(", ")}.`;
   updateClearUploadButtons();
 }
 
 function updateModelSelectors() {
   const files = uploadedModels();
-  const additional = Array.from(elements.additionalModelsUpload.files).slice(0, 3);
+  const additional = Array.from(elements.additionalModelsUpload.files);
   elements.additionalModelNames.replaceChildren();
   if (!additional.length) {
     const empty = document.createElement("span");
@@ -801,7 +828,7 @@ function updateModelSelectors() {
   }
   const extraCount = elements.additionalModelsUpload.files.length;
   elements.modelCollectionMessage.textContent = extraCount > 3
-    ? "Only the first three additional models will be available (five total)."
+    ? `Select at most three additional models. Remove ${extraCount - 3} before comparing.`
     : `${files.length} model${files.length === 1 ? "" : "s"} ready; the baseline is compared with every other model, and the candidate gets a detailed comparison.`;
   updateUploadReadiness();
 }
@@ -2967,6 +2994,8 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   let manifestFile;
   try {
     manifestFile = selectedManifestFile();
+    const selectionError = uploadSelectionError(models, manifestFile);
+    if (selectionError) throw new Error(selectionError);
   } catch (error) {
     elements.uploadMessage.className = "upload-comparison-message error";
     elements.uploadMessage.textContent = error.message;
