@@ -14,6 +14,7 @@ const state = {
   uploadValidation: null,
   regressionComparison: null,
   regressionOverview: null,
+  uploadSelectionRevision: 0,
 };
 
 const elements = {
@@ -669,7 +670,9 @@ function fillColumnSelector(selector, columns, optional, preferredNames = []) {
 async function updateManifestBuilder() {
   const file = elements.datasetUpload.files[0];
   if (!file) return;
+  const revision = state.uploadSelectionRevision;
   const columns = parseCsvHeader(await file.slice(0, 65536).text());
+  if (revision !== state.uploadSelectionRevision) return;
   if (columns.length < 2) {
     elements.manifestBuilderMessage.textContent = "Could not detect at least two CSV columns.";
     return;
@@ -720,6 +723,31 @@ function selectedManifestFile() {
     "generated-manifest.json",
     { type: "application/json" },
   );
+}
+
+function invalidateUploadComparison() {
+  state.uploadSelectionRevision += 1;
+  const hadResult = Boolean(
+    state.uploadComparison || state.regressionComparison
+    || state.uploadValidation || elements.uploadSubmit.disabled,
+  );
+  state.uploadComparison = null;
+  state.uploadComparisonFiles = null;
+  state.modelOverview = null;
+  state.uploadValidation = null;
+  state.regressionComparison = null;
+  state.regressionOverview = null;
+  elements.uploadResults.hidden = true;
+  elements.regressionResults.hidden = true;
+  elements.uploadValidation.hidden = true;
+  elements.candidateVerdict.hidden = true;
+  if (elements.explanationDialog.open) elements.explanationDialog.close();
+  elements.uploadSubmit.disabled = false;
+  elements.uploadSubmit.textContent = "Run local comparison";
+  if (hadResult) {
+    elements.uploadMessage.className = "upload-comparison-message";
+    elements.uploadMessage.textContent = "Inputs changed. Run local comparison again to see results for the current selection.";
+  }
 }
 
 function updateUploadTask() {
@@ -799,6 +827,7 @@ function updateModelSelectors() {
         const remaining = Array.from(elements.additionalModelsUpload.files)
           .filter((candidate) => candidate !== file);
         setInputFiles(elements.additionalModelsUpload, remaining);
+        invalidateUploadComparison();
         updateModelSelectors();
       });
       name.append(label, remove);
@@ -1558,6 +1587,7 @@ function openExplanation(sample) {
 async function generateSampleExplanation(sample, sampleIndex, button) {
   const files = state.uploadComparisonFiles;
   if (!files) return;
+  const revision = state.uploadSelectionRevision;
   button.disabled = true;
   button.textContent = "Generating…";
   try {
@@ -1570,6 +1600,7 @@ async function generateSampleExplanation(sample, sampleIndex, button) {
     const result = await fetchUploadReport(
       "/api/classification/sample-explanation", () => form, "Sample explanation",
     );
+    if (revision !== state.uploadSelectionRevision) return;
     sample.v1_explanation = result.v1_explanation;
     sample.v2_explanation = result.v2_explanation;
     sample.explanation_similarity = result.explanation_similarity;
@@ -1578,6 +1609,7 @@ async function generateSampleExplanation(sample, sampleIndex, button) {
     openExplanation(sample);
     renderUploadSamples();
   } catch (error) {
+    if (revision !== state.uploadSelectionRevision) return;
     button.textContent = "Retry maps";
     button.disabled = false;
     button.title = error.message;
@@ -2909,7 +2941,10 @@ for (const input of [
   elements.modelV2Upload,
   elements.additionalModelsUpload,
 ]) {
-  input.addEventListener("change", updateModelSelectors);
+  input.addEventListener("change", () => {
+    invalidateUploadComparison();
+    updateModelSelectors();
+  });
 }
 for (const button of document.querySelectorAll("[data-clear-upload]")) {
   button.addEventListener("click", (event) => {
@@ -2917,6 +2952,7 @@ for (const button of document.querySelectorAll("[data-clear-upload]")) {
     event.stopPropagation();
     const input = document.getElementById(button.dataset.clearUpload);
     if (!input) return;
+    invalidateUploadComparison();
     input.value = "";
     if (input === elements.datasetUpload) resetManifestBuilder();
     if ([elements.modelV1Upload, elements.modelV2Upload, elements.additionalModelsUpload].includes(input)) {
@@ -2927,14 +2963,18 @@ for (const button of document.querySelectorAll("[data-clear-upload]")) {
   });
 }
 elements.datasetUpload.addEventListener("change", async () => {
+  invalidateUploadComparison();
   await updateManifestBuilder();
   updateUploadReadiness();
 });
 elements.manifestUpload.addEventListener("change", async () => {
+  invalidateUploadComparison();
+  const revision = state.uploadSelectionRevision;
   const file = elements.manifestUpload.files[0];
   if (file) {
     try {
       const manifest = JSON.parse(await file.text());
+      if (revision !== state.uploadSelectionRevision) return;
       const method = String(manifest.explanation_method || "auto").toLowerCase();
       if ([...elements.manifestExplanationMethod.options].some((option) => option.value === method)) {
         elements.manifestExplanationMethod.value = method;
@@ -2945,13 +2985,30 @@ elements.manifestUpload.addEventListener("change", async () => {
   }
   updateUploadReadiness();
 });
-elements.manifestLabelColumn.addEventListener("change", updateUploadReadiness);
-elements.manifestTrustModels.addEventListener("change", updateUploadReadiness);
-elements.baselineModelSelector.addEventListener("change", updateUploadReadiness);
-elements.candidateModelSelector.addEventListener("change", updateUploadReadiness);
+for (const input of [
+  elements.manifestLabelColumn,
+  elements.manifestIdColumn,
+  elements.manifestExplanationMethod,
+  elements.manifestImageColumn,
+  elements.manifestImageHeight,
+  elements.manifestImageWidth,
+  elements.manifestImageChannels,
+  elements.manifestTrustModels,
+  elements.baselineModelSelector,
+  elements.candidateModelSelector,
+  elements.imagesUpload,
+]) {
+  input.addEventListener("change", () => {
+    invalidateUploadComparison();
+    updateUploadReadiness();
+  });
+}
 elements.agreementFirstModel.addEventListener("change", renderAgreementSelection);
 elements.agreementSecondModel.addEventListener("change", renderAgreementSelection);
-elements.uploadTaskSelector.addEventListener("change", updateUploadTask);
+elements.uploadTaskSelector.addEventListener("change", () => {
+  invalidateUploadComparison();
+  updateUploadTask();
+});
 elements.regressionOutcomeFilter.addEventListener("change", renderRegressionSamples);
 elements.closeExplanationDialog.addEventListener("click", () => {
   elements.explanationDialog.close();
@@ -3016,6 +3073,7 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   if (elements.imagesUpload.files[0]) {
     comparisonForm.append("images", elements.imagesUpload.files[0]);
   }
+  const revision = state.uploadSelectionRevision;
   elements.uploadSubmit.disabled = true;
   elements.uploadSubmit.textContent = "Comparing…";
   elements.candidateVerdict.hidden = true;
@@ -3026,22 +3084,28 @@ elements.uploadForm.addEventListener("submit", async (event) => {
   try {
     if (isRegression) {
       const validation = await fetchUploadReport("/api/regression/validate", collectionForm, "Regression model validation");
+      if (revision !== state.uploadSelectionRevision) return;
       renderUploadValidation(validation);
       if (!validation.ready) throw new Error("One or more uploaded regression models are incompatible.");
       const overview = await fetchUploadReport("/api/regression/overview", collectionForm, "Regression model overview");
+      if (revision !== state.uploadSelectionRevision) return;
       renderRegressionModelOverview(overview);
       const payload = await fetchUploadReport("/api/regression/compare", () => comparisonForm, "Regression model comparison");
+      if (revision !== state.uploadSelectionRevision) return;
       renderRegressionComparison(payload);
       elements.uploadMessage.className = "upload-comparison-message success";
       elements.uploadMessage.textContent = "Regression comparison complete. No uploaded file was saved.";
       return;
     }
     const validation = await fetchUploadReport("/api/classification/validate", collectionForm, "Model validation");
+    if (revision !== state.uploadSelectionRevision) return;
     renderUploadValidation(validation);
     if (!validation.ready) throw new Error("One or more uploaded models are incompatible.");
     const overview = await fetchUploadReport("/api/classification/overview", collectionForm, "Model overview");
+    if (revision !== state.uploadSelectionRevision) return;
     renderModelOverview(overview);
     const payload = await fetchUploadReport("/api/classification/compare", () => comparisonForm, "Model comparison");
+    if (revision !== state.uploadSelectionRevision) return;
     state.uploadComparisonFiles = {
       modelV1: models[baselineIndex],
       modelV2: models[candidateIndex],
@@ -3052,11 +3116,14 @@ elements.uploadForm.addEventListener("submit", async (event) => {
     elements.uploadMessage.className = "upload-comparison-message success";
     elements.uploadMessage.textContent = "Comparison complete. No uploaded file was saved.";
   } catch (error) {
+    if (revision !== state.uploadSelectionRevision) return;
     elements.uploadMessage.className = "upload-comparison-message error";
     elements.uploadMessage.textContent = `Could not run comparison: ${error.message}`;
   } finally {
-    elements.uploadSubmit.disabled = false;
-    elements.uploadSubmit.textContent = "Run local comparison";
+    if (revision === state.uploadSelectionRevision) {
+      elements.uploadSubmit.disabled = false;
+      elements.uploadSubmit.textContent = "Run local comparison";
+    }
   }
 });
 
